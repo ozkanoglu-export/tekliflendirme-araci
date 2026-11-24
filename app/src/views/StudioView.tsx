@@ -100,7 +100,7 @@ function PositionList() {
     })
 
   return (
-    <aside className="no-print flex w-[292px] shrink-0 flex-col border-r border-ink-800 bg-ink-950">
+    <aside className="no-print flex w-[292px] shrink-0 flex-col border-r glass-side">
       <div className="flex items-center justify-between px-4 pb-2 pt-4">
         <div>
           <h2 className="text-[13px] font-semibold text-white">Pozlar</h2>
@@ -122,17 +122,17 @@ function PositionList() {
               onClick={() => setActivePos(p.id)}
               className={cx(
                 'group relative cursor-pointer rounded-xl border p-2.5 transition-all',
-                active ? 'border-gold-500/50 bg-ink-850 shadow-[0_0_0_1px_rgba(212,175,55,0.15),0_10px_30px_-15px_rgba(0,0,0,0.8)]' : 'border-ink-800 bg-ink-900/60 hover:border-ink-700 hover:bg-ink-900',
+                active ? 'border-gold-500/50 bg-white/[0.08] shadow-[0_0_0_1px_rgba(212,175,55,0.15),0_10px_30px_-15px_rgba(0,0,0,0.8)]' : 'border-white/[0.07] bg-white/[0.04] hover:border-white/10 hover:bg-white/[0.04]',
               )}
             >
               {active && <span className="absolute -left-[13px] top-3 h-8 w-1 rounded-r bg-gold-500" />}
               <div className="flex gap-3">
-                <div className="flex h-[74px] w-[74px] shrink-0 items-center justify-center rounded-lg bg-[#0c1016] p-1.5">
+                <div className="flex h-[74px] w-[74px] shrink-0 items-center justify-center rounded-lg bg-black/25 p-1.5">
                   <WindowDrawing pos={p} geo={l.geo} catalog={catalog} variant="thumb" className="h-full w-full" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className={cx('rounded px-1.5 py-px font-mono text-[10px] font-bold', active ? 'bg-gold-500 text-ink-950' : 'bg-ink-800 text-gold-400')}>P{i + 1}</span>
+                    <span className={cx('rounded px-1.5 py-px font-mono text-[10px] font-bold', active ? 'bg-gold-500 text-ink-950' : 'bg-white/[0.07] text-gold-400')}>P{i + 1}</span>
                     {l.warnings.length > 0 && <AlertTriangle size={12} className="text-amber-400" />}
                     <span className="ml-auto font-mono text-[11px] text-ink-400">×{p.qty}</span>
                   </div>
@@ -147,10 +147,10 @@ function PositionList() {
                 </div>
               </div>
               <div className="absolute right-1.5 top-9 hidden flex-col gap-0.5 group-hover:flex">
-                <button title="Yukarı" onClick={(e) => (e.stopPropagation(), move(i, -1))} className="rounded bg-ink-800/90 p-1 text-ink-300 hover:text-white">
+                <button title="Yukarı" onClick={(e) => (e.stopPropagation(), move(i, -1))} className="rounded bg-white/[0.07] p-1 text-ink-300 hover:text-white">
                   <ArrowUp size={12} />
                 </button>
-                <button title="Aşağı" onClick={(e) => (e.stopPropagation(), move(i, 1))} className="rounded bg-ink-800/90 p-1 text-ink-300 hover:text-white">
+                <button title="Aşağı" onClick={(e) => (e.stopPropagation(), move(i, 1))} className="rounded bg-white/[0.07] p-1 text-ink-300 hover:text-white">
                   <ArrowDown size={12} />
                 </button>
               </div>
@@ -158,7 +158,7 @@ function PositionList() {
           )
         })}
       </div>
-      <div className="border-t border-ink-800 bg-ink-900/60 px-4 py-3">
+      <div className="border-t border-white/[0.07] bg-white/[0.03] px-4 py-3">
         <div className="flex items-baseline justify-between">
           <span className="text-[11px] uppercase tracking-wider text-ink-500">Ürün toplamı</span>
           <span className="font-mono text-[15px] font-semibold text-white">{money(totals.products, cur, catalog)}</span>
@@ -284,7 +284,7 @@ function Canvas({ pos, line }: { pos: Position; line: PositionCalc }) {
         </div>
 
         {/* Üst sağ: görünüm araçları */}
-        <div className="glass-card absolute right-4 top-4 flex items-center gap-0.5 rounded-xl border border-ink-700 p-1" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+        <div className="glass-card absolute right-4 top-4 flex items-center gap-0.5 rounded-xl border border-white/10 p-1" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
           <IconBtn title="Uzaklaş" onClick={() => zoom(1 / 1.25)}>
             <ZoomOut size={15} />
           </IconBtn>
@@ -295,7 +295,7 @@ function Canvas({ pos, line }: { pos: Position; line: PositionCalc }) {
           <IconBtn title="Sığdır" onClick={() => setView({ s: 1, x: 0, y: 0 })}>
             <Maximize2 size={15} />
           </IconBtn>
-          <div className="mx-1 h-5 w-px bg-ink-700" />
+          <div className="mx-1 h-5 w-px bg-white/[0.12]" />
           <IconBtn title={glassSizes ? 'Cam ölçülerini gizle' : 'Cam ölçülerini göster'} active={glassSizes} onClick={() => setGlassSizes((v) => !v)}>
             {glassSizes ? <Eye size={15} /> : <EyeOff size={15} />}
           </IconBtn>
@@ -317,7 +317,7 @@ function Canvas({ pos, line }: { pos: Position; line: PositionCalc }) {
           </div>
         )}
         {isTree && !sel && (
-          <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-ink-700 bg-ink-900/80 px-4 py-1 text-[11.5px] text-ink-400">
+          <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-4 py-1 text-[11.5px] text-ink-400">
             Alana tıkla → kanat tipi seç, böl, birleştir · Tekerlek: zoom · Sürükle: kaydır
           </div>
         )}
@@ -353,7 +353,7 @@ function FieldToolbar({ pos, field, onChange }: { pos: Position; field: Field; o
     selectField(created ? (collectLeaves(created)[0]?.id ?? null) : null)
   }
   return (
-    <div className="glass-card fade-up flex items-center gap-1 rounded-2xl border border-ink-600 p-1.5 shadow-2xl">
+    <div className="glass-card fade-up flex items-center gap-1 rounded-2xl border border-white/[0.16] p-1.5 shadow-2xl">
       {field.kind === 'leaf' ? (
         <>
           {FILLS.map((f) => {
@@ -363,7 +363,7 @@ function FieldToolbar({ pos, field, onChange }: { pos: Position; field: Field; o
                 key={f.label}
                 title={f.label}
                 onClick={() => setLeaf({ fill: f.fill, ...(f.opening ? { opening: f.opening } : {}) })}
-                className={cx('flex w-[62px] flex-col items-center gap-0.5 rounded-xl py-1 text-[10.5px] transition', on ? 'bg-brand-500/20 text-brand-200 ring-1 ring-brand-400/50' : 'text-ink-300 hover:bg-ink-800 hover:text-white')}
+                className={cx('flex w-[62px] flex-col items-center gap-0.5 rounded-xl py-1 text-[10.5px] transition', on ? 'bg-brand-500/20 text-brand-200 ring-1 ring-brand-400/50' : 'text-ink-300 hover:bg-white/[0.07] hover:text-white')}
               >
                 <FillIcon fill={f.fill} opening={f.opening} hinge={field.hinge} size={26} />
                 {f.label}
@@ -374,7 +374,7 @@ function FieldToolbar({ pos, field, onChange }: { pos: Position; field: Field; o
             <button
               title="Menteşe / aktif kanat yönünü çevir"
               onClick={() => setLeaf({ hinge: field.hinge === 'left' ? 'right' : 'left' })}
-              className="flex w-[62px] flex-col items-center gap-0.5 rounded-xl py-1 text-[10.5px] text-gold-300 hover:bg-ink-800"
+              className="flex w-[62px] flex-col items-center gap-0.5 rounded-xl py-1 text-[10.5px] text-gold-300 hover:bg-white/[0.07]"
             >
               <ArrowLeftRight size={20} className="my-[3px]" />
               {field.hinge === 'left' ? 'Sol' : 'Sağ'}
@@ -386,14 +386,14 @@ function FieldToolbar({ pos, field, onChange }: { pos: Position; field: Field; o
           {field.dir === 'v' ? 'Dikey' : 'Yatay'} bölme · {field.children.length} parça
         </span>
       )}
-      <div className="mx-1 h-10 w-px bg-ink-700" />
+      <div className="mx-1 h-10 w-px bg-white/[0.12]" />
       {[
         ['v', 2],
         ['v', 3],
         ['h', 2],
         ['h', 3],
       ].map(([d, n]) => (
-        <button key={`${d}${n}`} title={`${d === 'v' ? 'Dikey' : 'Yatay'} ${n} parçaya böl`} onClick={() => doSplit(d as 'v' | 'h', n as number)} className="flex w-[46px] flex-col items-center gap-0.5 rounded-xl py-1 text-[10.5px] text-ink-300 hover:bg-ink-800 hover:text-white">
+        <button key={`${d}${n}`} title={`${d === 'v' ? 'Dikey' : 'Yatay'} ${n} parçaya böl`} onClick={() => doSplit(d as 'v' | 'h', n as number)} className="flex w-[46px] flex-col items-center gap-0.5 rounded-xl py-1 text-[10.5px] text-ink-300 hover:bg-white/[0.07] hover:text-white">
           <SplitIcon dir={d as 'v' | 'h'} parts={n as number} size={26} />
           {d === 'v' ? '│' : '─'}
           {n}
@@ -401,8 +401,8 @@ function FieldToolbar({ pos, field, onChange }: { pos: Position; field: Field; o
       ))}
       {parent && (
         <>
-          <div className="mx-1 h-10 w-px bg-ink-700" />
-          <button title="Üst bölmeyi seç" onClick={() => selectField(parent.parent.id)} className="flex w-[50px] flex-col items-center gap-0.5 rounded-xl py-1 text-[10.5px] text-ink-300 hover:bg-ink-800 hover:text-white">
+          <div className="mx-1 h-10 w-px bg-white/[0.12]" />
+          <button title="Üst bölmeyi seç" onClick={() => selectField(parent.parent.id)} className="flex w-[50px] flex-col items-center gap-0.5 rounded-xl py-1 text-[10.5px] text-ink-300 hover:bg-white/[0.07] hover:text-white">
             <CornerLeftUp size={20} className="my-[3px]" />
             Üst
           </button>
@@ -429,7 +429,7 @@ function StatusBar({ line }: { line: PositionCalc }) {
   const cur = project.commercial.currency
   const [open, setOpen] = useState(false)
   return (
-    <div className="no-print relative border-t border-ink-800 bg-ink-950 px-5 py-2.5">
+    <div className="no-print relative border-t glass-bar px-5 py-2.5">
       <div className="flex items-center gap-8">
         <Stat label="Ölçü" value={`${fmtLen(line.geo.outerW, project.commercial.units)} × ${fmtLen(line.geo.totalH, project.commercial.units)}`} sub={project.commercial.units === 'inch' ? `${line.geo.outerW} × ${line.geo.totalH} mm` : 'mm'} />
         <Stat label="Alan" value={`${num(line.grossArea)} m²`} sub={`cam ${num(line.glassArea)} m²`} />
@@ -446,7 +446,7 @@ function StatusBar({ line }: { line: PositionCalc }) {
         )}
       </div>
       {open && line.warnings.length > 0 && (
-        <div className="fade-up absolute bottom-full right-4 mb-2 w-[380px] rounded-xl border border-amber-500/30 bg-ink-900 p-3 shadow-2xl">
+        <div className="fade-up absolute bottom-full right-4 mb-2 w-[380px] rounded-xl border border-amber-500/30 bg-white/[0.04] p-3 shadow-2xl">
           {line.warnings.map((w) => (
             <div key={w} className="flex gap-2 py-1 text-[12px] text-amber-100">
               <AlertTriangle size={13} className="mt-0.5 shrink-0 text-amber-400" /> {w}
@@ -479,8 +479,8 @@ function Inspector({ pos, line }: { pos: Position; line: PositionCalc }) {
   const idx = project.positions.findIndex((p) => p.id === pos.id)
 
   return (
-    <aside className="no-print flex w-[348px] shrink-0 flex-col border-l border-ink-800 bg-ink-950">
-      <div className="flex items-center justify-between border-b border-ink-800 px-4 py-3">
+    <aside className="no-print flex w-[348px] shrink-0 flex-col border-l glass-side">
+      <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-3">
         <div className="text-[13px] font-semibold text-white">Poz özellikleri</div>
         <div className="flex gap-0.5">
           <IconBtn title="Şablon / düzen değiştir" onClick={() => setGallery(true)}>
@@ -525,7 +525,7 @@ function Inspector({ pos, line }: { pos: Position; line: PositionCalc }) {
               </div>
               <div>
                 <Label>Adet</Label>
-                <div className="flex h-9 items-center rounded-lg border border-ink-700 bg-ink-950/70">
+                <div className="flex h-9 items-center rounded-lg border border-white/10 bg-black/20">
                   <button className="px-2 text-ink-400 hover:text-white" onClick={() => up((p) => ({ ...p, qty: Math.max(1, p.qty - 1) }))}>
                     <Minus size={13} />
                   </button>
@@ -590,7 +590,7 @@ function Inspector({ pos, line }: { pos: Position; line: PositionCalc }) {
                   <button
                     key={c.key}
                     onClick={() => up((p) => ({ ...p, color: c.key }))}
-                    className={cx('flex flex-col items-center gap-1 rounded-lg border p-1.5 transition', pos.color === c.key ? 'border-gold-500/60 bg-ink-850' : 'border-ink-800 hover:border-ink-600')}
+                    className={cx('flex flex-col items-center gap-1 rounded-lg border p-1.5 transition', pos.color === c.key ? 'border-gold-500/60 bg-white/[0.08]' : 'border-white/[0.07] hover:border-white/[0.16]')}
                     title={`${c.name} (${c.code})`}
                   >
                     <span
@@ -618,7 +618,7 @@ function Inspector({ pos, line }: { pos: Position; line: PositionCalc }) {
         {series?.kind === 'casement' && <FieldPanel pos={pos} line={line} sel={sel} />}
 
         <Panel title="Ek donanım">
-          <div className="divide-y divide-ink-800">
+          <div className="divide-y divide-white/[0.06]">
             <Toggle checked={pos.shutter.enabled} onChange={(v) => up((p) => ({ ...p, shutter: { ...p.shutter, enabled: v } }))} label="Monoblok motorlu panjur" hint="195 mm kutu" />
             {pos.shutter.enabled && (
               <div className="py-2">
@@ -694,7 +694,7 @@ function Inspector({ pos, line }: { pos: Position; line: PositionCalc }) {
                 <span className="font-mono">{money(line.priceUnit - line.materialUnit - line.laborUnit, cur, catalog)}</span>
               </div>
             )}
-            <div className="mt-1 flex justify-between border-t border-ink-800 pt-1.5 font-semibold text-white">
+            <div className="mt-1 flex justify-between border-t border-white/[0.07] pt-1.5 font-semibold text-white">
               <span>Birim satış</span>
               <span className="font-mono">{money(line.priceUnit, cur, catalog)}</span>
             </div>
@@ -763,7 +763,7 @@ function FieldPanel({ pos, line, sel }: { pos: Position; line: PositionCalc; sel
                   <button
                     key={f.label}
                     onClick={() => setRoot(replaceField(pos.root, sel.id, (x) => ({ ...(x as LeafField), fill: f.fill, ...(f.opening ? { opening: f.opening } : {}) })))}
-                    className={cx('flex flex-col items-center gap-0.5 rounded-lg border py-1.5 text-[10px] transition', on ? 'border-brand-400/60 bg-brand-500/15 text-brand-100' : 'border-ink-800 text-ink-400 hover:border-ink-600 hover:text-ink-100')}
+                    className={cx('flex flex-col items-center gap-0.5 rounded-lg border py-1.5 text-[10px] transition', on ? 'border-brand-400/60 bg-brand-500/15 text-brand-100' : 'border-white/[0.07] text-ink-400 hover:border-white/[0.16] hover:text-ink-100')}
                   >
                     <FillIcon fill={f.fill} opening={f.opening} hinge={sel.hinge} size={24} />
                     {f.label}
@@ -834,7 +834,7 @@ function FieldPanel({ pos, line, sel }: { pos: Position; line: PositionCalc; sel
           </div>
         )}
         {leafGeo && (
-          <div className="rounded-lg bg-ink-950/70 p-2.5 font-mono text-[11px] text-ink-400">
+          <div className="rounded-lg bg-black/20 p-2.5 font-mono text-[11px] text-ink-400">
             {line.geo.sashes
               .filter((s) => s.leafId === sel.id)
               .map((s, i) => (
@@ -864,7 +864,7 @@ function SizeRow({ size, actual, onChange }: { size: number | null; actual: numb
       <button
         onClick={() => onChange(null)}
         title="Otomatik: kalan alanı eşit paylaşır"
-        className={cx('h-9 rounded-lg border px-2.5 text-[11px] transition', size === null ? 'border-brand-400/50 bg-brand-500/15 text-brand-200' : 'border-ink-700 text-ink-400 hover:text-white')}
+        className={cx('h-9 rounded-lg border px-2.5 text-[11px] transition', size === null ? 'border-brand-400/50 bg-brand-500/15 text-brand-200' : 'border-white/10 text-ink-400 hover:text-white')}
       >
         Oto
       </button>

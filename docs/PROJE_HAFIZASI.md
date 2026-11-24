@@ -97,7 +97,17 @@ Proje    = Σ satır + ambalaj (m²) + palet (kademeli) + navlun
 - **Açık soru:** Katalogdaki €/m fiyatları satış listesi mi, alış maliyeti mi? Alış maliyetiyse marj ve işçilik girilmeli.
 - Uw hesabı EN ISO 10077-1'in basitleştirilmiş hâliyle yapılır: (Ag·Ug + Af·Uf + lg·Ψ) / A, Ψ = 0,06.
 
-## 6. Birimler
+## 6. Görünüm ve logolar
+
+- **Arayüz:** "liquid glass" tarzında. Koyu lacivert zemin üzerinde yumuşak renk ışıkları var; paneller buzlu cam (`.glass-panel`, `.glass-side`, `.glass-bar`, `.glass-modal`, `index.css`).
+  Çizim tuvali bilerek koyu ve net tutuldu.
+- **Logolar:** Katalog → Firma & logo ekranından yüklenir ve `settings.company` içinde data URL olarak saklanır (yedek JSON'a dahil).
+  Büyük görseller otomatik küçültülür.
+  - `logo`: açık zemin. Teklif sayfalarında kullanılır.
+  - `logoDark`: beyaz logo. Üst barda ve teklifin lacivert başlığında kullanılır; yoksa ana logo beyaz kapsülde gösterilir.
+  - `partnerLogos`: teklifin son sayfasındaki "Çözüm ortaklarımız" satırı.
+
+## 6b. Birimler
 
 - Proje başına mm veya inç seçilir.
 - İnç modunda birim yazmadan girilebilir (`49 1/4`, `49.25`). mm yazmak için `1250mm` yazılır.

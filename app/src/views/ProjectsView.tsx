@@ -62,7 +62,7 @@ export function ProjectsView() {
           ) : (
             <table className="w-full text-[13px]">
               <thead>
-                <tr className="border-b border-ink-800 text-left text-[10.5px] uppercase tracking-wider text-ink-500">
+                <tr className="border-b border-white/[0.07] text-left text-[10.5px] uppercase tracking-wider text-ink-500">
                   <th className="px-4 py-2.5">No</th>
                   <th className="py-2.5">Müşteri / Proje</th>
                   <th className="py-2.5">Tarih</th>
@@ -76,7 +76,7 @@ export function ProjectsView() {
                   const tot = calcProject(p.positions, catalog, p.commercial, settings)
                   const current = p.id === project.id
                   return (
-                    <tr key={p.id} className={cx('border-b border-ink-800/60', current ? 'bg-gold-500/5' : 'hover:bg-ink-900')}>
+                    <tr key={p.id} className={cx('border-b border-white/[0.07]', current ? 'bg-gold-500/5' : 'hover:bg-white/[0.04]')}>
                       <td className="px-4 py-2.5 font-mono font-semibold text-gold-400">
                         #{p.quoteNo}
                         {p.revision > 0 && <span className="text-ink-500"> R{p.revision}</span>}
@@ -226,7 +226,7 @@ export function ProjectsView() {
                 >
                   <ClipboardCopy size={14} /> Pozları kopyala
                 </Button>
-                <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-ink-700 bg-ink-800 px-3.5 text-[13px] font-medium text-ink-100 hover:bg-ink-700">
+                <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/[0.07] px-3.5 text-[13px] font-medium text-ink-100 hover:bg-white/[0.1]">
                   <FileUp size={14} /> Dosyadan yükle
                   <input
                     type="file"

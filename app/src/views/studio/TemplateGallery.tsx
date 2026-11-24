@@ -31,13 +31,13 @@ export function TemplateGallery({ catalog, mode, onPick, onClose }: { catalog: C
 
   return (
     <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm" onClick={onClose}>
-      <div className="fade-up max-h-full w-full max-w-4xl overflow-auto rounded-2xl border border-ink-700 bg-ink-900 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-ink-800 px-5 py-4">
+      <div className="fade-up max-h-full w-full max-w-4xl overflow-auto rounded-3xl glass-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
           <div>
             <h2 className="text-[16px] font-semibold text-white">{mode === 'new' ? 'Yeni poz — şablon seçin' : 'Pozun düzenini değiştir'}</h2>
             <p className="text-[12px] text-ink-400">{mode === 'new' ? 'Şablonla başlayın; sonra tuval üzerinde bölüp kanat tiplerini değiştirebilirsiniz.' : 'Ölçüler korunur, bölme ve kanat düzeni şablona göre yenilenir.'}</p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 text-ink-400 hover:bg-ink-800 hover:text-white">
+          <button onClick={onClose} className="rounded-lg p-2 text-ink-400 hover:bg-white/[0.07] hover:text-white">
             <X size={18} />
           </button>
         </div>
@@ -45,7 +45,7 @@ export function TemplateGallery({ catalog, mode, onPick, onClose }: { catalog: C
           <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-400">Kanatlı sistemler · Atlantik / Pasifik</h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5">
             {items.map(({ t, p, g }) => (
-              <button key={t.key} onClick={() => onPick({ kind: 'template', key: t.key })} className="group rounded-xl border border-ink-700 bg-ink-950/60 p-3 text-left transition hover:border-brand-400 hover:bg-ink-850">
+              <button key={t.key} onClick={() => onPick({ kind: 'template', key: t.key })} className="group rounded-xl border border-white/10 bg-black/20 p-3 text-left transition hover:border-brand-400 hover:bg-white/[0.06]">
                 <div className="flex h-28 items-center justify-center">
                   <WindowDrawing pos={p} geo={g} catalog={catalog} variant="thumb" className="h-full w-full" />
                 </div>
@@ -59,7 +59,7 @@ export function TemplateGallery({ catalog, mode, onPick, onClose }: { catalog: C
               <h3 className="mb-3 mt-6 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-400">Sürme sistemler</h3>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {slideItems.map(({ s, p, g }) => (
-                  <button key={s.key} onClick={() => onPick({ kind: 'series', series: s.key })} className={cx('group rounded-xl border border-ink-700 bg-ink-950/60 p-3 text-left transition hover:border-brand-400 hover:bg-ink-850')}>
+                  <button key={s.key} onClick={() => onPick({ kind: 'series', series: s.key })} className={cx('group rounded-xl border border-white/10 bg-black/20 p-3 text-left transition hover:border-brand-400 hover:bg-white/[0.06]')}>
                     <div className="flex h-28 items-center justify-center">
                       <WindowDrawing pos={p} geo={g} catalog={catalog} variant="thumb" className="h-full w-full" />
                     </div>

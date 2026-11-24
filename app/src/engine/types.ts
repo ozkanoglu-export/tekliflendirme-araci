@@ -282,6 +282,12 @@ export interface CompanyInfo {
   bankAccountName: string
   iban: string
   swift: string
+  /** Açık zemin logosu (data URL) — teklif sayfaları */
+  logo?: string
+  /** Koyu zemin / beyaz logo (data URL) — uygulama üst barı ve teklif başlık bandı */
+  logoDark?: string
+  /** Marka / iş ortağı logoları (data URL) — teklif son sayfası */
+  partnerLogos?: string[]
 }
 
 export interface ExportCostRules {

@@ -26,7 +26,7 @@ export function ExportCharges() {
         const on = c[incKey]
         const ov = c[ovKey]
         return (
-          <div key={r.key} className={cx('rounded-lg border px-3 py-1.5 transition', on ? 'border-ink-700 bg-ink-950/50' : 'border-transparent')}>
+          <div key={r.key} className={cx('rounded-lg border px-3 py-1.5 transition', on ? 'border-white/10 bg-black/20' : 'border-transparent')}>
             <Toggle
               checked={on}
               onChange={(v) => setC({ [incKey]: v } as Partial<Commercial>)}
@@ -39,7 +39,7 @@ export function ExportCharges() {
                 <button
                   onClick={() => setC({ [ovKey]: null } as Partial<Commercial>)}
                   title="Otomatik hesaba dön"
-                  className={cx('h-9 rounded-lg border px-2.5 text-[11px]', ov === null ? 'border-brand-400/50 bg-brand-500/15 text-brand-200' : 'border-ink-700 text-ink-400 hover:text-white')}
+                  className={cx('h-9 rounded-lg border px-2.5 text-[11px]', ov === null ? 'border-brand-400/50 bg-brand-500/15 text-brand-200' : 'border-white/10 text-ink-400 hover:text-white')}
                 >
                   Oto
                 </button>

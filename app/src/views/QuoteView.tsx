@@ -10,9 +10,11 @@ import { FREIGHT_INCLUDED } from '../engine/bom'
 import { discountForTarget, type PositionCalc, type ProjectTotals } from '../engine/bom'
 import { describeOpenings } from '../engine/describe'
 import { BrandMark } from '../App'
+import { LogoOnDark, LogoOnLight } from '../ui/logo'
 import type { AppSettings, Catalog, Incoterm, LangCode, Project } from '../engine/types'
 
 const INCOTERMS: Incoterm[] = ['EXW', 'FCA', 'FOB', 'CFR', 'CIF', 'DAP', 'DDP']
+const PARTNERS: Record<LangCode, string> = { TR: 'Çözüm ortaklarımız', EN: 'Our system partners', DE: 'Unsere Systempartner', IT: 'I nostri partner', RU: 'Наши партнёры', FR: 'Nos partenaires' }
 const CHAMBERS: Record<LangCode, string> = { TR: 'odacık', EN: 'chambers', DE: 'Kammern', IT: 'camere', RU: 'камер', FR: 'chambres' }
 
 export function QuoteView() {
@@ -28,14 +30,14 @@ export function QuoteView() {
 
   return (
     <div className="flex h-full min-h-0">
-      <aside className="no-print w-[340px] shrink-0 space-y-3 overflow-y-auto border-r border-ink-800 bg-ink-950 p-3">
+      <aside className="no-print w-[340px] shrink-0 space-y-3 overflow-y-auto border-r glass-side p-3">
         <Panel title="Teklif dili">
           <div className="grid grid-cols-3 gap-1.5">
             {LANGS.map((l) => (
               <button
                 key={l.code}
                 onClick={() => setC({ language: l.code as LangCode })}
-                className={cx('flex items-center justify-center gap-1.5 rounded-lg border py-2 text-[12px] font-medium transition', c.language === l.code ? 'border-gold-500/60 bg-gold-500/10 text-gold-300' : 'border-ink-800 text-ink-300 hover:border-ink-600')}
+                className={cx('flex items-center justify-center gap-1.5 rounded-lg border py-2 text-[12px] font-medium transition', c.language === l.code ? 'border-gold-500/60 bg-gold-500/10 text-gold-300' : 'border-white/[0.07] text-ink-300 hover:border-white/[0.16]')}
               >
                 <span>{l.flag}</span>
                 {l.code}
@@ -90,7 +92,7 @@ export function QuoteView() {
                 </Button>
               </div>
             </div>
-            <div className="divide-y divide-ink-800 border-t border-ink-800 pt-1">
+            <div className="divide-y divide-white/[0.06] border-t border-white/[0.07] pt-1">
               <Toggle checked={c.showBank} onChange={(v) => setC({ showBank: v })} label="Banka bilgilerini göster" />
             </div>
           </div>
@@ -148,7 +150,7 @@ export function QuoteView() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label>Tarih</Label>
-                <input type="date" value={project.date} onChange={(e) => updateProject((p) => ({ ...p, date: e.target.value }))} className="h-9 w-full rounded-lg border border-ink-700 bg-ink-950/70 px-2 text-[13px] text-ink-100 outline-none focus:border-brand-400" />
+                <input type="date" value={project.date} onChange={(e) => updateProject((p) => ({ ...p, date: e.target.value }))} className="h-9 w-full rounded-lg border border-white/10 bg-black/20 px-2 text-[13px] text-ink-100 outline-none focus:border-brand-400" />
               </div>
               <div>
                 <Label>Hazırlayan</Label>
@@ -168,7 +170,7 @@ export function QuoteView() {
         <p className="px-1 pb-4 text-[11px] leading-relaxed text-ink-500">Yazdır penceresinde hedef olarak "PDF olarak kaydet" seçin. Kenar boşluğu: Yok, Arka plan grafikleri: Açık.</p>
       </aside>
 
-      <div className="min-w-0 flex-1 overflow-auto bg-[#1b2029]">
+      <div className="min-w-0 flex-1 overflow-auto bg-transparent">
         <div className="print-area mx-auto flex w-[210mm] flex-col items-center gap-8 py-10 print:gap-0 print:py-0">
           {pages.map((pg, i) => (
             <Sheet key={i} page={i + 1} pages={pages.length} first={i === 0} project={project} t={t} settings={settings}>
@@ -215,13 +217,20 @@ function Sheet({ children, page, pages, first, project, t, settings }: { childre
             <div className="absolute -right-10 -top-16 h-56 w-56 rounded-full border-[28px] border-white/[0.04]" />
             <div className="absolute right-24 top-10 h-40 w-40 rounded-full border-[18px] border-white/[0.03]" />
             <div className="relative flex items-start justify-between">
-              <div className="flex items-center gap-3.5">
-                <BrandMark size={46} />
+              {co.logoDark || co.logo ? (
                 <div>
-                  <div className="text-[25px] font-extrabold leading-none tracking-[0.16em]">{co.name}</div>
-                  <div className="mt-1.5 text-[9px] font-semibold tracking-[0.32em] text-[#d4af37]">{t.slogan}</div>
+                  <LogoOnDark co={co} height={50} />
+                  <div className="mt-2 text-[9px] font-semibold tracking-[0.32em] text-[#d4af37]">{t.slogan}</div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center gap-3.5">
+                  <BrandMark size={46} />
+                  <div>
+                    <div className="text-[25px] font-extrabold leading-none tracking-[0.16em]">{co.name}</div>
+                    <div className="mt-1.5 text-[9px] font-semibold tracking-[0.32em] text-[#d4af37]">{t.slogan}</div>
+                  </div>
+                </div>
+              )}
               <div className="text-right">
                 <div className="text-[25px] font-light leading-none tracking-[0.12em]">{t.quoteTitle}</div>
                 <div className="mt-1.5 text-[10px] tracking-wide text-white/70">{t.quoteSubtitle}</div>
@@ -254,10 +263,7 @@ function Sheet({ children, page, pages, first, project, t, settings }: { childre
         </>
       ) : (
         <div className="flex items-center justify-between border-b border-slate-200 px-[14mm] pb-[3mm] pt-[8mm]">
-          <div className="flex items-center gap-2.5">
-            <BrandMark size={24} />
-            <span className="text-[13px] font-extrabold tracking-[0.16em] text-[#002b5c]">{co.name}</span>
-          </div>
+          <LogoOnLight co={co} height={24} />
           <div className="text-[9.5px] text-slate-500">
             {t.quoteTitle} <span className="font-mono font-semibold text-slate-800">#{project.quoteNo}</span> · {formatDate(project.date, c.language)}
           </div>
@@ -472,6 +478,16 @@ function Summary({ totals, t, project, catalog, settings, overview }: { totals: 
           <div className="mt-[9mm] border-t border-slate-300 pt-[1mm] text-[7.5px] uppercase tracking-[0.14em] text-slate-400">{t.signature}</div>
         </div>
       </div>
+      {(co.partnerLogos?.length ?? 0) > 0 && (
+        <div className="flex items-center gap-[6mm] border-t border-slate-100 pt-[3mm]">
+          <span className="shrink-0 text-[7.5px] font-bold uppercase tracking-[0.2em] text-slate-400">{PARTNERS[c.language]}</span>
+          <div className="flex flex-1 flex-wrap items-center justify-end gap-x-[7mm] gap-y-[2mm]">
+            {co.partnerLogos!.map((src, i) => (
+              <img key={i} src={src} alt="" className="h-[9mm] w-auto max-w-[36mm] object-contain" />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

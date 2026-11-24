@@ -10,8 +10,8 @@ export function Button({ variant = 'subtle', size = 'md', className, children, .
   const v: Record<BtnVariant, string> = {
     primary: 'bg-brand-500 hover:bg-brand-400 text-white shadow-[0_1px_0_rgba(255,255,255,0.15)_inset,0_6px_18px_-6px_rgba(11,107,196,0.7)]',
     gold: 'bg-gold-500 hover:bg-gold-400 text-ink-950 shadow-[0_6px_18px_-8px_rgba(212,175,55,0.8)]',
-    subtle: 'bg-ink-800 hover:bg-ink-700 text-ink-100 border border-ink-700',
-    ghost: 'hover:bg-ink-800 text-ink-300 hover:text-ink-100',
+    subtle: 'bg-white/[0.07] hover:bg-white/[0.1] text-ink-100 border border-white/10',
+    ghost: 'hover:bg-white/[0.07] text-ink-300 hover:text-ink-100',
     danger: 'bg-transparent hover:bg-red-500/10 text-red-300 border border-red-500/30',
   }
   const s = size === 'sm' ? 'h-7 px-2.5 text-[12px] gap-1.5' : 'h-9 px-3.5 text-[13px] gap-2'
@@ -28,7 +28,7 @@ export function IconBtn({ title, active, className, children, ...rest }: ButtonH
       title={title}
       aria-label={title}
       {...rest}
-      className={cx('inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-30', active ? 'bg-brand-500/20 text-brand-300 ring-1 ring-brand-500/40' : 'text-ink-300 hover:bg-ink-800 hover:text-ink-100', className)}
+      className={cx('inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-30', active ? 'bg-brand-500/20 text-brand-300 ring-1 ring-brand-500/40' : 'text-ink-300 hover:bg-white/[0.07] hover:text-ink-100', className)}
     >
       {children}
     </button>
@@ -45,7 +45,7 @@ export function Label({ children, hint }: { children: ReactNode; hint?: ReactNod
 }
 
 const inputCls =
-  'w-full h-9 rounded-lg bg-ink-950/70 border border-ink-700 px-3 text-[13px] text-ink-100 placeholder:text-ink-500 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/25 transition'
+  'w-full h-9 rounded-lg bg-black/20 border border-white/10 px-3 text-[13px] text-ink-100 placeholder:text-ink-500 outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-500/25 transition'
 
 export function TextInput({ value, onChange, placeholder, className, mono }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string; mono?: boolean }) {
   return <input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cx(inputCls, mono && 'font-mono', className)} />
@@ -226,7 +226,7 @@ export function Select<T extends string>({ value, onChange, options, className }
 
 export function Segmented<T extends string>({ value, onChange, options, size = 'md', className }: { value: T; onChange: (v: T) => void; options: Array<{ value: T; label: ReactNode; title?: string }>; size?: 'sm' | 'md'; className?: string }) {
   return (
-    <div className={cx('inline-flex rounded-lg bg-ink-950/70 p-0.5 border border-ink-700', className)}>
+    <div className={cx('inline-flex rounded-lg bg-black/20 p-0.5 border border-white/10', className)}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -235,7 +235,7 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
           className={cx(
             'flex-1 rounded-md font-medium transition-all whitespace-nowrap',
             size === 'sm' ? 'px-2 h-6 text-[11px]' : 'px-3 h-8 text-[12px]',
-            value === o.value ? 'bg-ink-700 text-white shadow-sm ring-1 ring-ink-600' : 'text-ink-400 hover:text-ink-100',
+            value === o.value ? 'bg-white/[0.12] text-white shadow-sm ring-1 ring-white/[0.16]' : 'text-ink-400 hover:text-ink-100',
           )}
         >
           {o.label}
@@ -257,7 +257,7 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={cx('relative h-5 w-9 shrink-0 rounded-full transition-colors', checked ? 'bg-brand-500' : 'bg-ink-700')}
+        className={cx('relative h-5 w-9 shrink-0 rounded-full transition-colors', checked ? 'bg-brand-500' : 'bg-white/[0.12]')}
       >
         <span className={cx('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all', checked ? 'left-[18px]' : 'left-0.5')} />
       </button>
@@ -267,9 +267,9 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
 
 export function Panel({ title, icon, actions, children, className, bodyClassName }: { title?: ReactNode; icon?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; bodyClassName?: string }) {
   return (
-    <section className={cx('rounded-xl border border-ink-700/70 bg-ink-900/80 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset]', className)}>
+    <section className={cx('rounded-2xl glass-panel', className)}>
       {title && (
-        <header className="flex items-center justify-between gap-2 border-b border-ink-700/60 px-4 py-2.5">
+        <header className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-2.5">
           <h3 className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-200">
             {icon && <span className="text-brand-300">{icon}</span>}
             {title}
@@ -314,8 +314,8 @@ export function Toaster() {
         <div
           key={t.id}
           className={cx(
-            'animate-[toastIn_.25s_ease-out] rounded-full border px-4 py-2 text-[13px] font-medium shadow-2xl backdrop-blur',
-            t.tone === 'err' ? 'border-red-500/40 bg-red-950/90 text-red-100' : t.tone === 'info' ? 'border-ink-600 bg-ink-850/95 text-ink-100' : 'border-emerald-500/30 bg-emerald-950/90 text-emerald-100',
+            'animate-[toastIn_.25s_ease-out] rounded-full border px-4 py-2 text-[13px] font-medium shadow-2xl backdrop-blur-xl backdrop-saturate-150',
+            t.tone === 'err' ? 'border-red-500/40 bg-red-950/90 text-red-100' : t.tone === 'info' ? 'border-white/[0.16] bg-white/[0.08] text-ink-100' : 'border-emerald-500/30 bg-emerald-950/90 text-emerald-100',
           )}
         >
           {t.msg}

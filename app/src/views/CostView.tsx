@@ -28,7 +28,7 @@ export function CostView() {
     <div className="flex h-full min-h-0">
       <PricingRail />
       <div className="min-w-0 flex-1 overflow-y-auto">
-        <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-ink-800 bg-ink-950/95 px-6 py-3 backdrop-blur">
+        <div className="sticky top-0 z-10 flex items-center gap-3 border-b glass-bar px-6 py-3">
           <Segmented<Tab>
             value={tab}
             onChange={setTab}
@@ -58,7 +58,7 @@ function PricingRail() {
   const setC = (patch: Partial<typeof c>) => updateProject((p) => ({ ...p, commercial: { ...p.commercial, ...patch } }))
   const cut = state.settings.cut
   return (
-    <aside className="no-print w-[300px] shrink-0 space-y-3 overflow-y-auto border-r border-ink-800 bg-ink-950 p-3">
+    <aside className="no-print w-[300px] shrink-0 space-y-3 overflow-y-auto border-r glass-side p-3">
       <Panel title="Fiyatlandırma">
         <div className="space-y-3">
           <div>
@@ -121,7 +121,7 @@ function CostTab() {
           ['Net (iskonto sonrası)', m(totals.net), 'gold'],
           ['Brüt kâr', `${m(totals.grossProfit)}`, totals.grossProfit >= 0 ? 'good' : 'warn'],
         ].map(([l, v, tone]) => (
-          <div key={l} className="rounded-xl border border-ink-800 bg-ink-900/70 p-4">
+          <div key={l} className="rounded-xl glass-panel p-4">
             <Stat label={l} value={v} tone={tone as 'default'} sub={l === 'Brüt kâr' ? `%${num(marginPct, 1)} net üzerinden` : undefined} />
           </div>
         ))}
@@ -146,7 +146,7 @@ function CostTab() {
       >
         <table className="w-full text-[12.5px]">
           <thead>
-            <tr className="border-b border-ink-800 text-left text-[10.5px] uppercase tracking-wider text-ink-500">
+            <tr className="border-b border-white/[0.07] text-left text-[10.5px] uppercase tracking-wider text-ink-500">
               <th className="px-4 py-2.5">Poz</th>
               <th className="py-2.5">Tanım</th>
               <th className="py-2.5">Ölçü</th>
@@ -163,7 +163,7 @@ function CostTab() {
             {totals.lines.map((l, i) => {
               const g = (k: string) => l.cost.filter((c) => c.group === k).reduce((a, c) => a + c.total, 0)
               return (
-                <tr key={l.pos.id} className="border-b border-ink-800/60 hover:bg-ink-900">
+                <tr key={l.pos.id} className="border-b border-white/[0.07] hover:bg-white/[0.04]">
                   <td className="px-4 py-2 font-mono font-bold text-gold-400">P{i + 1}</td>
                   <td className="py-2 text-ink-100">{l.pos.title}</td>
                   <td className="py-2 font-mono text-ink-300">
@@ -189,7 +189,7 @@ function CostTab() {
             <table className="w-full text-[12px]">
               <tbody>
                 {l.cost.map((c, j) => (
-                  <tr key={j} className="border-b border-ink-800/50">
+                  <tr key={j} className="border-b border-white/[0.07]">
                     <td className="px-4 py-1.5 text-ink-200">
                       {c.label}
                       <div className="font-mono text-[10px] text-ink-500">{c.code}</div>
@@ -228,16 +228,16 @@ function CutTab() {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="rounded-xl border border-ink-800 bg-ink-900/70 p-4">
+        <div className="rounded-xl glass-panel p-4">
           <Stat label="Toplam boy" value={opt.reduce((a, o) => a + o.bars.length, 0)} sub={`${opt.length} profil kodu`} />
         </div>
-        <div className="rounded-xl border border-ink-800 bg-ink-900/70 p-4">
+        <div className="rounded-xl glass-panel p-4">
           <Stat label="Net / brüt metre" value={`${num(opt.reduce((a, o) => a + o.netMeters, 0), 1)} / ${num(opt.reduce((a, o) => a + o.grossMeters, 0), 1)}`} sub="m" />
         </div>
-        <div className="rounded-xl border border-ink-800 bg-ink-900/70 p-4">
+        <div className="rounded-xl glass-panel p-4">
           <Stat label="Gerçek fire" value={`%${num(barCost > 0 ? ((barCost - netCost) / barCost) * 100 : 0, 1)}`} tone="warn" sub={`fiyatlamada kullanılan: %${project.commercial.wastePercent}`} />
         </div>
-        <div className="rounded-xl border border-ink-800 bg-ink-900/70 p-4">
+        <div className="rounded-xl glass-panel p-4">
           <Stat label="Boy bazlı profil maliyeti" value={money(barCost, cur, catalog)} sub={`net metre: ${money(netCost, cur, catalog)}`} tone="gold" />
         </div>
       </div>
@@ -282,7 +282,7 @@ function ProfileBars({ o }: { o: ProfileOptimization }) {
         {o.bars.map((b, i) => (
           <div key={i} className="flex items-center gap-3">
             <span className="w-7 text-right font-mono text-[10.5px] text-ink-500">{i + 1}</span>
-            <div className="relative flex h-7 flex-1 overflow-hidden rounded-md bg-[repeating-linear-gradient(135deg,#1a2029_0_6px,#141922_6px_12px)] ring-1 ring-ink-700">
+            <div className="relative flex h-7 flex-1 overflow-hidden rounded-md bg-[repeating-linear-gradient(135deg,#1a2029_0_6px,#141922_6px_12px)] ring-1 ring-white/10">
               {b.cuts.map((c, j) => (
                 <div
                   key={j}
@@ -322,7 +322,7 @@ function GlassTab() {
         <Panel key={k} title={`${catalog.glasses[k]?.name ?? k}`} actions={<span className="font-mono text-[11px] text-ink-400">{rs.reduce((a, r) => a + r.qty, 0)} adet · {num(rs.reduce((a, r) => a + r.area, 0), 2)} m²</span>} bodyClassName="p-0">
           <table className="w-full text-[12.5px]">
             <thead>
-              <tr className="border-b border-ink-800 text-left text-[10.5px] uppercase tracking-wider text-ink-500">
+              <tr className="border-b border-white/[0.07] text-left text-[10.5px] uppercase tracking-wider text-ink-500">
                 <th className="px-4 py-2">Poz</th>
                 <th className="py-2 text-right">Genişlik</th>
                 <th className="py-2 text-right">Yükseklik</th>
@@ -332,7 +332,7 @@ function GlassTab() {
             </thead>
             <tbody>
               {rs.map((r, i) => (
-                <tr key={i} className="border-b border-ink-800/50">
+                <tr key={i} className="border-b border-white/[0.07]">
                   <td className="px-4 py-1.5 font-mono text-gold-400">{r.pos}</td>
                   <td className="py-1.5 text-right font-mono text-white">{r.w}</td>
                   <td className="py-1.5 text-right font-mono text-white">{r.h}</td>
@@ -367,7 +367,7 @@ function HardwareTab() {
         <table className="w-full text-[12.5px]">
           <tbody>
             {[...agg.entries()].map(([k, e]) => (
-              <tr key={k} className="border-b border-ink-800/50">
+              <tr key={k} className="border-b border-white/[0.07]">
                 <td className="px-4 py-2 text-ink-100">
                   {e.label}
                   <div className="font-mono text-[10px] text-ink-500">{k}</div>
@@ -383,8 +383,8 @@ function HardwareTab() {
       </Panel>
       <Panel title="Profil kesim listesi (poz bazında)" bodyClassName="p-0 max-h-[70vh] overflow-auto">
         <table className="w-full text-[12px]">
-          <thead className="sticky top-0 bg-ink-900">
-            <tr className="border-b border-ink-800 text-left text-[10.5px] uppercase tracking-wider text-ink-500">
+          <thead className="sticky top-0 bg-[#0e1726]/90 backdrop-blur">
+            <tr className="border-b border-white/[0.07] text-left text-[10.5px] uppercase tracking-wider text-ink-500">
               <th className="px-4 py-2">Poz</th>
               <th className="py-2">Parça</th>
               <th className="py-2 text-right">Boy</th>
@@ -394,7 +394,7 @@ function HardwareTab() {
           </thead>
           <tbody>
             {pieces.map((p, i) => (
-              <tr key={i} className="border-b border-ink-800/40">
+              <tr key={i} className="border-b border-white/[0.07]">
                 <td className="px-4 py-1.5 font-mono text-gold-400">P{p.pos + 1}</td>
                 <td className="py-1.5 text-ink-200">
                   {p.label}

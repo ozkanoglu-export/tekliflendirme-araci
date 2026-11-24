@@ -8,6 +8,7 @@ import { CostView } from './views/CostView'
 import { CatalogView } from './views/CatalogView'
 import { ProjectsView } from './views/ProjectsView'
 import { money } from './engine/format'
+import { LogoOnDark } from './ui/logo'
 import type { CurrencyCode } from './engine/types'
 
 const TABS: Array<{ view: View; label: string; icon: typeof PenTool; key: string }> = [
@@ -39,6 +40,7 @@ export function BrandMark({ size = 34 }: { size?: number }) {
 export default function App() {
   const { state, setView, undo, redo, saved, totals, updateProject } = useApp()
   const { project, view, catalog } = state
+  const co = state.settings.company
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -71,12 +73,12 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="no-print relative z-30 flex h-14 shrink-0 items-center gap-4 border-b border-ink-800 bg-ink-950/95 px-4 backdrop-blur">
+      <header className="no-print relative z-30 flex h-14 shrink-0 items-center gap-4 border-b glass-bar px-4">
         <div className="flex min-w-0 items-center gap-3">
-          <BrandMark />
+          {co.logoDark || co.logo ? <LogoOnDark co={co} height={32} /> : <BrandMark />}
           <div className="leading-tight">
             <div className="flex items-center gap-2">
-              <span className="text-[15px] font-extrabold tracking-[0.14em] text-white">ÖZKANOĞLU</span>
+              {!(co.logoDark || co.logo) && <span className="text-[15px] font-extrabold tracking-[0.14em] text-white">{co.name}</span>}
               <span className="rounded-md border border-gold-500/30 bg-gold-500/10 px-1.5 py-px font-mono text-[10px] font-semibold text-gold-400">PenCAD 5</span>
             </div>
             <div className="truncate text-[11px] text-ink-400">
@@ -88,7 +90,7 @@ export default function App() {
           </div>
         </div>
 
-        <nav className="mx-auto hidden items-center gap-1 rounded-xl border border-ink-800 bg-ink-900/70 p-1 lg:flex">
+        <nav className="mx-auto hidden items-center gap-1 rounded-xl glass-panel p-1 lg:flex">
           {TABS.map((t) => (
             <button
               key={t.view}
@@ -96,12 +98,12 @@ export default function App() {
               title={`${t.label} (Alt+${t.key})`}
               className={cx(
                 'flex h-8 items-center gap-2 rounded-lg px-3 text-[12.5px] font-medium transition-all',
-                view === t.view ? 'bg-ink-700 text-white shadow-[0_1px_0_rgba(255,255,255,0.06)_inset]' : 'text-ink-400 hover:bg-ink-800 hover:text-ink-100',
+                view === t.view ? 'bg-white/[0.12] text-white shadow-[0_1px_0_rgba(255,255,255,0.06)_inset]' : 'text-ink-400 hover:bg-white/[0.07] hover:text-ink-100',
               )}
             >
               <t.icon size={15} className={view === t.view ? 'text-gold-400' : ''} />
               {t.label}
-              {t.view === 'quote' && <span className="rounded-full bg-ink-950 px-1.5 font-mono text-[10px] text-brand-300">{project.positions.length}</span>}
+              {t.view === 'quote' && <span className="rounded-full bg-black/30 px-1.5 font-mono text-[10px] text-brand-300">{project.positions.length}</span>}
             </button>
           ))}
         </nav>
@@ -146,9 +148,9 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="no-print flex gap-1 overflow-x-auto border-b border-ink-800 bg-ink-950 px-2 py-1.5 lg:hidden">
+      <nav className="no-print flex gap-1 overflow-x-auto border-b glass-bar px-2 py-1.5 lg:hidden">
         {TABS.map((t) => (
-          <button key={t.view} onClick={() => setView(t.view)} className={cx('flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px]', view === t.view ? 'bg-ink-700 text-white' : 'text-ink-400')}>
+          <button key={t.view} onClick={() => setView(t.view)} className={cx('flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px]', view === t.view ? 'bg-white/[0.12] text-white' : 'text-ink-400')}>
             <t.icon size={14} /> {t.label}
           </button>
         ))}

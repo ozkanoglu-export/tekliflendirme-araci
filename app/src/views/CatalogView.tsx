@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { fileToLogo } from '../ui/logo'
 import { RotateCcw, TrendingUp } from 'lucide-react'
 import { useApp } from '../store/store'
 import { Button, Label, NumberInput, Panel, Segmented, Select, TextInput, cx, toast } from '../ui/kit'
@@ -8,7 +9,7 @@ import type { CasementDeductions, Catalog, CurrencyCode, ProfileRole } from '../
 type Tab = 'profiles' | 'glass' | 'hw' | 'rates' | 'company' | 'deductions'
 const ROLE_LABEL: Record<ProfileRole, string> = { frame: 'Kasa', winSash: 'Pencere kanadı', doorSash: 'Kapı kanadı', mullion: 'Ortakayıt', hok: 'HOK ara' }
 
-const cellInput = 'h-8 w-full rounded-md border border-ink-700 bg-ink-950/70 px-2 text-right font-mono text-[12.5px] text-ink-100 outline-none focus:border-brand-400'
+const cellInput = 'h-8 w-full rounded-md border border-white/10 bg-black/20 px-2 text-right font-mono text-[12.5px] text-ink-100 outline-none focus:border-brand-400'
 
 function PriceCell({ value, onChange, tone }: { value: number; onChange: (v: number) => void; tone?: 'gold' }) {
   const [t, setT] = useState(String(value))
@@ -72,9 +73,9 @@ export function CatalogView() {
             variant="danger"
             size="sm"
             onClick={() => {
-              if (!confirm('Katalog ve ayarlar fabrika değerlerine dönsün mü?')) return
+              if (!confirm('Katalog ve ayarlar fabrika değerlerine dönsün mü? (Logolar korunur)')) return
               setCatalog(() => clone(DEFAULT_CATALOG))
-              setSettings(() => clone(DEFAULT_SETTINGS))
+              setSettings((s) => ({ ...clone(DEFAULT_SETTINGS), company: { ...DEFAULT_SETTINGS.company, logo: s.company.logo, logoDark: s.company.logoDark, partnerLogos: s.company.partnerLogos } }))
               toast('Fabrika ayarlarına dönüldü', 'info')
             }}
           >
@@ -117,7 +118,7 @@ export function CatalogView() {
             { value: 'glass', label: 'Cam & panel' },
             { value: 'hw', label: 'Aksesuar & ek' },
             { value: 'rates', label: 'Kur & ihracat' },
-            { value: 'company', label: 'Firma bilgileri' },
+            { value: 'company', label: 'Firma & logo' },
             { value: 'deductions', label: 'Düşüm tabloları' },
           ]}
         />
@@ -139,7 +140,7 @@ export function CatalogView() {
             >
               <table className="w-full text-[12.5px]">
                 <thead>
-                  <tr className="border-b border-ink-800 text-left text-[10.5px] uppercase tracking-wider text-ink-500">
+                  <tr className="border-b border-white/[0.07] text-left text-[10.5px] uppercase tracking-wider text-ink-500">
                     <th className="px-4 py-2">Rol</th>
                     <th className="py-2">Kod</th>
                     <th className="py-2">Profil</th>
@@ -153,7 +154,7 @@ export function CatalogView() {
                     const p = s.profiles[role]
                     const set = (patch: Partial<typeof p>) => setCatalog((c) => ({ ...c, series: { ...c.series, [s.key]: { ...c.series[s.key], profiles: { ...c.series[s.key].profiles, [role]: { ...c.series[s.key].profiles[role], ...patch } } } } }))
                     return (
-                      <tr key={role} className="border-b border-ink-800/50">
+                      <tr key={role} className="border-b border-white/[0.07]">
                         <td className="px-4 py-1.5 text-ink-400">{ROLE_LABEL[role]}</td>
                         <td className="py-1.5 font-mono text-[11.5px] text-gold-400">{p.code}</td>
                         <td className="py-1.5 text-ink-100">{p.name}</td>
@@ -178,7 +179,7 @@ export function CatalogView() {
           <Panel bodyClassName="p-0">
             <table className="w-full text-[12.5px]">
               <thead>
-                <tr className="border-b border-ink-800 text-left text-[10.5px] uppercase tracking-wider text-ink-500">
+                <tr className="border-b border-white/[0.07] text-left text-[10.5px] uppercase tracking-wider text-ink-500">
                   <th className="px-4 py-2.5">Kod</th>
                   <th className="py-2.5">Açıklama</th>
                   <th className="w-24 py-2.5 text-right">Ug</th>
@@ -187,10 +188,10 @@ export function CatalogView() {
               </thead>
               <tbody>
                 {Object.values(catalog.glasses).map((g) => (
-                  <tr key={g.key} className="border-b border-ink-800/50">
+                  <tr key={g.key} className="border-b border-white/[0.07]">
                     <td className="px-4 py-1.5 font-mono text-[11.5px] text-emerald-400">{g.key}</td>
                     <td className="py-1.5 text-ink-100">
-                      {g.name} {g.panel && <span className="ml-1 rounded bg-ink-800 px-1.5 text-[10px] text-ink-300">panel</span>}
+                      {g.name} {g.panel && <span className="ml-1 rounded bg-white/[0.07] px-1.5 text-[10px] text-ink-300">panel</span>}
                     </td>
                     <td className="py-1.5 pl-2">
                       <PriceCell value={g.ug} onChange={(v) => setCatalog((c) => ({ ...c, glasses: { ...c.glasses, [g.key]: { ...g, ug: v } } }))} />
@@ -211,7 +212,7 @@ export function CatalogView() {
               <table className="w-full text-[12.5px]">
                 <tbody>
                   {Object.values(catalog.hardware).map((h) => (
-                    <tr key={h.key} className="border-b border-ink-800/50">
+                    <tr key={h.key} className="border-b border-white/[0.07]">
                       <td className="px-4 py-1.5 text-ink-100">
                         {h.name}
                         <div className="font-mono text-[10px] text-ink-500">{h.key}</div>
@@ -228,7 +229,7 @@ export function CatalogView() {
               <table className="w-full text-[12.5px]">
                 <tbody>
                   {Object.values(catalog.extras).map((e) => (
-                    <tr key={e.key} className="border-b border-ink-800/50">
+                    <tr key={e.key} className="border-b border-white/[0.07]">
                       <td className="px-4 py-1.5 text-ink-100">
                         {e.name}
                         <div className="font-mono text-[10px] text-ink-500">€ / {e.unit}</div>
@@ -315,15 +316,72 @@ function RatesTab() {
 function CompanyTab() {
   const { state, setSettings } = useApp()
   const co = state.settings.company
-  const set = (k: keyof typeof co) => (v: string) => setSettings((s) => ({ ...s, company: { ...s.company, [k]: v } }))
-  const F = ({ k, label, mono }: { k: keyof typeof co; label: string; mono?: boolean }) => (
+  type TextKey = Exclude<keyof typeof co, 'logo' | 'logoDark' | 'partnerLogos'>
+  const set = (k: TextKey) => (v: string) => setSettings((s) => ({ ...s, company: { ...s.company, [k]: v } }))
+  const F = ({ k, label, mono }: { k: TextKey; label: string; mono?: boolean }) => (
     <div>
       <Label>{label}</Label>
       <TextInput value={co[k]} onChange={set(k)} mono={mono} />
     </div>
   )
+  const setLogo = (patch: Partial<typeof co>) => setSettings((s) => ({ ...s, company: { ...s.company, ...patch } }))
   return (
     <div className="grid gap-5 lg:grid-cols-2">
+      <Panel title="Logolar" className="lg:col-span-2">
+        <div className="grid gap-4 md:grid-cols-3">
+          <LogoSlot
+            title="Ana logo (açık zemin)"
+            hint="Teklif sayfalarında, beyaz kâğıt üzerinde. PNG (şeffaf) veya SVG önerilir."
+            value={co.logo}
+            light
+            onChange={(v) => setLogo({ logo: v })}
+          />
+          <LogoSlot
+            title="Beyaz logo (koyu zemin)"
+            hint="Uygulama üst barında ve teklifin lacivert başlığında. Yoksa ana logo beyaz kapsülde gösterilir."
+            value={co.logoDark}
+            onChange={(v) => setLogo({ logoDark: v })}
+          />
+          <div>
+            <div className="mb-1 text-[12.5px] font-medium text-ink-100">Marka & iş ortağı logoları</div>
+            <p className="mb-2 text-[11px] leading-relaxed text-ink-500">Teklifin son sayfasında "Çözüm ortaklarımız" satırında (ör. Adopen, Accado, grup firmaları).</p>
+            <div className="grid grid-cols-3 gap-2">
+              {(co.partnerLogos ?? []).map((src, i) => (
+                <div key={i} className="group relative flex h-14 items-center justify-center rounded-lg bg-white/95 p-1.5">
+                  <img src={src} alt="" className="max-h-full max-w-full object-contain" />
+                  <button
+                    onClick={() => setLogo({ partnerLogos: (co.partnerLogos ?? []).filter((_, j) => j !== i) })}
+                    className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[11px] text-white group-hover:flex"
+                    title="Kaldır"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <label className="flex h-14 cursor-pointer items-center justify-center rounded-lg border border-dashed border-white/20 text-[11px] text-ink-400 transition hover:border-brand-400 hover:text-brand-200">
+                + Ekle
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={async (e) => {
+                    const files = [...(e.target.files ?? [])]
+                    e.target.value = ''
+                    try {
+                      const urls = await Promise.all(files.map((f) => fileToLogo(f, 600, 240)))
+                      setLogo({ partnerLogos: [...(co.partnerLogos ?? []), ...urls] })
+                      toast(`${urls.length} logo eklendi`)
+                    } catch (err) {
+                      toast((err as Error).message, 'err')
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+      </Panel>
       <Panel title="Firma (teklif antetinde)">
         <div className="space-y-3">
           {F({ k: 'name', label: 'Marka adı' })}
@@ -374,12 +432,12 @@ function DeductionsTab() {
   const casement = Object.values(state.catalog.series).filter((s) => s.kind === 'casement')
   return (
     <Panel title="Düşüm tabloları (mm, her taraf)" bodyClassName="p-0">
-      <div className="border-b border-ink-800 bg-amber-500/5 px-4 py-2.5 text-[12px] text-amber-200">
+      <div className="border-b border-white/[0.07] bg-amber-500/5 px-4 py-2.5 text-[12px] text-amber-200">
         Değerler eski PenCAD 4.5 formüllerinden alındı. Ortakayıt eksen değerleri Adopen teknik kataloğundan teyit edilmeli. Değişiklik tüm cam/kesim ölçülerini anında günceller.
       </div>
       <table className="w-full text-[12.5px]">
         <thead>
-          <tr className="border-b border-ink-800 text-left text-[10.5px] uppercase tracking-wider text-ink-500">
+          <tr className="border-b border-white/[0.07] text-left text-[10.5px] uppercase tracking-wider text-ink-500">
             <th className="px-4 py-2.5">Parametre</th>
             {casement.map((s) => (
               <th key={s.key} className="w-32 px-2 py-2.5 text-right">
@@ -390,7 +448,7 @@ function DeductionsTab() {
         </thead>
         <tbody>
           {DED_LABELS.map(([k, l]) => (
-            <tr key={k} className="border-b border-ink-800/50">
+            <tr key={k} className="border-b border-white/[0.07]">
               <td className="px-4 py-1.5 text-ink-200">{l}</td>
               {casement.map((s) => (
                 <td key={s.key} className="px-2 py-1.5">
@@ -402,5 +460,49 @@ function DeductionsTab() {
         </tbody>
       </table>
     </Panel>
+  )
+}
+
+function LogoSlot({ title, hint, value, light, onChange }: { title: string; hint: string; value?: string; light?: boolean; onChange: (v: string | undefined) => void }) {
+  const [drag, setDrag] = useState(false)
+  const load = async (f?: File) => {
+    if (!f) return
+    try {
+      onChange(await fileToLogo(f))
+      toast('Logo yüklendi')
+    } catch (err) {
+      toast((err as Error).message, 'err')
+    }
+  }
+  return (
+    <div>
+      <div className="mb-1 text-[12.5px] font-medium text-ink-100">{title}</div>
+      <p className="mb-2 text-[11px] leading-relaxed text-ink-500">{hint}</p>
+      <label
+        onDragOver={(e) => {
+          e.preventDefault()
+          setDrag(true)
+        }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDrag(false)
+          load(e.dataTransfer.files?.[0])
+        }}
+        className={cx(
+          'relative flex h-24 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed p-3 transition',
+          drag ? 'border-brand-400 bg-brand-500/10' : 'border-white/20 hover:border-brand-400/70',
+          value && (light ? 'bg-white' : 'bg-[#002b5c]'),
+        )}
+      >
+        {value ? <img src={value} alt="" className="max-h-full max-w-full object-contain" /> : <span className="text-center text-[12px] text-ink-400">Sürükle-bırak ya da tıkla<br /><span className="text-[10.5px] text-ink-500">PNG · SVG · JPG</span></span>}
+        <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden" onChange={(e) => (load(e.target.files?.[0]), (e.target.value = ''))} />
+      </label>
+      {value && (
+        <button onClick={() => onChange(undefined)} className="mt-1.5 text-[11px] text-red-300 hover:text-red-200">
+          Logoyu kaldır
+        </button>
+      )}
+    </div>
   )
 }
