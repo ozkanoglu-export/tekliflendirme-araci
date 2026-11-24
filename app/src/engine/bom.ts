@@ -149,9 +149,11 @@ export function calcPosition(pos: Position, catalog: Catalog, commercial: Commer
     const m = geo.panes.reduce((a, p) => a + (2 * p.w + 2 * p.h) / 1000, 0)
     cost.push({ group: 'extra', label: ex.GRID_MUNTIN.name, code: 'GRID_MUNTIN', quantity: m, unit: 'Mt', unitPrice: ex.GRID_MUNTIN.price, total: m * ex.GRID_MUNTIN.price })
   }
-  if (pos.frameExt && ex.FRAME_EXT_35X70) {
+  if (pos.frameExt !== 'none' && ex.FRAME_EXT_35X70) {
     const up = tier === 'colored' ? (ex.FRAME_EXT_35X70.colored ?? ex.FRAME_EXT_35X70.price) : ex.FRAME_EXT_35X70.price
-    cost.push({ group: 'extra', label: ex.FRAME_EXT_35X70.name, code: 'FRAME_EXT_35X70', quantity: perimeterM, unit: 'Mt', unitPrice: up, total: perimeterM * up })
+    // Alt: tam genişlik; 4 kenar: dış çevre
+    const m = pos.frameExt === 'bottom' ? geo.outerW / 1000 : (2 * geo.outerW + 2 * (geo.totalH - geo.shutterH)) / 1000
+    cost.push({ group: 'extra', label: ex.FRAME_EXT_35X70.name, code: 'FRAME_EXT_35X70', quantity: m, unit: 'Mt', unitPrice: up, total: m * up })
   }
   if (pos.flyscreen !== 'NONE') {
     const key = pos.flyscreen === 'SABIT' ? 'FLYSCREEN_SABIT' : pos.flyscreen === 'MENTESELI' ? 'FLYSCREEN_MENTESELI' : 'FLYSCREEN_PILELI'
@@ -160,7 +162,7 @@ export function calcPosition(pos: Position, catalog: Catalog, commercial: Commer
   }
 
   const materialUnit = cost.reduce((a, c) => a + c.total, 0)
-  const grossArea = (geo.W * geo.totalH) / 1e6
+  const grossArea = (geo.outerW * geo.totalH) / 1e6
   const laborUnit = Math.max(0, commercial.laborPerUnit) + Math.max(0, commercial.laborPerM2) * grossArea
   const margin = Math.min(90, Math.max(0, commercial.marginPercent)) / 100
   const priceUnit = round2((materialUnit + laborUnit) / (1 - margin))
@@ -241,12 +243,16 @@ export function calcProject(positions: Position[], catalog: Catalog, commercial:
     totalUnits += q
   }
   const r = settings.exportRules
-  const packaging = commercial.packagingOverride ?? round2(totalArea * r.packagingPerM2)
+  // Her kalem ayrı açılıp kapatılabilir; manuel tutar otomatik hesabı ezer
+  let packaging = commercial.packagingOverride ?? round2(totalArea * r.packagingPerM2)
+  if (!commercial.includePackaging) packaging = 0
   let pallet = totalArea > 0 ? r.palletBase : 0
   if (totalArea > r.palletBaseArea) pallet += Math.ceil((totalArea - r.palletBaseArea) / r.palletStepArea) * r.palletStepPrice
   if (commercial.palletOverride !== null) pallet = commercial.palletOverride
-  let freight = FREIGHT_INCLUDED[commercial.incoterm] ? Math.ceil(totalArea / r.freightBlockArea) * r.freightPerBlock : 0
+  if (!commercial.includePallet) pallet = 0
+  let freight = Math.ceil(totalArea / r.freightBlockArea) * r.freightPerBlock
   if (commercial.freightOverride !== null) freight = commercial.freightOverride
+  if (!commercial.includeFreight) freight = 0
 
   const subtotal = round2(products + packaging + pallet + freight)
   const discount = round2((subtotal * Math.min(100, Math.max(0, commercial.discountPercent))) / 100)

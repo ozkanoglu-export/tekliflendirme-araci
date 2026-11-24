@@ -82,9 +82,13 @@ export interface PositionGeometry {
   W: number
   /** Kasa yüksekliği (panjur kutusu hariç) */
   H: number
-  /** Toplam yükseklik (panjur dahil) */
+  /** Toplam genişlik (kasa yükseltme dahil) */
+  outerW: number
+  /** Toplam yükseklik (panjur ve kasa yükseltme dahil) */
   totalH: number
   shutterH: number
+  /** Kasa yükseltme kalınlıkları (mm) */
+  ext: { l: number; t: number; r: number; b: number }
   threshold: boolean
   kind: Series['kind']
   leaves: LeafGeo[]
@@ -148,21 +152,31 @@ export function computeGeometry(pos: Position, catalog: Catalog): PositionGeomet
   const series = catalog.series[pos.series] ?? Object.values(catalog.series)[0]
   const warnings: string[] = []
 
-  const W = Math.max(200, pos.width)
-  let H = Math.max(200, pos.height)
-  let totalH = H
+  // Kasa yükseltme: girilen toplam ölçüden düşülür (alt veya 4 kenar)
+  const extSize = catalog.extras.FRAME_EXT_35X70?.size ?? 35
+  const ext = { l: 0, t: 0, r: 0, b: 0 }
+  if (pos.frameExt === 'bottom') ext.b = extSize
+  else if (pos.frameExt === 'all') ext.l = ext.t = ext.r = ext.b = extSize
+
+  const outerW = Math.max(200, pos.width)
+  const W = Math.max(200, outerW - ext.l - ext.r)
+  let totalH = Math.max(200, pos.height)
   let shutterH = 0
+  let H = totalH - ext.t - ext.b
   if (pos.shutter.enabled) {
     shutterH = SHUTTER_BOX
-    if (pos.shutter.mode === 'subtract') H = Math.max(300, totalH - SHUTTER_BOX)
-    else totalH = H + SHUTTER_BOX
+    if (pos.shutter.mode === 'subtract') H = totalH - SHUTTER_BOX - ext.t - ext.b
+    else totalH = totalH + SHUTTER_BOX
   }
+  H = Math.max(300, H)
 
   const geo: PositionGeometry = {
     W,
     H,
+    outerW,
     totalH,
     shutterH,
+    ext,
     threshold: false,
     kind: series.kind,
     leaves: [],

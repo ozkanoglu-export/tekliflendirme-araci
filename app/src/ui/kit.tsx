@@ -1,5 +1,5 @@
-import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
-import { parseDimension } from '../engine/format'
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { fmtLen, parseDimension } from '../engine/format'
 
 export function cx(...c: Array<string | false | null | undefined>): string {
   return c.filter(Boolean).join(' ')
@@ -85,42 +85,113 @@ export function NumberInput({ value, onChange, min, max, step, suffix, className
   )
 }
 
-/** Ölçü girişi: 1250 · 125cm · 1,25m · 49 1/4" */
-export function DimInput({ value, onChange, className, big }: { value: number; onChange: (v: number) => void; className?: string; big?: boolean }) {
-  const [txt, setTxt] = useState(String(value))
+/**
+ * Ölçü girişi — yazarken serbest, geçerli değer 0,3 sn sonra çizime yansır.
+ * mm modunda: 1250 · 125cm · 1,25m · 49 1/4"   inç modunda: 49 1/4 · 49.25 · 1250mm
+ */
+export function DimInput({ value, onChange, className, big, units = 'mm', min = 200, max = 12000 }: { value: number; onChange: (v: number) => void; className?: string; big?: boolean; units?: 'mm' | 'inch'; min?: number; max?: number }) {
+  const [txt, setTxt] = useState(fmtLen(value, units))
+  const [focused, setFocused] = useState(false)
   const [err, setErr] = useState(false)
-  useEffect(() => setTxt(String(value)), [value])
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const valueRef = useRef(value)
+  valueRef.current = value
+  useEffect(() => {
+    if (!focused) setTxt(fmtLen(value, units))
+  }, [value, units, focused])
+  useEffect(() => () => clearTimeout(timer.current), [])
+
+  const valid = (v: number | null): v is number => v !== null && v >= min && v <= max
+  const live = (t: string) => {
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => {
+      const v = parseDimension(t, units)
+      if (valid(v) && v !== valueRef.current) onChange(v)
+    }, 300)
+  }
   const commit = () => {
-    const v = parseDimension(txt)
-    if (v === null || v < 200 || v > 12000) {
+    clearTimeout(timer.current)
+    setFocused(false)
+    const v = parseDimension(txt, units)
+    if (!valid(v)) {
       setErr(true)
-      setTxt(String(value))
+      setTxt(fmtLen(value, units))
       setTimeout(() => setErr(false), 1200)
       return
     }
     setErr(false)
+    if (v !== value) onChange(v)
+    setTxt(fmtLen(v, units))
+  }
+  const step = (dir: 1 | -1, big: boolean) => {
+    const d = units === 'inch' ? (big ? 25.4 : 25.4 / 16) : big ? 100 : 10
+    const v = Math.min(max, Math.max(min, Math.round(value + dir * d)))
     onChange(v)
-    setTxt(String(v))
+    setTxt(fmtLen(v, units))
   }
   return (
     <div className={cx('relative', className)}>
       <input
         value={txt}
-        onChange={(e) => setTxt(e.target.value)}
+        inputMode={units === 'inch' ? 'text' : 'decimal'}
+        onChange={(e) => {
+          setTxt(e.target.value)
+          live(e.target.value)
+        }}
         onBlur={commit}
-        onFocus={(e) => e.target.select()}
+        onFocus={(e) => {
+          setFocused(true)
+          e.target.select()
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+          if (e.key === 'Escape') {
+            setTxt(fmtLen(value, units))
+            ;(e.target as HTMLInputElement).blur()
+          }
           if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
             e.preventDefault()
-            const d = (e.shiftKey ? 100 : 10) * (e.key === 'ArrowUp' ? 1 : -1)
-            onChange(Math.max(200, value + d))
+            step(e.key === 'ArrowUp' ? 1 : -1, e.shiftKey)
           }
         }}
         className={cx(inputCls, 'font-mono tabular-nums pr-10', big && 'h-11 text-[17px] font-semibold', err && 'border-red-500 ring-2 ring-red-500/30')}
       />
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-ink-500">mm</span>
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-ink-500">{units === 'inch' ? 'inç' : 'mm'}</span>
+      {focused && units === 'inch' && valid(parseDimension(txt, units)) && (
+        <span className="pointer-events-none absolute -bottom-4 right-1 font-mono text-[10px] text-ink-500">= {parseDimension(txt, units)} mm</span>
+      )}
     </div>
+  )
+}
+
+/** Tam sayı (adet) girişi — silip yeniden yazmaya izin verir */
+export function IntInput({ value, onChange, min = 1, max = 9999, className }: { value: number; onChange: (v: number) => void; min?: number; max?: number; className?: string }) {
+  const [txt, setTxt] = useState(String(value))
+  const [focused, setFocused] = useState(false)
+  useEffect(() => {
+    if (!focused) setTxt(String(value))
+  }, [value, focused])
+  return (
+    <input
+      value={txt}
+      inputMode="numeric"
+      onFocus={(e) => {
+        setFocused(true)
+        e.target.select()
+      }}
+      onChange={(e) => {
+        const t = e.target.value.replace(/[^0-9]/g, '')
+        setTxt(t)
+        const v = parseInt(t)
+        if (Number.isFinite(v) && v >= min && v <= max) onChange(v)
+      }}
+      onBlur={() => {
+        setFocused(false)
+        setTxt(String(value))
+      }}
+      onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+      className={className}
+    />
   )
 }
 

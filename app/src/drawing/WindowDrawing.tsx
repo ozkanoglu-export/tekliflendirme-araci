@@ -22,6 +22,8 @@ interface Props {
   onSelect?: (leafId: string) => void
   showGlassSizes?: boolean
   highlightRect?: Rect | null
+  /** Ölçü etiketi biçimi (mm / inç) */
+  fmt?: (mm: number) => string
   className?: string
 }
 
@@ -124,7 +126,7 @@ function shift(r: Rect, dy: number): Rect {
   return { ...r, y: r.y + dy }
 }
 
-export function WindowDrawing({ pos, geo, catalog, variant, convention = 'din', selectedId, onSelect, showGlassSizes = true, highlightRect, className }: Props) {
+export function WindowDrawing({ pos, geo, catalog, variant, convention = 'din', selectedId, onSelect, showGlassSizes = true, highlightRect, fmt = (v: number) => String(Math.round(v)), className }: Props) {
   const uidBase = useId().replace(/:/g, '')
   const P = PALETTES[variant]
   const series = catalog.series[pos.series] ?? Object.values(catalog.series)[0]
@@ -132,8 +134,11 @@ export function WindowDrawing({ pos, geo, catalog, variant, convention = 'din', 
   const profFill = color.woodgrain ? `url(#${uidBase}-wood)` : color.fill
   const profStroke = color.tier === 'white' ? (variant === 'paper' ? '#4b5563' : '#5b6675') : color.stroke
 
-  const { W, H, totalH, shutterH } = geo
-  const big = Math.max(W, totalH)
+  const { W, H, totalH, shutterH: boxH, ext, outerW: OW } = geo
+  // Kasanın çizim ofseti: panjur kutusu + üst kasa yükseltme (y), sol kasa yükseltme (x)
+  const shutterH = boxH + ext.t
+  const fx = ext.l
+  const big = Math.max(OW, totalH)
   const fs = Math.max(26, big * (variant === 'paper' ? 0.052 : 0.03))
   const showDims = variant !== 'thumb'
   const dimGap = fs * 2.1
@@ -146,8 +151,11 @@ export function WindowDrawing({ pos, geo, catalog, variant, convention = 'din', 
   const vChain = vAll.length ? vAll : vAxes
   const hChain = hAll.length ? hAll : hAxes
 
-  const padB = showDims ? dimGap * (vChain.length ? 2 : 1) + fs * 0.6 : fs * 0.3
-  const padR = showDims ? dimGap * (hChain.length || shutterH ? 2 : 1) + fs * 1.2 : fs * 0.3
+  const uniq = (a: number[]) => [...new Set(a.map((v) => Math.round(v)))].sort((x, y) => x - y)
+  const hPts = uniq([0, fx, ...vChain.map((a) => a + fx), fx + W, OW])
+  const vPts = uniq([0, boxH, shutterH, ...hChain.map((a) => a + shutterH), shutterH + H, totalH])
+  const padB = showDims ? dimGap * (hPts.length > 2 ? 2 : 1) + fs * 0.6 : fs * 0.3
+  const padR = showDims ? dimGap * (vPts.length > 2 ? 2 : 1) + fs * 1.2 : fs * 0.3
   const padT = showDims ? fs * 0.8 : fs * 0.3
   const padL = showDims ? fs * 0.8 : fs * 0.3
 
@@ -296,20 +304,14 @@ export function WindowDrawing({ pos, geo, catalog, variant, convention = 'din', 
   const dims: ReactNode[] = []
   if (showDims) {
     const yInner = totalH + dimGap * 0.9
-    const yOuter = totalH + dimGap * (vChain.length ? 1.9 : 0.9)
-    if (vChain.length) {
-      const pts = [0, ...vChain, W]
-      for (let i = 0; i < pts.length - 1; i++) dims.push(dimH(pts[i], pts[i + 1], yInner, String(Math.round(pts[i + 1] - pts[i])), `vi${i}`, yInner - totalH - fs * 0.3))
-    }
-    dims.push(dimH(0, W, yOuter, String(W), 'wo', yOuter - totalH - fs * 0.3))
+    const yOuter = totalH + dimGap * (hPts.length > 2 ? 1.9 : 0.9)
+    if (hPts.length > 2) for (let i = 0; i < hPts.length - 1; i++) dims.push(dimH(hPts[i], hPts[i + 1], yInner, fmt(hPts[i + 1] - hPts[i]), `vi${i}`, yInner - totalH - fs * 0.3))
+    dims.push(dimH(0, OW, yOuter, fmt(OW), 'wo', yOuter - totalH - fs * 0.3))
 
-    const xInner = W + dimGap * 0.9
-    const xOuter = W + dimGap * (hChain.length || shutterH ? 1.9 : 0.9)
-    const innerPts = [...(shutterH ? [0] : []), shutterH, ...hChain.map((a) => a + shutterH), shutterH + H]
-    if (innerPts.length > 2) {
-      for (let i = 0; i < innerPts.length - 1; i++) dims.push(dimV(innerPts[i], innerPts[i + 1], xInner, String(Math.round(innerPts[i + 1] - innerPts[i])), `hi${i}`, xInner - W - fs * 0.3))
-    }
-    dims.push(dimV(0, totalH, xOuter, String(totalH), 'ho', xOuter - W - fs * 0.3))
+    const xInner = OW + dimGap * 0.9
+    const xOuter = OW + dimGap * (vPts.length > 2 ? 1.9 : 0.9)
+    if (vPts.length > 2) for (let i = 0; i < vPts.length - 1; i++) dims.push(dimV(vPts[i], vPts[i + 1], xInner, fmt(vPts[i + 1] - vPts[i]), `hi${i}`, xInner - OW - fs * 0.3))
+    dims.push(dimV(0, totalH, xOuter, fmt(totalH), 'ho', xOuter - OW - fs * 0.3))
   }
 
   const threshold = geo.threshold
@@ -317,7 +319,7 @@ export function WindowDrawing({ pos, geo, catalog, variant, convention = 'din', 
 
   return (
     <svg
-      viewBox={`${-padL} ${-padT} ${W + padL + padR} ${totalH + padT + padB}`}
+      viewBox={`${-padL} ${-padT} ${OW + padL + padR} ${totalH + padT + padB}`}
       className={className}
       xmlns="http://www.w3.org/2000/svg"
       preserveAspectRatio="xMidYMid meet"
@@ -353,22 +355,29 @@ export function WindowDrawing({ pos, geo, catalog, variant, convention = 'din', 
       </defs>
 
       {/* Panjur kutusu */}
-      {shutterH > 0 && (
+      {boxH > 0 && (
         <g>
-          <rect x={0} y={0} width={W} height={shutterH} fill={`url(#${uidBase}-shutter)`} stroke={P.line} strokeWidth={1.1} {...NS} />
-          {showDims && W > fs * 9 && (
-            <text x={W / 2} y={shutterH / 2 + fs * 0.25} fontSize={fs * 0.6} textAnchor="middle" fill="#f1f5f9" fontFamily="Inter, sans-serif" fontWeight={700} letterSpacing={fs * 0.05}>
+          <rect x={0} y={0} width={OW} height={boxH} fill={`url(#${uidBase}-shutter)`} stroke={P.line} strokeWidth={1.1} {...NS} />
+          {showDims && OW > fs * 9 && (
+            <text x={OW / 2} y={boxH / 2 + fs * 0.25} fontSize={fs * 0.6} textAnchor="middle" fill="#f1f5f9" fontFamily="Inter, sans-serif" fontWeight={700} letterSpacing={fs * 0.05}>
               MONOBLOK PANJUR 195
             </text>
           )}
         </g>
       )}
 
+      {/* Kasa yükseltme profili */}
+      {ext.b > 0 && <rect x={0} y={shutterH + H} width={OW} height={ext.b} fill={profFill} stroke={profStroke} strokeWidth={1} {...NS} />}
+      {ext.t > 0 && <rect x={0} y={boxH} width={OW} height={ext.t} fill={profFill} stroke={profStroke} strokeWidth={1} {...NS} />}
+      {ext.l > 0 && <rect x={0} y={shutterH} width={ext.l} height={H} fill={profFill} stroke={profStroke} strokeWidth={1} {...NS} />}
+      {ext.r > 0 && <rect x={OW - ext.r} y={shutterH} width={ext.r} height={H} fill={profFill} stroke={profStroke} strokeWidth={1} {...NS} />}
+
+      <g transform={`translate(${fx} 0)`}>
       {/* Kasa iç zemini (çıta) */}
       <rect x={frameRect.x} y={frameRect.y} width={W} height={H} fill={color.tier === 'white' ? '#dfe3e8' : color.stroke} />
 
       {/* Sabit camlar */}
-      {geo.panes.filter((p) => !p.inSash).map((p, i) => renderPane(p.rect, p.glassKey, `fp${i}`, `${p.w}×${p.h}`))}
+      {geo.panes.filter((p) => !p.inSash).map((p, i) => renderPane(p.rect, p.glassKey, `fp${i}`, `${fmt(p.w)}×${fmt(p.h)}`))}
 
       {/* Ortakayıtlar */}
       {mullions.map((m) => {
@@ -395,7 +404,7 @@ export function WindowDrawing({ pos, geo, catalog, variant, convention = 'din', 
         return (
           <g key={`s${i}`}>
             <rect x={r.x} y={r.y} width={r.w} height={r.h} fill={P.bead} />
-            {panes.map((p, j) => renderPane(p.rect, p.glassKey, `sp${i}-${j}`, `${p.w}×${p.h}`))}
+            {panes.map((p, j) => renderPane(p.rect, p.glassKey, `sp${i}-${j}`, `${fmt(p.w)}×${fmt(p.h)}`))}
             <MiterRing r={r} face={visibleFace} fill={profFill} stroke={profStroke} />
             <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={P.line} strokeOpacity={0.55} strokeWidth={1.2} {...NS} />
             {symbol(s, inner.w > 0 && inner.h > 0 ? inner : r, `sy${i}`)}
@@ -462,6 +471,7 @@ export function WindowDrawing({ pos, geo, catalog, variant, convention = 'din', 
           {...NS}
         />
       )}
+      </g>
 
       {dims}
     </svg>

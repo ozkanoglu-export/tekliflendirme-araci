@@ -4,7 +4,9 @@ import { useApp } from '../store/store'
 import { WindowDrawing } from '../drawing/WindowDrawing'
 import { Button, Label, NumberInput, Panel, Select, TextArea, TextInput, Toggle, cx, toast } from '../ui/kit'
 import { LANGS, QUOTE_I18N, type QuoteDict } from '../engine/i18n'
-import { addDays, formatDate, money, num } from '../engine/format'
+import { addDays, fmtLen, formatDate, money, num } from '../engine/format'
+import { ExportCharges } from './ExportCharges'
+import { FREIGHT_INCLUDED } from '../engine/bom'
 import { discountForTarget, type PositionCalc, type ProjectTotals } from '../engine/bom'
 import { describeOpenings } from '../engine/describe'
 import { BrandMark } from '../App'
@@ -47,7 +49,7 @@ export function QuoteView() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label>Teslim şekli</Label>
-                <Select<Incoterm> value={c.incoterm} onChange={(v) => setC({ incoterm: v })} options={INCOTERMS.map((i) => ({ value: i, label: i }))} />
+                <Select<Incoterm> value={c.incoterm} onChange={(v) => setC({ incoterm: v, includeFreight: FREIGHT_INCLUDED[v] })} options={INCOTERMS.map((i) => ({ value: i, label: i }))} />
               </div>
               <div>
                 <Label>Geçerlilik</Label>
@@ -92,6 +94,10 @@ export function QuoteView() {
               <Toggle checked={c.showBank} onChange={(v) => setC({ showBank: v })} label="Banka bilgilerini göster" />
             </div>
           </div>
+        </Panel>
+
+        <Panel title="Ambalaj · palet · nakliye">
+          <ExportCharges />
         </Panel>
 
         <Panel title="Müşteri">
@@ -299,7 +305,7 @@ function PositionCard({ line, index, t, catalog, project, settings }: { line: Po
   if (line.geo.threshold) extras.push(t.threshold)
   if (p.flyscreen !== 'NONE') extras.push(t.flyscreen[p.flyscreen])
   if (p.muntin) extras.push(t.muntin)
-  if (p.frameExt) extras.push(t.frameExt)
+  if (p.frameExt !== 'none') extras.push(t.frameExt)
 
   return (
     <div className="grid h-[76mm] grid-cols-[64mm_1fr_36mm] overflow-hidden rounded-lg border border-slate-200" style={{ breakInside: 'avoid' }}>
@@ -311,7 +317,7 @@ function PositionCard({ line, index, t, catalog, project, settings }: { line: Po
           <span className="text-[7px] uppercase tracking-[0.14em] text-slate-400">{t.insideView}</span>
         </div>
         <div className="flex h-[64mm] items-center justify-center pt-1">
-          <WindowDrawing pos={p} geo={line.geo} catalog={catalog} variant="paper" convention={settings.symbolConvention} showGlassSizes={false} className="h-full w-full" />
+          <WindowDrawing pos={p} geo={line.geo} catalog={catalog} variant="paper" convention={settings.symbolConvention} showGlassSizes={false} fmt={(v) => fmtLen(v, project.commercial.units)} className="h-full w-full" />
         </div>
       </div>
 
@@ -320,7 +326,7 @@ function PositionCard({ line, index, t, catalog, project, settings }: { line: Po
         <div className="mb-[2mm] text-[9.5px] font-medium text-[#0b6bc4]">{describeOpenings(p, line.geo, t)}</div>
         <table className="w-full text-[9px] leading-[1.45]">
           <tbody>
-            <Spec k={t.size} v={`${line.geo.W} × ${line.geo.totalH} mm · ${num(line.grossArea)} m²`} mono />
+            <Spec k={t.size} v={project.commercial.units === 'inch' ? `${fmtLen(line.geo.outerW, 'inch')} × ${fmtLen(line.geo.totalH, 'inch')} (${line.geo.outerW} × ${line.geo.totalH} mm) · ${num(line.grossArea * 10.7639, 1)} ft²` : `${line.geo.outerW} × ${line.geo.totalH} mm · ${num(line.grossArea)} m²`} mono />
             <Spec k={t.series} v={`${s?.brand ?? ''} ${s?.name ?? ''} · ${s?.thickness} mm${s?.chambers ? ` · ${s.chambers} ${CHAMBERS[project.commercial.language]}` : ''}`} />
             <Spec k={t.color} v={`${color?.name ?? ''} ${color?.code ? `(${color.code})` : ''}`} />
             <Spec k={t.glass} v={glassKeys.map((k) => catalog.glasses[k]?.name ?? k).join(' / ')} />
@@ -398,7 +404,7 @@ function Summary({ totals, t, project, catalog, settings, overview }: { totals: 
                     <span className="text-slate-400"> · {describeOpenings(l.pos, l.geo, t)} · {catalog.series[l.pos.series]?.name}</span>
                   </td>
                   <td className="py-[1.1mm] text-right font-mono text-slate-600">
-                    {l.geo.W}×{l.geo.totalH}
+                    {fmtLen(l.geo.outerW, project.commercial.units)}×{fmtLen(l.geo.totalH, project.commercial.units)}
                   </td>
                   <td className="py-[1.1mm] text-right font-mono text-slate-600">{l.pos.qty}</td>
                   <td className="py-[1.1mm] text-right font-mono text-slate-600">{m(l.priceUnit)}</td>

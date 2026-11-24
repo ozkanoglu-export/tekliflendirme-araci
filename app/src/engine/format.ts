@@ -20,12 +20,14 @@ export function num(v: number, d = 2): string {
  * Ölçü girişi: "1250", "1250mm", "125cm", "1,25m", "49 1/4\"", "49.25in".
  * Birim yazılmazsa milimetre kabul edilir (eski sürümdeki "300'den küçükse cm" tahmini kaldırıldı).
  */
-export function parseDimension(input: string | number): number | null {
+export function parseDimension(input: string | number, defaultUnit: 'mm' | 'inch' = 'mm'): number | null {
   if (typeof input === 'number') return Number.isFinite(input) ? Math.round(input) : null
-  const s = input.trim().toLowerCase().replace(/\s+/g, ' ')
+  const s = input.trim().toLowerCase().replace(/\s+/g, ' ').replace(/[-–]/g, ' ')
   if (!s) return null
-  const inch = s.match(/^(\d+(?:[.,]\d+)?)?\s*(?:(\d+)\/(\d+))?\s*(?:"|in|inch|inç)$/)
-  if (inch && (inch[1] || inch[2])) {
+  // İnç: 49 1/4" · 49.25in · 1/2" — inç modunda birim yazmak gerekmez
+  const unitRe = defaultUnit === 'inch' ? '(?:"|in|inch|inç|″)?' : '(?:"|in|inch|inç|″)'
+  const inch = s.match(new RegExp(`^(\\d+(?:[.,]\\d+)?)?\\s*(?:(\\d+)\\/(\\d+))?\\s*${unitRe}$`))
+  if (inch && (inch[1] || inch[2]) && (defaultUnit === 'inch' || /["″]|in/.test(s))) {
     const whole = inch[1] ? parseFloat(inch[1].replace(',', '.')) : 0
     const frac = inch[2] ? parseInt(inch[2]) / Math.max(1, parseInt(inch[3])) : 0
     return Math.round((whole + frac) * 25.4)
@@ -54,4 +56,23 @@ export function formatDate(iso: string, lang: string): string {
   if (isNaN(d.getTime())) return iso
   const loc: Record<string, string> = { TR: 'tr-TR', EN: 'en-GB', DE: 'de-DE', IT: 'it-IT', RU: 'ru-RU', FR: 'fr-FR' }
   return d.toLocaleDateString(loc[lang] ?? 'tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })
+}
+
+/** mm → inç, 1/16 hassasiyetle kesir: 1251 → 49 1/4" */
+export function formatInch(mm: number, withMark = true): string {
+  const sixteenths = Math.round((mm / 25.4) * 16)
+  const whole = Math.floor(sixteenths / 16)
+  let num = sixteenths % 16
+  let den = 16
+  while (num > 0 && num % 2 === 0) {
+    num /= 2
+    den /= 2
+  }
+  const mark = withMark ? '"' : ''
+  return num ? (whole ? `${whole} ${num}/${den}${mark}` : `${num}/${den}${mark}`) : `${whole}${mark}`
+}
+
+/** Seçili birime göre uzunluk metni */
+export function fmtLen(mm: number, units: 'mm' | 'inch'): string {
+  return units === 'inch' ? formatInch(mm) : String(Math.round(mm))
 }

@@ -74,6 +74,9 @@ Değerler eski PenCAD 4.5 formüllerinden alındı ve testlerle doğrulandı.
 | Hebeschiebe | Ortakayıt H−115; sabit cam W/2−94 × H−130; aktif cam W/2−238 × H−274 |
 
 - Pencere kanadı 2000 mm'den yüksekse otomatik olarak kapı kanat profiline geçilir.
+- **Kasa yükseltme (35×70):** girilen ölçü toplam ölçüdür; profil kalınlığı (35 mm, katalogdaki `size`) kasa ölçüsünden düşülür.
+  "Sadece alt" seçilirse H−35 olur. "4 kenar" seçilirse W−70 × H−70 olur.
+  Metraj: alt için toplam genişlik, 4 kenar için dış çevre.
 - ⚠ Ortakayıt ekseninden yapılan düşümler (kanat 34, cam 47) eski programın "yatay bölünmüş" mantığından geliyor. Adopen teknik kataloğundan teyit edilmeli. Değerler **Katalog → Düşüm tabloları** ekranından düzenlenebilir.
 - Çift kanat kapıda eski program eşikli cam yüksekliği için H−226 kullanıyordu; yeni model tutarlılık için H−228 hesaplıyor (2 mm fark).
 
@@ -94,7 +97,14 @@ Proje    = Σ satır + ambalaj (m²) + palet (kademeli) + navlun
 - **Açık soru:** Katalogdaki €/m fiyatları satış listesi mi, alış maliyeti mi? Alış maliyetiyse marj ve işçilik girilmeli.
 - Uw hesabı EN ISO 10077-1'in basitleştirilmiş hâliyle yapılır: (Ag·Ug + Af·Uf + lg·Ψ) / A, Ψ = 0,06.
 
-## 6. Yol haritası
+## 6. Birimler
+
+- Proje başına mm veya inç seçilir.
+- İnç modunda birim yazmadan girilebilir (`49 1/4`, `49.25`). mm yazmak için `1250mm` yazılır.
+- Çizim, liste ve teklif ölçüleri 1/16" hassasiyetle kesirli inç gösterilir. Teklifte mm karşılığı ve ft² de yazar.
+- Hesaplar her zaman tam sayı mm üzerinden yapılır.
+
+## 7. Yol haritası
 
 1. Adopen teknik kataloğu ile ortakayıt düşümlerini, kanat sınırlarını ve gerçek profil yüz ölçülerini doğrulamak.
 2. Takviye sacı, çıta ve conta metrajını reçeteye eklemek (veri gerekiyor).

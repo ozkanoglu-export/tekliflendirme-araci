@@ -21,13 +21,13 @@ import { useApp } from '../store/store'
 import { WindowDrawing } from '../drawing/WindowDrawing'
 import { TemplateGallery, type GalleryPick } from './studio/TemplateGallery'
 import { FillIcon, SplitIcon } from './studio/icons'
-import { Button, DimInput, IconBtn, Label, Panel, Segmented, Select, Stat, TextArea, TextInput, Toggle, cx, toast } from '../ui/kit'
-import { money, num } from '../engine/format'
+import { Button, DimInput, IconBtn, IntInput, Label, Panel, Segmented, Select, Stat, TextArea, TextInput, Toggle, cx, toast } from '../ui/kit'
+import { fmtLen, money, num } from '../engine/format'
 import { TEMPLATES } from '../engine/fields'
 import { collectLeaves, findField, findParent, removeField, replaceField, setChildSize, splitField } from '../engine/fields'
 import { clonePosition, newPosition } from '../engine/project'
 import type { PositionCalc } from '../engine/bom'
-import type { Field, FlyscreenType, LeafField, LeafFill, Position, SashOpening } from '../engine/types'
+import type { Field, FlyscreenType, FrameExtMode, LeafField, LeafFill, Position, SashOpening, UnitSystem } from '../engine/types'
 import { describeOpenings } from '../engine/describe'
 import { QUOTE_I18N } from '../engine/i18n'
 
@@ -138,7 +138,7 @@ function PositionList() {
                   </div>
                   <div className="mt-1 truncate text-[12.5px] font-medium text-ink-100">{p.title || 'İsimsiz poz'}</div>
                   <div className="font-mono text-[11px] text-ink-400">
-                    {p.width} × {l.geo.totalH}
+                    {fmtLen(l.geo.outerW, project.commercial.units)} × {fmtLen(l.geo.totalH, project.commercial.units)}
                   </div>
                   <div className="mt-0.5 flex items-center justify-between">
                     <span className="truncate text-[10.5px] text-ink-500">{catalog.series[p.series]?.shortName}</span>
@@ -268,6 +268,7 @@ function Canvas({ pos, line }: { pos: Position; line: PositionCalc }) {
             selectedId={state.selectedFieldId}
             showGlassSizes={glassSizes}
             highlightRect={selRect}
+            fmt={(v) => fmtLen(v, project.commercial.units)}
             onSelect={(id) => {
               if (!dragged.current) selectField(id)
             }}
@@ -430,7 +431,7 @@ function StatusBar({ line }: { line: PositionCalc }) {
   return (
     <div className="no-print relative border-t border-ink-800 bg-ink-950 px-5 py-2.5">
       <div className="flex items-center gap-8">
-        <Stat label="Ölçü" value={`${line.geo.W} × ${line.geo.totalH}`} sub="mm" />
+        <Stat label="Ölçü" value={`${fmtLen(line.geo.outerW, project.commercial.units)} × ${fmtLen(line.geo.totalH, project.commercial.units)}`} sub={project.commercial.units === 'inch' ? `${line.geo.outerW} × ${line.geo.totalH} mm` : 'mm'} />
         <Stat label="Alan" value={`${num(line.grossArea)} m²`} sub={`cam ${num(line.glassArea)} m²`} />
         <Stat label="Uw" value={`${num(line.uw)}`} sub="W/m²K" tone="good" />
         <Stat label="Profil" value={`${num(Object.values(line.profileMeters).reduce((a, b) => a + b, 0))} m`} sub={`${line.pieces.reduce((a, p) => a + p.qty, 0)} parça`} />
@@ -468,6 +469,7 @@ function Inspector({ pos, line }: { pos: Position; line: PositionCalc }) {
   const series = catalog.series[pos.series]
   const sel = state.selectedFieldId ? findField(pos.root, state.selectedFieldId) : null
   const cur = project.commercial.currency
+  const units = project.commercial.units
 
   const seriesOptions = useMemo(
     () => Object.values(catalog.series).map((s) => ({ value: s.key, label: `${s.name} · ${s.thickness} mm`, group: `${s.brand} ${s.kind === 'casement' ? 'Kanatlı' : 'Sürme'}` })),
@@ -527,24 +529,43 @@ function Inspector({ pos, line }: { pos: Position; line: PositionCalc }) {
                   <button className="px-2 text-ink-400 hover:text-white" onClick={() => up((p) => ({ ...p, qty: Math.max(1, p.qty - 1) }))}>
                     <Minus size={13} />
                   </button>
-                  <input value={pos.qty} onChange={(e) => up((p) => ({ ...p, qty: Math.max(1, parseInt(e.target.value) || 1) }), true)} className="w-full bg-transparent text-center font-mono text-[14px] font-semibold text-white outline-none" />
+                  <IntInput value={pos.qty} onChange={(v) => up((p) => ({ ...p, qty: v }), true)} className="w-full min-w-0 bg-transparent text-center font-mono text-[14px] font-semibold text-white outline-none" />
                   <button className="px-2 text-ink-400 hover:text-white" onClick={() => up((p) => ({ ...p, qty: p.qty + 1 }))}>
                     <Plus size={13} />
                   </button>
                 </div>
               </div>
             </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-400">Ölçü birimi</span>
+              <Segmented<UnitSystem>
+                size="sm"
+                value={units}
+                onChange={(v) => updateProject((p) => ({ ...p, commercial: { ...p.commercial, units: v } }))}
+                options={[
+                  { value: 'mm', label: 'Metrik (mm)' },
+                  { value: 'inch', label: 'İnç (")' },
+                ]}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label hint="↑↓ ±10 · ⇧ ±100">Genişlik</Label>
-                <DimInput big value={pos.width} onChange={(v) => up((p) => ({ ...p, width: v }))} />
+                <Label hint={pos.frameExt !== 'none' ? 'toplam' : undefined}>Genişlik</Label>
+                <DimInput big units={units} value={pos.width} onChange={(v) => up((p) => ({ ...p, width: v }), true)} />
               </div>
               <div>
-                <Label hint={pos.shutter.enabled && pos.shutter.mode === 'subtract' ? 'panjur dahil' : undefined}>Yükseklik</Label>
-                <DimInput big value={pos.height} onChange={(v) => up((p) => ({ ...p, height: v }))} />
+                <Label hint={pos.shutter.enabled && pos.shutter.mode === 'subtract' ? 'panjur dahil' : pos.frameExt !== 'none' ? 'toplam' : undefined}>Yükseklik</Label>
+                <DimInput big units={units} value={pos.height} onChange={(v) => up((p) => ({ ...p, height: v }), true)} />
               </div>
             </div>
-            <p className="text-[11px] leading-relaxed text-ink-500">Ölçü: 1250 · 125cm · 1,25m · 49 1/4" — birim yazılmazsa mm.</p>
+            <p className="text-[11px] leading-relaxed text-ink-500">
+              {units === 'inch' ? 'İnç: 49 1/4 · 49.25 · mm yazmak için 1250mm' : 'mm: 1250 · 125cm · 1,25m · inç için 49 1/4"'} · ↑↓ ince, ⇧↑↓ kaba ayar
+              {(line.geo.outerW !== line.geo.W || line.geo.ext.t + line.geo.ext.b > 0) && (
+                <span className="mt-1 block text-gold-400/90">
+                  Kasa ölçüsü: {fmtLen(line.geo.W, units)} × {fmtLen(line.geo.H, units)} (kasa yükseltme düşüldü)
+                </span>
+              )}
+            </p>
           </div>
         </Panel>
 
@@ -617,7 +638,20 @@ function Inspector({ pos, line }: { pos: Position; line: PositionCalc }) {
               <Toggle checked={pos.threshold === 'alu20'} onChange={(v) => up((p) => ({ ...p, threshold: v ? 'alu20' : 'none' }))} label="Alüminyum düşük eşik" hint="20 mm · kapı altı 3 kenar kasa" />
             )}
             <Toggle checked={pos.muntin} onChange={(v) => up((p) => ({ ...p, muntin: v }))} label="Cam içi karolaj" />
-            <Toggle checked={pos.frameExt} onChange={(v) => up((p) => ({ ...p, frameExt: v }))} label="35×70 kasa yükseltme" />
+            <div className="py-2.5">
+              <Label hint={`${catalog.extras.FRAME_EXT_35X70?.size ?? 35} mm toplam ölçüden düşülür`}>35×70 kasa yükseltme</Label>
+              <Segmented<FrameExtMode>
+                size="sm"
+                className="w-full"
+                value={pos.frameExt}
+                onChange={(v) => up((p) => ({ ...p, frameExt: v }))}
+                options={[
+                  { value: 'none', label: 'Yok' },
+                  { value: 'bottom', label: 'Sadece alt' },
+                  { value: 'all', label: '4 kenar' },
+                ]}
+              />
+            </div>
             <div className="pt-2.5">
               <Label>Sineklik</Label>
               <Select<FlyscreenType>
@@ -805,14 +839,14 @@ function FieldPanel({ pos, line, sel }: { pos: Position; line: PositionCalc; sel
               .filter((s) => s.leafId === sel.id)
               .map((s, i) => (
                 <div key={i}>
-                  kanat {Math.round(s.rect.w)} × {Math.round(s.rect.h)} {s.role === 'doorSash' ? '· kapı profili' : ''}
+                  kanat {fmtLen(s.rect.w, state.project.commercial.units)} × {fmtLen(s.rect.h, state.project.commercial.units)} {s.role === 'doorSash' ? '· kapı profili' : ''}
                 </div>
               ))}
             {line.geo.panes
               .filter((p) => p.leafId === sel.id)
               .map((p, i) => (
                 <div key={i} className="text-brand-300">
-                  cam {p.w} × {p.h}
+                  cam {p.w} × {p.h} mm
                 </div>
               ))}
           </div>
@@ -823,9 +857,10 @@ function FieldPanel({ pos, line, sel }: { pos: Position; line: PositionCalc; sel
 }
 
 function SizeRow({ size, actual, onChange }: { size: number | null; actual: number; onChange: (v: number | null) => void }) {
+  const { state } = useApp()
   return (
     <div className="flex flex-1 items-center gap-2">
-      <DimInput value={size ?? actual} onChange={(v) => onChange(v)} className="flex-1" />
+      <DimInput units={state.project.commercial.units} min={150} value={size ?? actual} onChange={(v) => onChange(v)} className="flex-1" />
       <button
         onClick={() => onChange(null)}
         title="Otomatik: kalan alanı eşit paylaşır"

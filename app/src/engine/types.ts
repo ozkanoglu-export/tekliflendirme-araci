@@ -133,6 +133,8 @@ export interface ExtraItem {
   name: string
   unit: ExtraUnit
   price: number
+  /** Profil kalınlığı (mm) — kasa yükseltmede toplam ölçüden düşülür */
+  size?: number
   /** Renkli profil için farklı fiyat */
   colored?: number
 }
@@ -185,6 +187,8 @@ export interface SplitField {
 export type Field = LeafField | SplitField
 
 export type ThresholdType = 'none' | 'alu20'
+export type FrameExtMode = 'none' | 'bottom' | 'all'
+export type UnitSystem = 'mm' | 'inch'
 export type FlyscreenType = 'NONE' | 'SABIT' | 'MENTESELI' | 'PILELI_YATAY' | 'PILELI_DIKEY'
 
 export interface Position {
@@ -205,7 +209,8 @@ export interface Position {
   threshold: ThresholdType
   flyscreen: FlyscreenType
   muntin: boolean
-  frameExt: boolean
+  /** Kasa yükseltme: yok / sadece alt / 4 kenar */
+  frameExt: FrameExtMode
   note?: string
 }
 
@@ -238,6 +243,12 @@ export interface Commercial {
   vatPercent: number
   validityDays: number
   showBank: boolean
+  /** Ölçü giriş/gösterim birimi */
+  units: UnitSystem
+  /** Teklife eklenecek ihracat kalemleri */
+  includePackaging: boolean
+  includePallet: boolean
+  includeFreight: boolean
   /** Manuel tutar girilirse otomatik hesap ezilir (EUR) */
   freightOverride: number | null
   palletOverride: number | null

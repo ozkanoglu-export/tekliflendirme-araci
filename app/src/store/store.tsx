@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 import { CATALOG_VERSION, DEFAULT_CATALOG, DEFAULT_SETTINGS, clone } from '../engine/catalog'
 import { calcProject, type ProjectTotals } from '../engine/bom'
-import { newProject } from '../engine/project'
+import { newProject, normalizeProject } from '../engine/project'
 import type { AppSettings, Catalog, Position, Project } from '../engine/types'
 
 export type View = 'studio' | 'quote' | 'cost' | 'catalog' | 'projects'
@@ -47,14 +47,27 @@ function write(key: string, v: unknown) {
   }
 }
 
+/** Kullanıcının fiyat düzenlemelerini koruyarak eski katalogları günceller */
+function migrateCatalog(c: Catalog | null): Catalog {
+  if (!c || typeof c.version !== 'number' || c.version < 5) return clone(DEFAULT_CATALOG)
+  if (c.version === CATALOG_VERSION) return c
+  const n = clone(c)
+  if (n.version === 5) {
+    const fe = n.extras.FRAME_EXT_35X70
+    if (fe && fe.size === undefined) fe.size = 35
+    n.version = 6
+  }
+  return n.version === CATALOG_VERSION ? n : clone(DEFAULT_CATALOG)
+}
+
 function init(): State {
-  const storedCatalog = read<Catalog>(K.catalog)
-  const catalog = storedCatalog && storedCatalog.version === CATALOG_VERSION ? storedCatalog : clone(DEFAULT_CATALOG)
+  const catalog = migrateCatalog(read<Catalog>(K.catalog))
   const storedSettings = read<AppSettings>(K.settings)
   const settings: AppSettings = storedSettings
     ? { ...clone(DEFAULT_SETTINGS), ...storedSettings, company: { ...DEFAULT_SETTINGS.company, ...storedSettings.company }, exportRules: { ...DEFAULT_SETTINGS.exportRules, ...storedSettings.exportRules }, cut: { ...DEFAULT_SETTINGS.cut, ...storedSettings.cut } }
     : clone(DEFAULT_SETTINGS)
-  const project = read<Project>(K.project) ?? newProject()
+  const stored = read<Project>(K.project)
+  const project = stored ? normalizeProject(stored) : newProject()
   const view = read<View>(K.view) ?? 'studio'
   return { project, catalog, settings, view, activePosId: project.positions[0]?.id ?? '', selectedFieldId: null, past: [], future: [], lastPush: 0 }
 }
@@ -70,7 +83,7 @@ function reducer(s: State, a: Action): State {
       return { ...s, project: next, past, future: [], lastPush: push ? now : s.lastPush, activePosId }
     }
     case 'load':
-      return { ...s, project: a.project, past: [...s.past.slice(-79), s.project], future: [], activePosId: a.project.positions[0]?.id ?? '', selectedFieldId: null }
+      return { ...s, project: normalizeProject(a.project), past: [...s.past.slice(-79), s.project], future: [], activePosId: a.project.positions?.[0]?.id ?? '', selectedFieldId: null }
     case 'undo': {
       if (!s.past.length) return s
       const prev = s.past[s.past.length - 1]
@@ -137,7 +150,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const saved: SavedApi = useMemo(
     () => ({
-      list: () => read<Project[]>(K.saved) ?? [],
+      list: () => (read<Project[]>(K.saved) ?? []).map(normalizeProject),
       save: (p) => {
         const all = read<Project[]>(K.saved) ?? []
         const i = all.findIndex((x) => x.id === p.id)

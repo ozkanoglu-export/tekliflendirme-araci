@@ -1,7 +1,7 @@
 import type { AppSettings, Catalog, CasementDeductions, SeriesLimits } from './types'
 
 /** Katalog şeması değiştikçe artırılır; eski localStorage kayıtları buna göre göç ettirilir. */
-export const CATALOG_VERSION = 5
+export const CATALOG_VERSION = 6
 
 /**
  * Adopen kanatlı seriler için düşümler.
@@ -170,7 +170,7 @@ export const DEFAULT_CATALOG: Catalog = {
     ALU_THRESHOLD_20MM: { key: 'ALU_THRESHOLD_20MM', name: '20 mm Alüminyum Düşük Eşik', unit: 'Mt', price: 100 },
     SHUTTER_MONO_195: { key: 'SHUTTER_MONO_195', name: '195 mm Monoblok Motorlu Panjur', unit: 'M2', price: 110 },
     GRID_MUNTIN: { key: 'GRID_MUNTIN', name: 'Cam İçi Karolaj', unit: 'Mt', price: 13.63 },
-    FRAME_EXT_35X70: { key: 'FRAME_EXT_35X70', name: '35x70 Kasa Yükseltme Profili', unit: 'Mt', price: 5.61, colored: 6.87 },
+    FRAME_EXT_35X70: { key: 'FRAME_EXT_35X70', name: '35x70 Kasa Yükseltme Profili', unit: 'Mt', price: 5.61, colored: 6.87, size: 35 },
     FLYSCREEN_SABIT: { key: 'FLYSCREEN_SABIT', name: 'Sabit Sineklik', unit: 'Mt', price: 19.02 },
     FLYSCREEN_MENTESELI: { key: 'FLYSCREEN_MENTESELI', name: 'Menteşeli Sineklik', unit: 'Mt', price: 19.02 },
     FLYSCREEN_PILELI: { key: 'FLYSCREEN_PILELI', name: 'Pileli Sineklik', unit: 'Mt', price: 34.87 },

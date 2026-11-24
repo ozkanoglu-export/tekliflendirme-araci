@@ -1,6 +1,7 @@
 import { addDays, todayISO } from './format'
 import { cloneTree, leaf, split, uid, TEMPLATES, type TemplateKey } from './fields'
-import type { Catalog, Commercial, Field, LeafFill, Position, Project } from './types'
+import type { Catalog, Commercial, Field, FrameExtMode, LeafFill, Position, Project } from './types'
+import { FREIGHT_INCLUDED } from './bom'
 
 export const DEFAULT_COMMERCIAL: Commercial = {
   currency: 'EUR',
@@ -14,6 +15,10 @@ export const DEFAULT_COMMERCIAL: Commercial = {
   laborPerM2: 0,
   vatPercent: 0,
   validityDays: 30,
+  units: 'mm',
+  includePackaging: true,
+  includePallet: true,
+  includeFreight: false,
   showBank: true,
   freightOverride: null,
   palletOverride: null,
@@ -39,7 +44,7 @@ export function newPosition(template: TemplateKey = 'tiltturn', base?: Partial<P
     threshold: template === 'door' || template === 'doorPair' || template === 'balcony' ? 'alu20' : 'none',
     flyscreen: 'NONE',
     muntin: false,
-    frameExt: false,
+    frameExt: 'none',
     note: '',
   }
 }
@@ -61,7 +66,7 @@ export function newProject(seq = 1861): Project {
   p2.flyscreen = 'SABIT'
   const p3 = newPosition('door', { width: 1000, height: 2200, series: 'PASIFIK_888', color: 'ANTHRACITE', glass: 'SN4124LM' })
   p3.title = 'Veranda Çıkış Kapısı'
-  p3.frameExt = true
+  p3.frameExt = 'bottom'
   return {
     id: uid('q'),
     quoteNo: String(seq),
@@ -114,7 +119,8 @@ export function importLegacyPositions(raw: unknown, catalog: Catalog): Position[
     // Yeni formatta root varsa doğrudan kabul et
     if (o.root && typeof o.root === 'object') {
       const p = o as unknown as Position
-      return { ...newPosition(), ...p, id: uid('p'), root: cloneTree(p.root) }
+      const fe = (p as unknown as { frameExt: unknown }).frameExt
+      return { ...newPosition(), ...p, id: uid('p'), root: cloneTree(p.root), frameExt: fe === true ? 'bottom' : fe === 'bottom' || fe === 'all' ? fe : 'none' }
     }
     const type = String(o.type ?? 'TEK_CIFT_ACILIM')
     let width = Number(o.width) || 1000
@@ -147,8 +153,24 @@ export function importLegacyPositions(raw: unknown, catalog: Catalog): Position[
       threshold: isDoor && (o.threshold === 'ALU_20MM' || fill === 'door') && o.threshold !== 'PVC_4KENAR' ? 'alu20' : 'none',
       flyscreen: (['SABIT', 'MENTESELI', 'PILELI_YATAY', 'PILELI_DIKEY'].includes(String(o.flyscreen)) ? o.flyscreen : 'NONE') as Position['flyscreen'],
       muntin: !!o.hasMuntin,
-      frameExt: !!o.hasFrameExt,
+      frameExt: o.hasFrameExt ? 'bottom' : 'none',
       note: '',
     }
   })
+}
+
+/** Eski kayıtları (v5.0) güncel şemaya taşır: eksik alanlar, boolean kasa yükseltme vb. */
+export function normalizeProject(p: Project): Project {
+  const c = (p.commercial ?? {}) as Partial<Commercial>
+  const commercial: Commercial = {
+    ...DEFAULT_COMMERCIAL,
+    ...c,
+    includeFreight: c.includeFreight ?? FREIGHT_INCLUDED[c.incoterm ?? 'EXW'] ?? false,
+  }
+  const positions = (p.positions ?? []).map((x) => {
+    const fe = (x as unknown as { frameExt: unknown }).frameExt
+    const frameExt: FrameExtMode = fe === true ? 'bottom' : fe === 'bottom' || fe === 'all' ? fe : 'none'
+    return { ...x, frameExt }
+  })
+  return { ...p, commercial, positions }
 }

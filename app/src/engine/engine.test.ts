@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { calcPosition, calcProject, discountForTarget } from './bom'
+import { FREIGHT_INCLUDED, calcPosition, calcProject, discountForTarget } from './bom'
 import { DEFAULT_CATALOG, DEFAULT_SETTINGS } from './catalog'
 import { leaf, removeField, split, splitField, collectLeaves } from './fields'
-import { parseDimension } from './format'
+import { formatInch, parseDimension } from './format'
 import { computeGeometry, distribute } from './geometry'
 import { packBars } from './optimize'
-import { DEFAULT_COMMERCIAL, importLegacyPositions, newPosition } from './project'
+import { DEFAULT_COMMERCIAL, importLegacyPositions, newPosition, normalizeProject, newProject } from './project'
 import type { Position } from './types'
 
 const cat = DEFAULT_CATALOG
@@ -108,10 +108,11 @@ describe('Fiyatlandırma', () => {
     expect(c.materialUnit).toBeGreaterThan(w.materialUnit)
   })
 
-  it('EXW teslimde navlun yok, CIF teslimde var', () => {
-    const ps = [pos({ width: 3000, height: 2500, qty: 5 })]
-    expect(calcProject(ps, cat, { ...com, incoterm: 'EXW' }, set).freight).toBe(0)
-    expect(calcProject(ps, cat, { ...com, incoterm: 'CIF' }, set).freight).toBeGreaterThan(0)
+  it('teslim şekli navlun seçeneğinin varsayılanını belirler (EXW kapalı, CIF açık)', () => {
+    expect(FREIGHT_INCLUDED.EXW).toBe(false)
+    expect(FREIGHT_INCLUDED.FOB).toBe(false)
+    expect(FREIGHT_INCLUDED.CIF).toBe(true)
+    expect(FREIGHT_INCLUDED.DAP).toBe(true)
   })
 
   it('hedef fiyattan iskonto', () => {
@@ -190,5 +191,76 @@ describe('Eski JSON içe aktarma', () => {
   it('HEBESCHIEBE tipini seriye çevirir', () => {
     const ps = importLegacyPositions([{ type: 'HEBESCHIEBE_AKDENIZ', width: 3200, height: 2400 }], cat)
     expect(ps[0].series).toBe('AKDENIZ_HEBESCHIEBE')
+  })
+})
+
+describe('Kasa yükseltme (35 mm) toplam ölçüden düşer', () => {
+  it('sadece alt: kasa yüksekliği H−35, genişlik aynı', () => {
+    const p = pos({ width: 900, height: 1300, frameExt: 'bottom', root: leaf('sash', 'tiltturn', 'right') })
+    const c = calcPosition(p, cat, com, set)
+    expect(c.geo.outerW).toBe(900)
+    expect(c.geo.totalH).toBe(1300)
+    expect(c.geo.W).toBe(900)
+    expect(c.geo.H).toBe(1265)
+    expect(c.geo.panes[0].h).toBe(1265 - 190)
+    expect(c.cost.find((l) => l.code === 'FRAME_EXT_35X70')?.quantity).toBeCloseTo(0.9, 3)
+    expect(c.grossArea).toBeCloseTo(0.9 * 1.3, 4)
+  })
+  it('4 kenar: kasa W−70 × H−70, metraj dış çevre', () => {
+    const c = calcPosition(pos({ width: 1000, height: 1400, frameExt: 'all', root: leaf('fixed') }), cat, com, set)
+    expect([c.geo.W, c.geo.H]).toEqual([930, 1330])
+    expect([c.geo.panes[0].w, c.geo.panes[0].h]).toEqual([930 - 94, 1330 - 94])
+    expect(c.cost.find((l) => l.code === 'FRAME_EXT_35X70')?.quantity).toBeCloseTo(4.8, 3)
+  })
+  it('panjur + alt yükseltme birlikte', () => {
+    const g = computeGeometry(pos({ width: 1000, height: 1600, frameExt: 'bottom', shutter: { enabled: true, mode: 'subtract' } }), cat)
+    expect(g.H).toBe(1600 - 195 - 35)
+    expect(g.totalH).toBe(1600)
+  })
+})
+
+describe('Ambalaj / palet / nakliye seçenekleri', () => {
+  const ps = [pos({ width: 3000, height: 2500, qty: 5 })]
+  it('her kalem kapatılabilir', () => {
+    const on = calcProject(ps, cat, { ...com, includePackaging: true, includePallet: true, includeFreight: true }, set)
+    expect(on.packaging).toBeGreaterThan(0)
+    expect(on.pallet).toBeGreaterThan(0)
+    expect(on.freight).toBeGreaterThan(0)
+    const off = calcProject(ps, cat, { ...com, includePackaging: false, includePallet: false, includeFreight: false }, set)
+    expect([off.packaging, off.pallet, off.freight]).toEqual([0, 0, 0])
+    expect(off.subtotal).toBeCloseTo(off.products, 2)
+  })
+  it('elle tutar otomatiği ezer', () => {
+    const t = calcProject(ps, cat, { ...com, includeFreight: true, freightOverride: 750 }, set)
+    expect(t.freight).toBe(750)
+  })
+})
+
+describe('İnç birimi', () => {
+  it('inç modunda birimsiz sayı inç kabul edilir', () => {
+    expect(parseDimension('49 1/4', 'inch')).toBe(1251)
+    expect(parseDimension('47.5', 'inch')).toBe(1207)
+    expect(parseDimension('1250mm', 'inch')).toBe(1250)
+    expect(parseDimension('1250', 'mm')).toBe(1250)
+  })
+  it('mm → kesirli inç', () => {
+    expect(formatInch(1251)).toBe('49 1/4"')
+    expect(formatInch(1219.2)).toBe('48"')
+    expect(formatInch(3.175)).toBe('1/8"')
+  })
+})
+
+describe('Eski kayıt göçü', () => {
+  it('boolean kasa yükseltme ve eksik ticari alanlar tamamlanır', () => {
+    const p = newProject()
+    const old = JSON.parse(JSON.stringify(p))
+    old.positions[0].frameExt = true
+    delete old.commercial.includeFreight
+    delete old.commercial.units
+    old.commercial.incoterm = 'CIF'
+    const n = normalizeProject(old)
+    expect(n.positions[0].frameExt).toBe('bottom')
+    expect(n.commercial.includeFreight).toBe(true)
+    expect(n.commercial.units).toBe('mm')
   })
 })

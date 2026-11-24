@@ -3,6 +3,7 @@ import { Download, Scissors, Layers, Wrench, TrendingUp } from 'lucide-react'
 import { useApp } from '../store/store'
 import { Button, Label, NumberInput, Panel, Segmented, Stat, cx } from '../ui/kit'
 import { money, num } from '../engine/format'
+import { ExportCharges } from './ExportCharges'
 import { optimizeProject, type ProfileOptimization } from '../engine/optimize'
 
 type Tab = 'cost' | 'cut' | 'glass' | 'hw'
@@ -56,17 +57,6 @@ function PricingRail() {
   const c = state.project.commercial
   const setC = (patch: Partial<typeof c>) => updateProject((p) => ({ ...p, commercial: { ...p.commercial, ...patch } }))
   const cut = state.settings.cut
-  const Override = ({ label, value, onChange }: { label: string; value: number | null; onChange: (v: number | null) => void }) => (
-    <div>
-      <Label hint={value === null ? 'otomatik' : 'manuel'}>{label}</Label>
-      <div className="flex gap-1.5">
-        <NumberInput value={value ?? 0} onChange={(v) => onChange(v)} min={0} suffix="€" className="flex-1" />
-        <button onClick={() => onChange(null)} className={cx('h-9 rounded-lg border px-2 text-[11px]', value === null ? 'border-brand-400/50 bg-brand-500/15 text-brand-200' : 'border-ink-700 text-ink-400')}>
-          Oto
-        </button>
-      </div>
-    </div>
-  )
   return (
     <aside className="no-print w-[300px] shrink-0 space-y-3 overflow-y-auto border-r border-ink-800 bg-ink-950 p-3">
       <Panel title="Fiyatlandırma">
@@ -92,13 +82,8 @@ function PricingRail() {
           <p className="text-[11px] leading-relaxed text-ink-500">Katalog fiyatları satış listesi ise marjı %0 bırakın. Alış maliyetiyse marj ve işçilik girin.</p>
         </div>
       </Panel>
-      <Panel title="İhracat kalemleri">
-        <div className="space-y-3">
-          <Override label="Ambalaj & sandık" value={c.packagingOverride} onChange={(v) => setC({ packagingOverride: v })} />
-          <Override label="Paletleme" value={c.palletOverride} onChange={(v) => setC({ palletOverride: v })} />
-          <Override label="Navlun" value={c.freightOverride} onChange={(v) => setC({ freightOverride: v })} />
-          <p className="text-[11px] text-ink-500">Navlun otomatikte yalnızca CFR/CIF/DAP/DDP teslimde eklenir.</p>
-        </div>
+      <Panel title="Ambalaj · palet · nakliye">
+        <ExportCharges />
       </Panel>
       <Panel title="Kesim ayarları">
         <div className="grid grid-cols-2 gap-2">
@@ -150,7 +135,7 @@ function CostTab() {
             onClick={() =>
               downloadCSV(`Maliyet_${project.quoteNo}.csv`, [
                 ['Poz', 'Tanım', 'Ölçü', 'Adet', 'Seri', 'Renk', 'Malzeme/adet', 'İşçilik/adet', 'Satış/adet', 'Satır toplam'],
-                ...totals.lines.map((l, i) => [`P${i + 1}`, l.pos.title, `${l.geo.W}x${l.geo.totalH}`, l.pos.qty, catalog.series[l.pos.series]?.name ?? '', catalog.colors[l.pos.color]?.name ?? '', l.materialUnit.toFixed(2), l.laborUnit.toFixed(2), l.priceUnit.toFixed(2), l.priceLine.toFixed(2)]),
+                ...totals.lines.map((l, i) => [`P${i + 1}`, l.pos.title, `${l.geo.outerW}x${l.geo.totalH}`, l.pos.qty, catalog.series[l.pos.series]?.name ?? '', catalog.colors[l.pos.color]?.name ?? '', l.materialUnit.toFixed(2), l.laborUnit.toFixed(2), l.priceUnit.toFixed(2), l.priceLine.toFixed(2)]),
               ])
             }
           >
@@ -182,7 +167,7 @@ function CostTab() {
                   <td className="px-4 py-2 font-mono font-bold text-gold-400">P{i + 1}</td>
                   <td className="py-2 text-ink-100">{l.pos.title}</td>
                   <td className="py-2 font-mono text-ink-300">
-                    {l.geo.W}×{l.geo.totalH}
+                    {l.geo.outerW}×{l.geo.totalH}
                   </td>
                   <td className="py-2 text-right font-mono">{l.pos.qty}</td>
                   <td className="py-2 text-right font-mono text-ink-300">{m(g('profile'))}</td>
