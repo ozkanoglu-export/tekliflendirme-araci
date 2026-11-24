@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-ink-950 text-ink-100 font-sans antialiased;
+  font-feature-settings: 'cv11', 'ss01', 'tnum' 0;
+}
+
+::selection {
+  background: rgba(11, 107, 196, 0.45);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #262e3a;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #364152;
+  background-clip: content-box;
+}
+
+.canvas-grid {
+  background-color: #0c1016;
+  background-image:
+    linear-gradient(rgba(125, 150, 180, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 150, 180, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(125, 150, 180, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 150, 180, 0.035) 1px, transparent 1px);
+  background-size:
+    100px 100px,
+    100px 100px,
+    20px 20px,
+    20px 20px;
+}
+
+.glass-card {
+  background: linear-gradient(180deg, rgba(26, 32, 41, 0.92), rgba(15, 19, 26, 0.92));
+  backdrop-filter: blur(10px);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up {
+  animation: fadeUp 0.25s ease-out;
+}
+
+/* ---------- Teklif kağıdı (A4) ---------- */
+.sheet {
+  width: 210mm;
+  min-height: 297mm;
+  background: #fff;
+  color: #0f172a;
+  color-scheme: light;
+  position: relative;
+  box-shadow:
+    0 30px 60px -25px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  html,
+  body,
+  #root {
+    height: auto !important;
+    background: #fff !important;
+    overflow: visible !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm;
+  }
+  .sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    break-after: page;
+    page-break-after: always;
+    min-height: 297mm;
+    height: 297mm;
+    overflow: hidden;
+  }
+  .sheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+  .no-print {
+    display: none !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

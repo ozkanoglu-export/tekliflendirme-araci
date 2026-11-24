@@ -1,0 +1,2443 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Özkanoğlu PenCAD & Teklif Stüdyosu — ABT Web Studio</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Inter & Roboto Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+              950: '#172554'
+            },
+            abt: {
+              blue: '#0055A5',
+              darkblue: '#002B5C',
+              gold: '#D4AF37',
+              gray: '#2C3E50',
+              glass: '#4DF0FF'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Roboto Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Print Styles for A4 Paper Layout */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 11px !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      .page-break-inside-avoid {
+        page-break-inside: avoid;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 10mm 10mm 10mm 10mm;
+      }
+      .print-card-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    .abt-glass-pattern {
+      background-color: #0284c7;
+      background-image: radial-gradient(#38bdf8 1px, transparent 1px);
+      background-size: 16px 16px;
+    }
+  </style>
+</head>
+<body class="h-full font-sans antialiased flex flex-col bg-slate-950 text-slate-100 overflow-x-hidden selection:bg-blue-600 selection:text-white">
+
+  <!-- TOP NAVBAR / HEADER (Hidden on Print) -->
+  <header class="no-print bg-slate-900 border-b border-slate-800 sticky top-0 z-40 shadow-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Brand Logo & Slogan -->
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('cad')">
+          <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-800 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-400/30">
+            <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
+              <line x1="12" y1="3" x2="12" y2="21" stroke="currentColor"/>
+              <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xl font-black tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-sky-200 to-indigo-300">ÖZKANOGLU</span>
+              <span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-mono border border-blue-500/30">PenCAD 4.5</span>
+            </div>
+            <p class="text-[10px] text-slate-400 tracking-widest font-medium uppercase">HAYATA PENCERE AÇ — ABT Web Studio</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="hidden lg:flex items-center space-x-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800/80">
+          <button id="tab-cad" onclick="switchView('cad')" class="px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all bg-blue-600 text-white shadow-md">
+            <i class="fa-solid fa-compass-drafting text-sm"></i>
+            <span>1. Çizim & Poz Stüdyosu</span>
+          </button>
+
+          <button id="tab-quote" onclick="switchView('quote')" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 flex items-center space-x-2 transition-all">
+            <i class="fa-solid fa-file-invoice-dollar text-sm"></i>
+            <span>2. Müşteri Teklifi</span>
+            <span id="nav-pos-count" class="bg-slate-800 text-blue-400 px-1.5 py-0.2 rounded-full text-[10px] font-mono">0</span>
+          </button>
+
+          <button id="tab-bom" onclick="switchView('bom')" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 flex items-center space-x-2 transition-all">
+            <i class="fa-solid fa-table-list text-sm"></i>
+            <span>3. İç Maliyet & Metraj</span>
+          </button>
+
+          <button id="tab-catalog" onclick="switchView('catalog')" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 flex items-center space-x-2 transition-all">
+            <i class="fa-solid fa-sliders text-sm"></i>
+            <span>4. Fiyat & Seri Yönetimi</span>
+          </button>
+
+          <button id="tab-gemini" onclick="switchView('gemini')" class="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 flex items-center space-x-2 transition-all">
+            <i class="fa-solid fa-robot text-sm text-purple-400"></i>
+            <span>5. Gemini Bridge & Projeler</span>
+          </button>
+        </nav>
+
+        <!-- Quick Controls (Currency & Quick Actions) -->
+        <div class="flex items-center space-x-3">
+          <!-- Currency Selector -->
+          <div class="flex items-center space-x-1.5 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-800">
+            <i class="fa-solid fa-coins text-amber-400 text-xs"></i>
+            <select id="currency-select" onchange="changeCurrency(this.value)" class="bg-transparent text-xs font-bold text-slate-200 outline-none cursor-pointer">
+              <option value="EUR">EUR (€)</option>
+              <option value="USD">USD ($)</option>
+              <option value="TRY">TRY (₺)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="CHF">CHF (Fr)</option>
+              <option value="RUB">RUB (₽)</option>
+            </select>
+          </div>
+
+          <!-- Quick Print / Action Button -->
+          <button onclick="triggerPrint()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition shadow-lg shadow-emerald-900/30">
+            <i class="fa-solid fa-print"></i>
+            <span>Yazdır / PDF</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- MOBILE TAB NAVIGATION (Hidden on Print) -->
+  <div class="no-print lg:hidden bg-slate-900 border-b border-slate-800 px-2 py-2 flex overflow-x-auto space-x-1 text-xs">
+    <button onclick="switchView('cad')" class="px-3 py-1.5 rounded-md bg-slate-800 text-slate-200 whitespace-nowrap"><i class="fa-solid fa-compass-drafting mr-1"></i>Çizim</button>
+    <button onclick="switchView('quote')" class="px-3 py-1.5 rounded-md bg-slate-800 text-slate-200 whitespace-nowrap"><i class="fa-solid fa-file-invoice-dollar mr-1"></i>Teklif</button>
+    <button onclick="switchView('bom')" class="px-3 py-1.5 rounded-md bg-slate-800 text-slate-200 whitespace-nowrap"><i class="fa-solid fa-table-list mr-1"></i>Maliyet & Metraj</button>
+    <button onclick="switchView('catalog')" class="px-3 py-1.5 rounded-md bg-slate-800 text-slate-200 whitespace-nowrap"><i class="fa-solid fa-sliders mr-1"></i>Fiyat/Seri</button>
+    <button onclick="switchView('gemini')" class="px-3 py-1.5 rounded-md bg-slate-800 text-slate-200 whitespace-nowrap"><i class="fa-solid fa-robot mr-1"></i>Gemini</button>
+  </div>
+
+  <!-- MAIN CONTAINER WITH DYNAMIC VIEWS -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 space-y-6">
+
+    <!-- VIEW 1: INTERACTIVE CAD & POSITION DESIGNER STUDIO -->
+    <section id="view-cad" class="space-y-6">
+      <!-- Header Info & Quick Status -->
+      <div class="no-print bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 p-4 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <div class="flex items-center space-x-3">
+          <div class="p-3 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/30">
+            <i class="fa-solid fa-drafting-compass text-2xl"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>İnteraktif Poz & CAD Çizim Editörü</span>
+              <span class="text-xs font-normal text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">İçeriden Bakış (Inside View)</span>
+            </h1>
+            <p class="text-xs text-slate-400">Pencere, Kapı, Sürme ve Hebeschiebe doğramalarını parametrik ölçülerle saniyeler içinde çizin.</p>
+          </div>
+        </div>
+
+        <!-- Position Switcher / New Position Buttons -->
+        <div class="flex items-center space-x-2">
+          <button onclick="createNewPosition()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 shadow-lg shadow-blue-600/30 transition">
+            <i class="fa-solid fa-plus"></i>
+            <span>Yeni Poz Ekle</span>
+          </button>
+          <button onclick="cloneCurrentPosition()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium border border-slate-700 flex items-center space-x-1 transition">
+            <i class="fa-solid fa-copy"></i>
+            <span>Kopyala</span>
+          </button>
+          <button onclick="deleteCurrentPosition()" class="px-3 py-2 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 rounded-xl text-xs font-medium border border-rose-800/50 flex items-center space-x-1 transition">
+            <i class="fa-solid fa-trash-can"></i>
+            <span>Sil</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Position Ribbon / Selector -->
+      <div class="no-print flex items-center space-x-2 overflow-x-auto pb-1" id="position-tabs-bar">
+        <!-- JS dynamically renders active position pills here -->
+      </div>
+
+      <!-- CAD MAIN SPLIT WORKSPACE: LEFT CANVAS (SVG), RIGHT CONTROLS -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- LEFT: SVG CAD CANVAS & LIVE PREVIEW (7 Cols) -->
+        <div class="lg:col-span-7 bg-slate-900 rounded-2xl border border-slate-800 p-4 flex flex-col items-center justify-between shadow-2xl relative min-h-[520px]">
+          
+          <!-- Drawing Header Bar -->
+          <div class="w-full flex items-center justify-between border-b border-slate-800 pb-3 mb-2">
+            <div class="flex items-center space-x-2">
+              <span id="cad-pos-code" class="text-sm font-bold text-amber-400 font-mono bg-amber-400/10 px-2.5 py-1 rounded border border-amber-400/20">POZ 1</span>
+              <span id="cad-pos-title" class="text-xs font-semibold text-slate-300">Tek Kanat Çift Açılım Pencere</span>
+            </div>
+            <div class="flex items-center space-x-2 text-xs text-slate-400 font-mono">
+              <span id="cad-dimensions-badge" class="bg-slate-800 px-2 py-0.5 rounded text-blue-300">800 x 1200 mm</span>
+              <span id="cad-area-badge" class="bg-slate-800 px-2 py-0.5 rounded text-emerald-300">0.96 m²</span>
+              <span id="cad-uw-badge" class="bg-slate-800 px-2 py-0.5 rounded text-purple-300">Uw: 1.16 W/m²K</span>
+            </div>
+          </div>
+
+          <!-- SVG CANVAS WRAPPER -->
+          <div class="w-full flex-1 flex items-center justify-center p-4 bg-slate-950/80 rounded-xl border border-slate-800/80 min-h-[380px] relative overflow-hidden" id="svg-drawing-container">
+            <!-- Dynamic SVG SVG Content injected via JS -->
+          </div>
+
+          <!-- Quick Drawing Specs Footer -->
+          <div class="w-full mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-slate-400 font-mono">
+            <div><span class="text-slate-500">Seri:</span> <span id="cad-spec-series" class="text-slate-200 font-semibold">ATLANTİK 750</span></div>
+            <div><span class="text-slate-500">Renk:</span> <span id="cad-spec-color" class="text-slate-200 font-semibold">Beyaz</span></div>
+            <div><span class="text-slate-500">Cam:</span> <span id="cad-spec-glass" class="text-slate-200 font-semibold">4+16+4 Sinerji</span></div>
+            <div><span class="text-slate-500">Birime Fiyat:</span> <span id="cad-spec-price" class="text-emerald-400 font-bold">145.00 €</span></div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: CAD FORM CONTROLS & SELECTION PANEL (5 Cols) -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+            <h2 class="text-sm font-bold text-white border-b border-slate-800 pb-2.5 flex items-center justify-between">
+              <span><i class="fa-solid fa-sliders text-blue-400 mr-2"></i>Poz Parametreleri & Konfigürasyon</span>
+              <span class="text-[10px] text-slate-400 font-mono">CAD v4.5</span>
+            </h2>
+
+            <!-- Form Grid -->
+            <div class="space-y-3 text-xs">
+              
+              <!-- Position Label & Quantity -->
+              <div class="grid grid-cols-3 gap-2">
+                <div class="col-span-2">
+                  <label class="block text-slate-400 font-medium mb-1">Poz Adı / Tanımı</label>
+                  <input type="text" id="input-pos-title" onchange="updateActivePosition()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 focus:border-blue-500 outline-none">
+                </div>
+                <div>
+                  <label class="block text-slate-400 font-medium mb-1">Adet</label>
+                  <input type="number" id="input-pos-qty" min="1" value="1" onchange="updateActivePosition()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 font-bold text-center focus:border-blue-500 outline-none">
+                </div>
+              </div>
+
+              <!-- Dimensions (W & H in mm, cm or imperial fraction support) -->
+              <div class="grid grid-cols-2 gap-2 p-2.5 bg-slate-950/60 rounded-xl border border-slate-800">
+                <div>
+                  <label class="block text-slate-400 font-medium mb-1 flex items-center justify-between">
+                    <span>Genişlik (W)</span>
+                    <span class="text-[10px] text-blue-400 font-mono">mm / inç</span>
+                  </label>
+                  <input type="text" id="input-pos-width" value="1000" oninput="updateActivePosition()" placeholder="Örn: 1000 veya 39 3/8" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono font-semibold focus:border-blue-500 outline-none">
+                </div>
+                <div>
+                  <label class="block text-slate-400 font-medium mb-1 flex items-center justify-between">
+                    <span>Yükseklik (H)</span>
+                    <span class="text-[10px] text-blue-400 font-mono">mm / inç</span>
+                  </label>
+                  <input type="text" id="input-pos-height" value="1400" oninput="updateActivePosition()" placeholder="Örn: 1400 veya 55 1/8" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono font-semibold focus:border-blue-500 outline-none">
+                </div>
+              </div>
+
+              <!-- Opening Type Visual Selector -->
+              <div>
+                <label class="block text-slate-400 font-medium mb-1">Açılım & Tip Seçimi</label>
+                <select id="input-pos-type" onchange="updateActivePosition()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-semibold focus:border-blue-500 outline-none cursor-pointer">
+                  <optgroup label="Pencereler">
+                    <option value="SABIT">Sabit Pencere (Fixed Glass)</option>
+                    <option value="TEK_SOL">Tek Kanat Sol Açılım (Turn Left)</option>
+                    <option value="TEK_SAG">Tek Kanat Sağ Açılım (Turn Right)</option>
+                    <option value="TEK_CIFT_ACILIM">Tek Kanat Çift Açılım (Tilt & Turn)</option>
+                    <option value="HOK_CIFTKANAT">Çift Kanat Fransız / HOK (Double Sash)</option>
+                    <option value="YATAY_BOLUNMUS">Üstü Vasistas / Altı Sabit Bölünmüş</option>
+                  </optgroup>
+                  <optgroup label="Kapılar">
+                    <option value="KAPI_TEK_SOL">Tek Kanat Dilli/Kilitli Kapı — Sol</option>
+                    <option value="KAPI_TEK_SAG">Tek Kanat Dilli/Kilitli Kapı — Sağ</option>
+                    <option value="KAPI_CIFT">Çift Kanat Bina Giriş / Veranda Kapısı</option>
+                    <option value="KAPI_DEKORATIF">Dekoratif Panelli Giriş Kapısı (Panel 04101s)</option>
+                  </optgroup>
+                  <optgroup label="Sürme & Hebeschiebe">
+                    <option value="SURME_PERGE">Perge Çiftli Sürme (2 Kanat Hareketli)</option>
+                    <option value="HEBESCHIEBE_AKDENIZ">Akdeniz Hebeschiebe Lift & Slide (1 Sabit + 1 Sürme)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <!-- Profile Series & Color -->
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-slate-400 font-medium mb-1">Profil Serisi</label>
+                  <select id="input-pos-series" onchange="updateActivePosition()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-blue-500 outline-none">
+                    <!-- Populated via JS catalog -->
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-slate-400 font-medium mb-1">Profil Rengi</label>
+                  <select id="input-pos-color" onchange="updateActivePosition()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-blue-500 outline-none">
+                    <!-- Populated via JS catalog -->
+                  </select>
+                </div>
+              </div>
+
+              <!-- Glass & Panel Selection -->
+              <div>
+                <label class="block text-slate-400 font-medium mb-1">Cam / Dolgu Tipi</label>
+                <select id="input-pos-glass" onchange="updateActivePosition()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-blue-500 outline-none">
+                  <!-- Populated via JS catalog -->
+                </select>
+              </div>
+
+              <!-- Shutter (Panjur) Config -->
+              <div class="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="input-pos-has-shutter" onchange="updateActivePosition()" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0 cursor-pointer">
+                    <span class="text-xs font-semibold text-slate-200">195 mm Monoblok Motorlu Panjur Ekle</span>
+                  </label>
+                  <span class="text-[10px] bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded font-mono">110.00 €/m²</span>
+                </div>
+                <div id="shutter-options-box" class="hidden text-[11px] grid grid-cols-2 gap-2 pt-1 border-t border-slate-800">
+                  <label class="flex items-center space-x-1 cursor-pointer">
+                    <input type="radio" name="shutter-deduct" value="subtract" checked onchange="updateActivePosition()" class="text-blue-600">
+                    <span class="text-slate-300">195mm Yükseklikten Düş</span>
+                  </label>
+                  <label class="flex items-center space-x-1 cursor-pointer">
+                    <input type="radio" name="shutter-deduct" value="add" onchange="updateActivePosition()" class="text-blue-600">
+                    <span class="text-slate-300">195mm Üste Ekle</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Threshold & Extras (Düşük Eşik, Karolaj, Sineklik) -->
+              <div class="grid grid-cols-2 gap-2 text-[11px]">
+                <div>
+                  <label class="block text-slate-400 mb-1">Eşik Tipi (Kapılar için)</label>
+                  <select id="input-pos-threshold" onchange="updateActivePosition()" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200">
+                    <option value="ALU_20MM">20 mm Alüminyum Düşük Eşik</option>
+                    <option value="PVC_4KENAR">4 Kenar PVC Kasa Eşik</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-slate-400 mb-1">Sineklik Tipi</label>
+                  <select id="input-pos-flyscreen" onchange="updateActivePosition()" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200">
+                    <option value="NONE">Yok</option>
+                    <option value="SABIT">Sabit Sineklik</option>
+                    <option value="MENTESELI">Menteşeli Sineklik</option>
+                    <option value="PILELI_YATAY">Pileli Yatay Sineklik</option>
+                    <option value="PILELI_DIKEY">Pileli Dikey Sineklik</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Karolaj & Frame Upgrade Extras -->
+              <div class="grid grid-cols-2 gap-2 text-[11px]">
+                <div class="flex items-center space-x-2 pt-2">
+                  <input type="checkbox" id="input-pos-muntin" onchange="updateActivePosition()" class="w-3.5 h-3.5 rounded bg-slate-900 border-slate-700">
+                  <span class="text-slate-300">Cam İçi Karolaj (Grid)</span>
+                </div>
+                <div class="flex items-center space-x-2 pt-2">
+                  <input type="checkbox" id="input-pos-frame-ext" onchange="updateActivePosition()" class="w-3.5 h-3.5 rounded bg-slate-900 border-slate-700">
+                  <span class="text-slate-300">35x70 Kasa Yükseltme</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 2: CUSTOMER QUOTE PRINT VIEW (Müşteri Teklifi - 6 Dilli A4 Layout) -->
+    <section id="view-quote" class="hidden space-y-6">
+      <!-- Quote Controls Header Bar (Hidden on Print) -->
+      <div class="no-print bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        
+        <!-- Language Selector -->
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-semibold text-slate-400"><i class="fa-solid fa-language mr-1 text-blue-400"></i>Teklif Dili:</span>
+          <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 space-x-1">
+            <button onclick="setQuoteLanguage('TR')" id="lang-btn-TR" class="px-2.5 py-1 rounded text-xs font-bold transition bg-blue-600 text-white">TR</button>
+            <button onclick="setQuoteLanguage('EN')" id="lang-btn-EN" class="px-2.5 py-1 rounded text-xs font-bold transition text-slate-400 hover:text-white">EN</button>
+            <button onclick="setQuoteLanguage('DE')" id="lang-btn-DE" class="px-2.5 py-1 rounded text-xs font-bold transition text-slate-400 hover:text-white">DE</button>
+            <button onclick="setQuoteLanguage('IT')" id="lang-btn-IT" class="px-2.5 py-1 rounded text-xs font-bold transition text-slate-400 hover:text-white">IT</button>
+            <button onclick="setQuoteLanguage('RU')" id="lang-btn-RU" class="px-2.5 py-1 rounded text-xs font-bold transition text-slate-400 hover:text-white">RU</button>
+            <button onclick="setQuoteLanguage('FR')" id="lang-btn-FR" class="px-2.5 py-1 rounded text-xs font-bold transition text-slate-400 hover:text-white">FR</button>
+          </div>
+        </div>
+
+        <!-- Commercial Calculation Controls & Target Price Solver -->
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          <!-- Discount % Input -->
+          <div class="flex items-center space-x-1.5 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+            <span class="text-slate-400 font-medium">İskonto (%):</span>
+            <input type="number" id="commercial-discount-percent" value="0" min="0" max="100" onchange="updateCommercials()" class="w-14 bg-slate-900 border border-slate-700 rounded text-center font-bold text-amber-400 outline-none">
+          </div>
+
+          <!-- Target Price Solver Button -->
+          <button onclick="solveTargetPrice()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition shadow-md flex items-center space-x-1">
+            <i class="fa-solid fa-bullseye text-xs"></i>
+            <span>Hedef Fiyattan İskonto Hesapla</span>
+          </button>
+
+          <!-- Toggle Bank Details -->
+          <label class="flex items-center space-x-1.5 cursor-pointer bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+            <input type="checkbox" id="toggle-bank-iban" checked onchange="renderCustomerQuote()" class="w-3.5 h-3.5 text-blue-600 rounded">
+            <span class="text-slate-300 font-medium">Banka IBAN Göster</span>
+          </label>
+
+          <!-- Print PDF Button -->
+          <button onclick="triggerPrint()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold transition shadow-lg shadow-emerald-900/30 flex items-center space-x-2">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>Yazdır / PDF İndir</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- PRINTABLE A4 QUOTATION CONTAINER (White Background on Print) -->
+      <div id="customer-quote-paper" class="bg-white text-slate-900 p-6 sm:p-10 rounded-2xl shadow-2xl space-y-6 max-w-5xl mx-auto font-sans">
+        <!-- Rendered dynamically by JS -->
+      </div>
+    </section>
+
+    <!-- VIEW 3: INTERNAL BOM & TAKEOFF BREAKDOWN (Şirket İçi Maliyet & Metraj) -->
+    <section id="view-bom" class="hidden space-y-6">
+      <div class="no-print bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <div class="flex items-center space-x-3">
+          <div class="p-3 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+            <i class="fa-solid fa-calculator text-2xl"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-white">Şirket İçi Maliyet, Metraj & Kesim İcmali</h1>
+            <p class="text-xs text-slate-400">ABT PenCAD standartlarında profil, cam, aksesuar ve işçilik detaylı stok kodu dökümü.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button onclick="exportBOMToCSV()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 flex items-center space-x-2 transition">
+            <i class="fa-solid fa-file-excel text-emerald-400"></i>
+            <span>Excel / CSV İndir</span>
+          </button>
+          <button onclick="triggerPrint()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg transition flex items-center space-x-2">
+            <i class="fa-solid fa-print"></i>
+            <span>Yazdır</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- BOM Content Container -->
+      <div id="bom-view-container" class="space-y-6">
+        <!-- JS renders detailed BOM & Metraj tables here -->
+      </div>
+    </section>
+
+    <!-- VIEW 4: EDITABLE PRICE & PROFILE SERIES DATABASE (Fiyat & Seri Yönetimi) -->
+    <section id="view-catalog" class="hidden space-y-6">
+      <div class="no-print bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <div class="flex items-center space-x-3">
+          <div class="p-3 bg-amber-600/20 text-amber-400 rounded-xl border border-amber-500/30">
+            <i class="fa-solid fa-tags text-2xl"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-white">Fiyat, Seri & Birim Maliyet Yönetimi</h1>
+            <p class="text-xs text-slate-400">Zamlarda tek tıkla toplu % artış yapın, yeni markalar/seriler veya cam türleri ekleyin.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button onclick="saveCatalogToLocalStorage()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-lg flex items-center space-x-1.5">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>Değişiklikleri Kaydet</span>
+          </button>
+          <button onclick="resetCatalogToFactory()" class="px-3 py-2 bg-rose-950/60 hover:bg-rose-900 text-rose-300 rounded-xl text-xs font-medium border border-rose-800/50 transition">
+            <i class="fa-solid fa-rotate-left mr-1"></i>Fabrika Ayarları
+          </button>
+        </div>
+      </div>
+
+      <!-- Bulk % Adjustment Tool -->
+      <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3">
+        <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+          <i class="fa-solid fa-arrow-trend-up"></i>
+          <span>Toplu Zam / İndirim Uygulama Aracı (%)</span>
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1">Kategori</label>
+            <select id="bulk-category-select" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white">
+              <option value="ALL">Tüm Kataloğa Uygula</option>
+              <option value="SERIES">Sadece Profil Serilerine</option>
+              <option value="GLASS">Sadece Cam & Panellere</option>
+              <option value="HARDWARE">Sadece Aksesuarlara</option>
+              <option value="EXTRAS">Sadece Panjur & Sinekliklere</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Oran (%) — Zam için +, İndirim için -</label>
+            <input type="number" id="bulk-percent-input" value="10" step="0.5" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-bold font-mono">
+          </div>
+          <div class="flex items-end">
+            <button onclick="applyBulkPriceAdjustment()" class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold transition shadow-md">
+              Toplu Fiyat Güncelle
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Catalog Editing Tabs & Tables -->
+      <div id="catalog-tables-container" class="space-y-6">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- VIEW 5: GEMINI CHAT-TO-APP BRIDGE & LOCAL PROJECTS (Proje & Gemini JSON) -->
+    <section id="view-gemini" class="hidden space-y-6">
+      <div class="no-print bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <div class="flex items-center space-x-3">
+          <div class="p-3 bg-purple-600/20 text-purple-400 rounded-xl border border-purple-500/30">
+            <i class="fa-solid fa-robot text-2xl"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>Gemini AI Chat Köprüsü & Kayıtlı Projeler</span>
+              <span class="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">JSON Sync</span>
+            </h1>
+            <p class="text-xs text-slate-400">Gemini sohbetine attığınız el çizimlerini veya ölçü listelerini JSON formatında buraya yapıştırıp anında yükleyin.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Split View: Left Gemini JSON Import/Export, Right Local Saved Projects -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Gemini JSON Bridge Box -->
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4">
+          <h2 class="text-sm font-bold text-purple-300 flex items-center justify-between border-b border-slate-800 pb-2">
+            <span><i class="fa-solid fa-code-compare mr-2"></i>Gemini JSON Yapıştır / Dışa Aktar</span>
+            <button onclick="copyCurrentProjectJSON()" class="text-xs bg-purple-950 hover:bg-purple-900 text-purple-300 px-2.5 py-1 rounded border border-purple-800 transition">
+              <i class="fa-solid fa-copy mr-1"></i>Projeyi Kopyala
+            </button>
+          </h2>
+
+          <p class="text-xs text-slate-400">
+            Gemini sohbetinden aldığınız `[{ "title": "Poz 1", "width": 1200, "height": 1400, ... }]` JSON kodunu aşağıdaki kutuya yapıştırıp projeye aktarabilirsiniz.
+          </p>
+
+          <textarea id="gemini-json-input" rows="10" placeholder='[
+  {
+    "title": "Salons Çift Kanat Fransız",
+    "qty": 2,
+    "width": 1600,
+    "height": 2100,
+    "type": "HOK_CIFTKANAT",
+    "series": "PASIFIK_888",
+    "color": "GOLDEN_OAK",
+    "glass": "SN4164TP146SN"
+  }
+]' class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-purple-200 focus:border-purple-500 outline-none"></textarea>
+
+          <div class="flex items-center space-x-2">
+            <button onclick="importJSONFromGemini()" class="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-purple-900/40">
+              <i class="fa-solid fa-file-import mr-1.5"></i>JSON Projesini Yükle
+            </button>
+          </div>
+        </div>
+
+        <!-- Saved Projects List & Sample Projects Loader -->
+        <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4">
+          <h2 class="text-sm font-bold text-blue-300 flex items-center justify-between border-b border-slate-800 pb-2">
+            <span><i class="fa-solid fa-folder-open mr-2"></i>Kayıtlı Projeler & Örnek Demolar</span>
+            <button onclick="saveCurrentProjectToLocal()" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded transition">
+              <i class="fa-solid fa-plus mr-1"></i>Mevcut Projeyi Kaydet
+            </button>
+          </h2>
+
+          <div class="space-y-2" id="saved-projects-list">
+            <!-- Rendered by JS -->
+          </div>
+
+          <div class="pt-3 border-t border-slate-800 space-y-2">
+            <h3 class="text-xs font-semibold text-slate-400">Hazır Demo Örnek Projeler:</h3>
+            <div class="grid grid-cols-1 gap-2 text-xs">
+              <button onclick="loadSampleProject('SAMPLE_1')" class="p-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-left flex items-center justify-between transition">
+                <div>
+                  <div class="font-bold text-white">3 Poz Atlantik 750 Beyaz Test Projesi</div>
+                  <div class="text-[10px] text-slate-400">Tek kanat, çift kanat HOK ve kapı kombinasyonu</div>
+                </div>
+                <span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded">Yükle</span>
+              </button>
+
+              <button onclick="loadSampleProject('SAMPLE_2')" class="p-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-left flex items-center justify-between transition">
+                <div>
+                  <div class="font-bold text-amber-400">Quote 1859 — İtalya Pasifik 888 Altın Meşe (10 Poz)</div>
+                  <div class="text-[10px] text-slate-400">80mm Pasifik, Üçlü Cam, Panjurlu & Karolajlı Lüks İhracat</div>
+                </div>
+                <span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-1 rounded">Yükle</span>
+              </button>
+
+              <button onclick="loadSampleProject('SAMPLE_3')" class="p-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-left flex items-center justify-between transition">
+                <div>
+                  <div class="font-bold text-slate-200">Teklif 1860 — USA Sunroom Siyah Hebeschiebe</div>
+                  <div class="text-[10px] text-slate-400">Mat Siyah, Akdeniz Hebeschiebe Lift-Slide & Perge Sürme</div>
+                </div>
+                <span class="text-xs bg-slate-700 text-slate-200 px-2 py-1 rounded">Yükle</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CUSTOM MODAL TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 no-print pointer-events-none"></div>
+
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <script>
+    /* ==========================================================================
+       1. DICTIONARIES & MULTI-LANGUAGE LOCALIZATION (TR, EN, DE, IT, RU, FR)
+       ========================================================================== */
+    const LOCALIZATION = {
+      TR: {
+        companySlogan: "HAYATA PENCERE AÇ",
+        quoteTitle: "PVC PENCERE & KAPI SİSTEMLERİ MÜŞTERİ TEKLİFİ",
+        quoteNo: "Teklif No",
+        orderDate: "Tarih",
+        dealer: "Bayi / Satıcı",
+        customer: "Müşteri / Proje",
+        drawnBy: "Çizen",
+        posHeader: "Poz",
+        qtyHeader: "Adet",
+        descHeader: "Açıklama & Teknik Özellikler",
+        unitPriceHeader: "Birim Fiyat",
+        totalHeader: "Toplam Tutar",
+        totalProducts: "Pencere / Kapı Ürün Toplamı",
+        packaging: "İhracat Ambalaj & Sandıklama",
+        freight: "Nakliye / Lojistik",
+        palletizing: "Paletleme Bedeli",
+        subtotal: "Ara Toplam",
+        discount: "Özel İskonto",
+        netTotal: "Net Toplam",
+        vat: "KDV (%0 İhracat / Sınır Dışı)",
+        grandTotal: "GENEL TOPLAM",
+        bankTitle: "Banka IBAN & Ödeme Bilgileri",
+        termsTitle: "Satış & İhracat Şartları",
+        terms: [
+          "Fiyatlarımıza ihracat ambalajı ve Türkiye gümrükleme masrafları dahildir.",
+          "Varış ülkesi ithalat vergileri ve KDV alıcıya aittir.",
+          "Montaj ve iskele hizmetleri hariç olup, sadece imalat ve teslimatı kapsar.",
+          "Üretim süresi, %50 avans ödemesi ve onaylı çizimlerin tesliminden itibaren 7-9 haftadır.",
+          "Bakiye ödeme (%50) sevkiyat öncesinde tamamlanmalıdır.",
+          "Sipariş onaylanıp imalata geçildikten sonra yapılan iptallerde %40 cezai şart uygulanır.",
+          "İmalat öncesinde imzalı teknik çizim onayı zorunludur.",
+          "Panjur sistemleri nakliye güvenliği için demonte sevk edilebilir.",
+          "Teslimattaki hasarlar aynı gün fotoğraflı tutanak ile bildirilmelidir."
+        ]
+      },
+      EN: {
+        companySlogan: "OPEN A WINDOW TO LIFE",
+        quoteTitle: "PVC WINDOW & DOOR SYSTEMS QUOTATION",
+        quoteNo: "Quote No",
+        orderDate: "Date",
+        dealer: "Dealer / Seller",
+        customer: "Customer / Project",
+        drawnBy: "Drawn By",
+        posHeader: "Pos",
+        qtyHeader: "Qty",
+        descHeader: "Description & Technical Specifications",
+        unitPriceHeader: "Unit Price",
+        totalHeader: "Total Amount",
+        totalProducts: "Window & Door Subtotal",
+        packaging: "Export Packaging & Crate",
+        freight: "Freight & Transport",
+        palletizing: "Palletizing Fee",
+        subtotal: "Subtotal",
+        discount: "Special Discount",
+        netTotal: "Net Total",
+        vat: "VAT (0% Export)",
+        grandTotal: "GRAND TOTAL",
+        bankTitle: "Bank IBAN & Payment Details",
+        termsTitle: "Terms & Conditions of Export",
+        terms: [
+          "Prices include export packaging and Turkish export customs clearance.",
+          "Destination country import duties, taxes, and local VAT are excluded.",
+          "Installation and scaffolding are excluded; supply-only contract.",
+          "Production lead time is 7-9 weeks following 50% advance payment & signed drawing approval.",
+          "Remaining 50% balance must be settled prior to dispatch.",
+          "A 40% cancellation fee applies once order shop drawings are signed and in production.",
+          "Signed shop-drawing approval is mandatory before manufacturing.",
+          "Shutter systems may ship detached for transit safety.",
+          "Any transit damage must be reported on the day of delivery with video/photos."
+        ]
+      },
+      DE: {
+        companySlogan: "EIN FENSTER ZUM LEBEN ÖFFNEN",
+        quoteTitle: "PVC FENSTER & TÜREN ANGEBOT",
+        quoteNo: "Angebot Nr",
+        orderDate: "Datum",
+        dealer: "Händler",
+        customer: "Kunde / Projekt",
+        drawnBy: "Gezeichnet von",
+        posHeader: "Pos",
+        qtyHeader: "Anz",
+        descHeader: "Beschreibung & Technische Daten",
+        unitPriceHeader: "Einzelpreis",
+        totalHeader: "Gesamtpreis",
+        totalProducts: "Fenster & Türen Zwischensumme",
+        packaging: "Exportverpackung",
+        freight: "Fracht & Transport",
+        palletizing: "Palettierungsgebühr",
+        subtotal: "Zwischensumme",
+        discount: "Sonderrabatt",
+        netTotal: "Nettobetrag",
+        vat: "MwSt. (0% Export)",
+        grandTotal: "GESAMTBETRAG",
+        bankTitle: "Bankverbindung & IBAN",
+        termsTitle: "Verkaufs- und Lieferbedingungen",
+        terms: [
+          "Preise inkl. Exportverpackung und türkischer Ausfuhrverzollung.",
+          "Einfuhrabgaben und MwSt. im Bestimmungsland gehen zu Lasten des Käufers.",
+          "Montage und Gerüstbau sind nicht enthalten (Nur Lieferung).",
+          "Lieferzeit beträgt 7-9 Wochen nach 50% Anzahlung und freigegebener Zeichnung.",
+          "Restzahlung (50%) vor Verladung erforderlich.",
+          "Bei Stornierung nach Produktionsfreigabe werden 40% Stornogebühren berechnet.",
+          "Unterschriebene Ausführungszeichnung vor Baubeginn erforderlich.",
+          "Transportschäden müssen am Liefertag mit Fotos gemeldet werden."
+        ]
+      },
+      IT: {
+        companySlogan: "APRI UNA FINESTRA SULLA VITA",
+        quoteTitle: "PREVENTIVO INFISSI IN PVC E PORTE",
+        quoteNo: "Preventivo N.",
+        orderDate: "Data",
+        dealer: "Rivenditore",
+        customer: "Cliente / Progetto",
+        drawnBy: "Disegnato da",
+        posHeader: "Pos",
+        qtyHeader: "Qtà",
+        descHeader: "Descrizione & Specifiche Tecniche",
+        unitPriceHeader: "Prezzo Unitario",
+        totalHeader: "Importo Totale",
+        totalProducts: "Totale Finestre & Porte",
+        packaging: "Imballaggio di Esportazione",
+        freight: "Trasporto & Spedizione",
+        palletizing: "Costo Pallet",
+        subtotal: "Subtotale",
+        discount: "Sconto Speciale",
+        netTotal: "Totale Netto",
+        vat: "IVA (0% Esportazione)",
+        grandTotal: "TOTALE GENERALE",
+        bankTitle: "Coordinate Bancarie IBAN",
+        termsTitle: "Condizioni di Vendita",
+        terms: [
+          "Prezzi comprensivi di imballo export e dogana di uscita dalla Turchia.",
+          "Dazi e IVA del paese di destinazione sono a carico dell'acquirente.",
+          "Installazione ed ponteggi esclusi (Solo fornitura).",
+          "Tempi di produzione: 7-9 settimane dal ricevimento dell'acconto del 50%.",
+          "Saldo del 50% prima della spedizione.",
+          "Approvazione dei disegni tecnici obbligatoria prima della produzione."
+        ]
+      },
+      RU: {
+        companySlogan: "ОТКРОЙ ОКНО В ЖИЗНЬ",
+        quoteTitle: "КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ - ПВХ ОКНА И ДВЕРИ",
+        quoteNo: "Предложение №",
+        orderDate: "Дата",
+        dealer: "Дилер",
+        customer: "Клиент / Проект",
+        drawnBy: "Составил",
+        posHeader: "Поз",
+        qtyHeader: "Кол-во",
+        descHeader: "Описание и технические характеристики",
+        unitPriceHeader: "Цена за ед.",
+        totalHeader: "Общая сумма",
+        totalProducts: "Итого изделия",
+        packaging: "Экспортная упаковка",
+        freight: "Доставка / Логистика",
+        palletizing: "Паллетирование",
+        subtotal: "Промежуточный итог",
+        discount: "Скидка",
+        netTotal: "Чистый итог",
+        vat: "НДС (0% Экспорт)",
+        grandTotal: "ОБЩАЯ СУММА",
+        bankTitle: "Банковские реквизиты IBAN",
+        termsTitle: "Условия поставки и оплаты",
+        terms: [
+          "Цены включают экспортную упаковку и таможенное оформление в Турции.",
+          "Таможенные пошлины и НДС в стране назначения оплачиваются покупателем.",
+          "Монтаж не входит в стоимость (только поставка).",
+          "Срок производства 7-9 недель после предоплаты 50%.",
+          "Окончательный расчет 50% перед отгрузкой."
+        ]
+      },
+      FR: {
+        companySlogan: "OUVREZ UNE FENÊTRE SUR LA VIE",
+        quoteTitle: "DEVIS MENUISERIES PVC & PORTES",
+        quoteNo: "Devis N°",
+        orderDate: "Date",
+        dealer: "Vendeur / Distributeur",
+        customer: "Client / Projet",
+        drawnBy: "Dessiné par",
+        posHeader: "Pos",
+        qtyHeader: "Qté",
+        descHeader: "Description & Spécifications Techniques",
+        unitPriceHeader: "Prix Unitaire",
+        totalHeader: "Prix Total",
+        totalProducts: "Total Fenêtres & Portes",
+        packaging: "Emballage Exportation",
+        freight: "Fret & Transport",
+        palletizing: "Frais de Palettisation",
+        subtotal: "Sous-total",
+        discount: "Remise Spéciale",
+        netTotal: "Total Net",
+        vat: "TVA (0% Export)",
+        grandTotal: "TOTAL GÉNÉRAL",
+        bankTitle: "Coordonnées Bancaires IBAN",
+        termsTitle: "Conditions Générales de Vente",
+        terms: [
+          "Les prix comprennent l'emballage export et le dédouanement turc.",
+          "Les taxes d'importation et TVA du pays de destination sont à la charge du client.",
+          "Pose et échafaudage exclus (Fourniture seule).",
+          "Délai de fabrication : 7-9 semaines après acompte de 50%.",
+          "Solde de 50% avant l'expédition."
+        ]
+      }
+    };
+
+    /* ==========================================================================
+       2. INITIAL BASE CATALOG DATABASE (EUR PRICES) & PROFILE SERIES
+       ========================================================================== */
+    const DEFAULT_CATALOG = {
+      exchangeRates: { EUR: 1.0, USD: 1.10, TRY: 38.5, GBP: 0.85, CHF: 0.95, RUB: 105.0 },
+      activeCurrency: 'EUR',
+      colors: {
+        WHITE: { code: '.19.00', name: 'Beyaz (White)', tier: 'white', fill: '#FFFFFF', stroke: '#94A3B8' },
+        GOLDEN_OAK: { code: '.303', name: 'Altın Meşe Cyl (Golden Oak)', tier: 'colored', fill: '#B46527', stroke: '#451A03' },
+        ANTHRACITE: { code: '.305', name: 'Antrasit Gri Cyl (Anthracite)', tier: 'colored', fill: '#334155', stroke: '#0F172A' },
+        BLACK: { code: '.308', name: 'Siyah Cyl (Matte Black)', tier: 'colored', fill: '#1E1E22', stroke: '#000000' }
+      },
+      series: {
+        PASIFIK_888: {
+          brand: 'ADOPEN',
+          name: 'PASİFİK 888 (80 mm / 6 Odacık)',
+          thickness: 80,
+          uf: 0.90,
+          hardwareBrand: 'ACCADO',
+          type: 'casement',
+          profiles: {
+            frame: { code: 'P.A.88801000.600.0.B', name: 'Kasa Profili', white: 13.64, colored: 16.54 },
+            winSash: { code: 'P.A.88802000.600.0.B', name: 'Pencere Kanat Profili', white: 14.06, colored: 17.35 },
+            doorSash: { code: 'P.A.88802100.600.0.B', name: 'Kapı Kanat Profili', white: 16.62, colored: 20.27 },
+            mullion: { code: 'P.A.88803000.600.0.B', name: 'Sabit Ortakayıt Profili', white: 15.19, colored: 18.71 },
+            hok: { code: 'P.A.88803100.600.0.B', name: 'Çift Kanat Ara Profili', white: 12.04, colored: 13.10 }
+          }
+        },
+        ATLANTIK_750: {
+          brand: 'ADOPEN',
+          name: 'ATLANTİK 750 (70 mm / 5 Odacık)',
+          thickness: 70,
+          uf: 1.30,
+          hardwareBrand: 'ACCADO',
+          type: 'casement',
+          profiles: {
+            frame: { code: 'P.A.75001000.600.0.B', name: 'Kasa Profili', white: 11.31, colored: 13.57 },
+            winSash: { code: 'P.A.75002200.600.0.B', name: 'Damlalıklı Kanat Profili', white: 12.67, colored: 15.50 },
+            doorSash: { code: 'P.A.75002100.600.0.B', name: 'Kapı Kanat Profili', white: 15.02, colored: 18.34 },
+            mullion: { code: 'P.A.75003000.600.0.B', name: 'Ortakayıt Profili', white: 12.29, colored: 15.05 },
+            hok: { code: 'P.A.75003101.600.0.B', name: 'Çift Kanat Ara Profili', white: 11.90, colored: 14.18 }
+          }
+        },
+        PERGE_SURME: {
+          brand: 'ADOPEN',
+          name: 'PERGE ÇİFTLİ SÜRME (70 mm Çift Ray)',
+          thickness: 70,
+          uf: 1.80,
+          hardwareBrand: 'ACCADO',
+          type: 'sliding',
+          profiles: {
+            frame: { code: 'P.A.23201106.650.0.0', name: 'Sürme Kasa Çift Ray', white: 16.45, colored: 20.15 },
+            winSash: { code: 'P.A.23202300.650.0.B', name: 'Sürme Kanat Kıl Fitilli', white: 16.45, colored: 20.15 },
+            doorSash: { code: 'P.A.23202300.650.0.B', name: 'Sürme Kanat Kıl Fitilli', white: 16.45, colored: 20.15 },
+            mullion: { code: 'P.A.23203000.650.0.B', name: 'Sürme Ortakayıt', white: 14.00, colored: 17.00 },
+            hok: { code: 'P.A.23203100.650.0.B', name: 'Sürme Ara Profil', white: 10.00, colored: 12.00 }
+          }
+        },
+        AKDENIZ_HEBESCHIEBE: {
+          brand: 'ADOPEN',
+          name: 'AKDENİZ HEBESCHIEBE (185 mm Kaldır Sür)',
+          thickness: 185,
+          uf: 1.50,
+          hardwareBrand: 'ACCADO',
+          type: 'hebeschiebe',
+          profiles: {
+            frame: { code: 'P.A.93001000.600.0.0', name: 'Hebeschiebe Kasa', white: 20.00, colored: 24.00 },
+            winSash: { code: 'P.A.93002301.600.0.B', name: 'Hebeschiebe Kanat', white: 22.50, colored: 27.00 },
+            doorSash: { code: 'P.A.93002301.600.0.B', name: 'Hebeschiebe Kanat', white: 22.50, colored: 27.00 },
+            mullion: { code: 'P.A.86003000.600.0.B', name: '800 Seri Ortakayıt', white: 18.00, colored: 21.00 },
+            hok: { code: 'P.A.93003100.600.0.B', name: 'Hebeschiebe Ara Profil', white: 15.00, colored: 18.00 }
+          }
+        },
+        REHAU_SYNEGO: {
+          brand: 'REHAU',
+          name: 'REHAU SYNEGO 80 MD (80 mm / ROTO NX)',
+          thickness: 80,
+          uf: 0.94,
+          hardwareBrand: 'ROTO',
+          type: 'casement',
+          profiles: {
+            frame: { code: 'REH.SYN.01', name: 'Rehau Synego Kasa', white: 22.00, colored: 27.50 },
+            winSash: { code: 'REH.SYN.02', name: 'Rehau Synego Pencere Kanat', white: 23.50, colored: 29.00 },
+            doorSash: { code: 'REH.SYN.03', name: 'Rehau Synego Kapı Kanat', white: 28.00, colored: 34.00 },
+            mullion: { code: 'REH.SYN.04', name: 'Rehau Synego Ortakayıt', white: 24.00, colored: 30.00 },
+            hok: { code: 'REH.SYN.05', name: 'Rehau Synego HOK Adaptör', white: 18.00, colored: 22.00 }
+          }
+        }
+      },
+      glasses: {
+        DC4164SN: { name: '4+16+4 Isıcam Sinerji (Low-E)', ug: 1.0, price: 51.29 },
+        DC4124SN: { name: '4+12+4 Isıcam Sinerji (Sürme Yatak)', ug: 1.3, price: 51.29 },
+        DC4164DC: { name: '4+16+4 Standart Düz Isıcam', ug: 2.7, price: 47.28 },
+        DC4164KF: { name: '4+16+4 Isıcam Konfor (Solar Low-E)', ug: 1.0, price: 55.30 },
+        ST4164SN: { name: '4+16+4 Satina (Buzlu) Sinerji', ug: 1.0, price: 60.53 },
+        DCTMPR: { name: '4+16+4 Çift Taraf Temperli Isıcam', ug: 1.1, price: 59.31 },
+        SN4124LM: { name: '44+12+4 Sinerji Lamine Güvenlik Camı', ug: 1.0, price: 83.89 },
+        SN4164TP146SN: { name: '4+16+4+16+4 Triple Çift Sinerji Üçlü Cam', ug: 0.5, price: 96.13 },
+        JZ4204DC: { name: '4+20+4 Mıknatıslı Jaluzili Isıcam', ug: 1.1, price: 192.68 },
+        PNL58114S: { name: '24 mm Düz Sandviç Panel (Dolgulu)', ug: 1.2, price: 150.00 },
+        PNL04101S: { name: 'Dekoratif Giriş Kapı Paneli (Panel 04101s)', ug: 0.9, price: 450.00 }
+      },
+      hardware: {
+        VASISTAS: { name: 'Vasistas Basit Menteşe Aksesuarı', price: 9.49 },
+        TEK_CIFT_ACILIM: { name: 'Tek Kanat Çift Açılım Güvenlikli Set', price: 30.91 },
+        KAPI_LOK: { name: 'Tek Kanat Kapı Kilitli Barelli Set (Basit)', price: 43.74 },
+        KAPI_CIFT_ACILIM_MENTESE: { name: 'Tek Kanat Kapı Kilitli Barelli Set (Çift Açılım Menteşeli)', price: 47.67 },
+        HOK_SET: { name: 'Çift Kanat HOK Çift Açılım Levye Kollu Set', price: 52.30 },
+        HOK_KAPI_SET: { name: 'Çift Kanat HOK Kapı Dilli Kilitli Set', price: 74.17 },
+        BINA_GIRIS_3KANCALI: { name: 'Bina Giriş Kapısı 3 Kancalı Güvenlik Kilit Seti', price: 500.00 },
+        SURME_PERGE_SET: { name: 'Perge Çiftli Sürme Çift Kol Seti', price: 92.72 },
+        HEBESCHIEBE_160KG: { name: 'Akdeniz Hebeschiebe 160 Kg Lift-Slide Seti', price: 1500.00 }
+      },
+      extras: {
+        ALU_THRESHOLD_20MM: { name: '20 mm Alüminyum Düşük Eşik Profili', unit: 'Mt', price: 100.00 },
+        SHUTTER_MONO_195: { name: '195 mm Monoblok Motorlu Panjur (Alusel)', unit: 'M2', price: 110.00 },
+        GRID_MUNTIN: { name: 'Cam İçi Karolaj (Grid)', unit: 'Mt', price: 13.63 },
+        FRAME_EXT_35X70: { name: '35x70 Kasa Yükseltme Profili', unit: 'Mt', white: 5.61, colored: 6.87 },
+        FLYSCREEN_SABIT: { name: 'Sabit Sineklik', unit: 'Mt', price: 19.02 },
+        FLYSCREEN_MENTESELI: { name: 'Menteşeli Pencere Sinekliği', unit: 'Mt', price: 19.02 },
+        FLYSCREEN_PILELI: { name: 'Pileli Yatay/Dikey Sineklik', unit: 'Mt', price: 34.87 },
+        PACKAGING_EXPORT: { name: 'Export Ambalaj & Ahşap Sandıklama', unit: 'M2', price: 15.00 },
+        FREIGHT_BASE_EUR: { name: 'İhracat Nakliye Sabit (Her 30 m² için)', unit: 'EUR', price: 1000.00 }
+      }
+    };
+
+    /* ==========================================================================
+       3. APPLICATION GLOBAL STATE
+       ========================================================================== */
+    let catalog = JSON.parse(localStorage.getItem('ozkanoglu_catalog')) || DEFAULT_CATALOG;
+
+    let project = {
+      quoteNo: "1861",
+      orderDate: new Date().toISOString().split('T')[0],
+      dealer: "ÖZKANOGLU ABT WEB STUDIO",
+      customer: "İhracat Müşterisi — Proje #1861",
+      drawnBy: "ABT CAD",
+      language: "TR",
+      currency: "EUR",
+      discountPercent: 0,
+      transportManualOverride: null,
+      palletizingManualOverride: null,
+      positions: [
+        {
+          id: "POS-1",
+          title: "Salon Çift Kanat Fransız Pencere (HOK)",
+          qty: 1,
+          width: 1400,
+          height: 1800,
+          type: "HOK_CIFTKANAT",
+          series: "PASIFIK_888",
+          color: "GOLDEN_OAK",
+          glass: "SN4164TP146SN",
+          hasShutter: true,
+          shutterDeduct: "subtract",
+          threshold: "PVC_4KENAR",
+          flyscreen: "PILELI_YATAY",
+          hasMuntin: true,
+          hasFrameExt: false
+        },
+        {
+          id: "POS-2",
+          title: "Mutfak Tek Kanat Çift Açılım Pencere",
+          qty: 2,
+          width: 900,
+          height: 1300,
+          type: "TEK_CIFT_ACILIM",
+          series: "ATLANTİK_750",
+          color: "WHITE",
+          glass: "DC4164SN",
+          hasShutter: false,
+          shutterDeduct: "subtract",
+          threshold: "PVC_4KENAR",
+          flyscreen: "SABIT",
+          hasMuntin: false,
+          hasFrameExt: false
+        },
+        {
+          id: "POS-3",
+          title: "Veranda Çıkış Dilli/Kilitli Kapı",
+          qty: 1,
+          width: 1000,
+          height: 2200,
+          type: "KAPI_TEK_SAG",
+          series: "PASIFIK_888",
+          color: "ANTHRACITE",
+          glass: "SN4124LM",
+          hasShutter: false,
+          shutterDeduct: "subtract",
+          threshold: "ALU_20MM",
+          flyscreen: "NONE",
+          hasMuntin: false,
+          hasFrameExt: true
+        }
+      ]
+    };
+
+    let activePositionIndex = 0;
+
+    /* ==========================================================================
+       4. HELPER & UTILITY FUNCTIONS (Dimension Parser, Toast, Currency)
+       ========================================================================== */
+    function parseDimension(input) {
+      if (typeof input === 'number') return input;
+      if (!input) return 1000;
+      let str = String(input).trim();
+      
+      // Check for imperial fraction e.g. "64 3/4" or "80 1/2"
+      if (str.includes('/')) {
+        let parts = str.split(' ');
+        let whole = 0;
+        let fracStr = str;
+        if (parts.length > 1) {
+          whole = parseFloat(parts[0]) || 0;
+          fracStr = parts[1];
+        }
+        let fracParts = fracStr.split('/');
+        let frac = (parseFloat(fracParts[0]) || 0) / (parseFloat(fracParts[1]) || 1);
+        let totalInches = whole + frac;
+        return Math.round(totalInches * 25.4); // Convert inches to mm
+      }
+      
+      let val = parseFloat(str.replace(',', '.'));
+      if (isNaN(val)) return 1000;
+      
+      // If entered in cm e.g. 120 -> convert to mm if < 300, otherwise mm
+      if (val < 300 && !str.includes('.')) {
+        return Math.round(val * 10);
+      }
+      return Math.round(val);
+    }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold text-white transition-all transform translate-y-2 pointer-events-auto flex items-center space-x-2 ${
+        type === 'error' ? 'bg-rose-600' : type === 'success' ? 'bg-emerald-600' : 'bg-blue-600'
+      }`;
+      toast.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-triangle-exclamation' : type === 'success' ? 'fa-circle-check' : 'fa-circle-info'}"></i><span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function formatMoney(amount, currency = null) {
+      const curr = currency || project.currency || 'EUR';
+      const rate = catalog.exchangeRates[curr] || 1.0;
+      const converted = amount * rate;
+      const symbols = { EUR: '€', USD: '$', TRY: '₺', GBP: '£', CHF: 'CHF', RUB: '₽' };
+      const sym = symbols[curr] || curr;
+      return `${converted.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${sym}`;
+    }
+
+    /* ==========================================================================
+       5. CORE CUTTING, TAKEOFF & BOM CALCULATOR ENGINE
+       ========================================================================== */
+    function calculatePositionBOM(pos) {
+      const seriesKey = pos.series || 'ATLANTİK_750';
+      const series = catalog.series[seriesKey] || catalog.series.ATLANTİK_750;
+      const colorObj = catalog.colors[pos.color] || catalog.colors.WHITE;
+      const colorTier = colorObj.tier === 'colored' ? 'colored' : 'white';
+      
+      const W = parseDimension(pos.width);
+      let H_total = parseDimension(pos.height);
+      const qty = parseInt(pos.qty) || 1;
+
+      // 195mm Monoblock Shutter Height Deduction Logic
+      let H_frame = H_total;
+      let shutterArea = 0;
+      if (pos.hasShutter) {
+        if (pos.shutterDeduct === 'subtract') {
+          H_frame = Math.max(500, H_total - 195);
+        } else {
+          H_total = H_frame + 195;
+        }
+        shutterArea = (W * H_frame) / 1000000; // Shutter m² based on net frame area
+      }
+
+      // Height > 2000mm Rule: Automatically use Door Sash profile for rigidity if casement window
+      const isHeightOver2M = H_frame > 2000;
+      const isDoorType = pos.type.startsWith('KAPI_') || isHeightOver2M;
+      const hasLowThreshold = pos.threshold === 'ALU_20MM' && pos.type.startsWith('KAPI_');
+
+      // Profile Bar Cutting Formulas (+6mm weld allowance per bar)
+      let frameMeters = 0;
+      let winSashMeters = 0;
+      let doorSashMeters = 0;
+      let mullionMeters = 0;
+      let hokMeters = 0;
+      let aluThresholdMeters = 0;
+      let glassPanes = [];
+
+      if (hasLowThreshold) {
+        // 3-side PVC frame + bottom Alum threshold
+        frameMeters = Math.round((W + 6) / 10) / 100 + 2 * (Math.round((H_frame + 6) / 10) / 100);
+        aluThresholdMeters = Math.round((W - 40) / 10) / 100;
+      } else {
+        // 4-side PVC frame
+        frameMeters = 2 * (Math.round((W + 6) / 10) / 100) + 2 * (Math.round((H_frame + 6) / 10) / 100);
+      }
+
+      // Sashes & Glass deductions depending on Opening Type
+      switch (pos.type) {
+        case 'SABIT': {
+          let gw = W - 94;
+          let gh = H_frame - 94;
+          glassPanes.push({ w: gw, h: gh, area: Math.round((gw * gh / 1e6) * 100) / 100 });
+          break;
+        }
+        case 'TEK_SOL':
+        case 'TEK_SAG':
+        case 'TEK_CIFT_ACILIM': {
+          let sashW = Math.round((W - 68 + 6) / 10) / 100;
+          let sashH = Math.round((H_frame - 68 + 6) / 10) / 100;
+          if (isDoorType) doorSashMeters = 2 * sashW + 2 * sashH;
+          else winSashMeters = 2 * sashW + 2 * sashH;
+
+          let gw = W - 190;
+          let gh = H_frame - 190;
+          glassPanes.push({ w: gw, h: gh, area: Math.round((gw * gh / 1e6) * 100) / 100 });
+          break;
+        }
+        case 'HOK_CIFTKANAT': {
+          let sashW = Math.round(((W - 80) / 2 + 6) / 10) / 100;
+          let sashH = Math.round((H_frame - (hasLowThreshold ? 48 : 68) + 6) / 10) / 100;
+          if (isDoorType) doorSashMeters = 2 * (2 * sashW + 2 * sashH);
+          else winSashMeters = 2 * (2 * sashW + 2 * sashH);
+
+          hokMeters = Math.round((H_frame - (hasLowThreshold ? 115 : 140)) / 10) / 100;
+
+          let gw = Math.round((W - 318) / 2);
+          let gh = H_frame - 190;
+          glassPanes.push({ w: gw, h: gh, area: Math.round((gw * gh / 1e6) * 100) / 100 });
+          glassPanes.push({ w: gw, h: gh, area: Math.round((gw * gh / 1e6) * 100) / 100 });
+          break;
+        }
+        case 'YATAY_BOLUNMUS': {
+          let hTransom = Math.round((W - 84) / 10) / 100;
+          mullionMeters = hTransom;
+          
+          let topH = Math.round(H_frame * 0.35);
+          let botH = H_frame - topH;
+
+          // Top vasistas sash
+          let sashW = Math.round((W - 68 + 6) / 10) / 100;
+          let sashH = Math.round((topH - 68 + 6) / 10) / 100;
+          winSashMeters = 2 * sashW + 2 * sashH;
+
+          glassPanes.push({ w: W - 190, h: topH - 190, area: Math.round(((W - 190) * (topH - 190) / 1e6) * 100) / 100 });
+          glassPanes.push({ w: W - 94, h: botH - 94, area: Math.round(((W - 94) * (botH - 94) / 1e6) * 100) / 100 });
+          break;
+        }
+        case 'KAPI_TEK_SOL':
+        case 'KAPI_TEK_SAG':
+        case 'KAPI_DEKORATIF': {
+          let sashW = Math.round((W - 68 + 6) / 10) / 100;
+          let sashH = Math.round((H_frame - (hasLowThreshold ? 48 : 68) + 6) / 10) / 100;
+          doorSashMeters = 2 * sashW + 2 * sashH;
+
+          let gw = W - 250;
+          let gh = H_frame - (hasLowThreshold ? 228 : 250);
+          glassPanes.push({ w: gw, h: gh, area: Math.round((gw * gh / 1e6) * 100) / 100 });
+          break;
+        }
+        case 'KAPI_CIFT': {
+          let sashW = Math.round(((W - 80) / 2 + 6) / 10) / 100;
+          let sashH = Math.round((H_frame - (hasLowThreshold ? 48 : 68) + 6) / 10) / 100;
+          doorSashMeters = 2 * (2 * sashW + 2 * sashH);
+
+          hokMeters = Math.round((H_frame - (hasLowThreshold ? 115 : 140)) / 10) / 100;
+
+          let gw = Math.round((W - 438) / 2);
+          let gh = H_frame - (hasLowThreshold ? 226 : 250);
+          glassPanes.push({ w: gw, h: gh, area: Math.round((gw * gh / 1e6) * 100) / 100 });
+          glassPanes.push({ w: gw, h: gh, area: Math.round((gw * gh / 1e6) * 100) / 100 });
+          break;
+        }
+        case 'SURME_PERGE': {
+          let sashW = Math.round((W / 2 - 8) / 10) / 100;
+          let sashH = Math.round((H_frame - 82) / 10) / 100;
+          winSashMeters = 2 * (2 * sashW + 2 * sashH);
+
+          let gw = Math.round(W / 2 - 140);
+          let gh = H_frame - 230;
+          glassPanes.push({ w: gw, h: gh, area: Math.round((gw * gh / 1e6) * 100) / 100 });
+          glassPanes.push({ w: gw, h: gh, area: Math.round((gw * gh / 1e6) * 100) / 100 });
+          break;
+        }
+        case 'HEBESCHIEBE_AKDENIZ': {
+          mullionMeters = Math.round((H_frame - 115) / 10) / 100;
+          let activeSashW = Math.round((W / 2 - 40) / 10) / 100;
+          let activeSashH = Math.round((H_frame - 115) / 10) / 100;
+          doorSashMeters = 2 * activeSashW + 2 * activeSashH;
+
+          let gwFixed = Math.round(W / 2 - 94);
+          let ghFixed = H_frame - 130;
+          let gwActive = Math.round(W / 2 - 238);
+          let ghActive = H_frame - 274;
+
+          glassPanes.push({ w: gwFixed, h: ghFixed, area: Math.round((gwFixed * ghFixed / 1e6) * 100) / 100 });
+          glassPanes.push({ w: gwActive, h: ghActive, area: Math.round((gwActive * ghActive / 1e6) * 100) / 100 });
+          break;
+        }
+      }
+
+      // Total Net Glass / Panel Area
+      const netGlassArea = glassPanes.reduce((acc, p) => acc + p.area, 0);
+
+      // Karolaj Grid Meters
+      let muntinMeters = 0;
+      if (pos.hasMuntin) {
+        glassPanes.forEach(pane => {
+          muntinMeters += (2 * (pane.w / 1000) + 2 * (pane.h / 1000));
+        });
+        muntinMeters = Math.round(muntinMeters * 100) / 100;
+      }
+
+      // Frame Upgrade / Extension Meters (35x70)
+      let frameExtMeters = 0;
+      if (pos.hasFrameExt) {
+        frameExtMeters = Math.round((2 * (W / 1000) + 2 * (H_frame / 1000)) * 100) / 100;
+      }
+
+      // Flyscreen Meters (Perimeter based)
+      let flyscreenMeters = 0;
+      if (pos.flyscreen && pos.flyscreen !== 'NONE') {
+        flyscreenMeters = Math.round((2 * (W / 1000) + 2 * (H_frame / 1000)) * 100) / 100;
+      }
+
+      // Calculate Profile Costs (Linear Meter * Price per Meter)
+      const profFrameUnitCost = series.profiles.frame[colorTier];
+      const profWinSashUnitCost = series.profiles.winSash[colorTier];
+      const profDoorSashUnitCost = series.profiles.doorSash[colorTier];
+      const profMullionUnitCost = series.profiles.mullion[colorTier];
+      const profHokUnitCost = series.profiles.hok[colorTier];
+
+      const frameTotalCost = frameMeters * profFrameUnitCost;
+      const winSashTotalCost = winSashMeters * profWinSashUnitCost;
+      const doorSashTotalCost = doorSashMeters * profDoorSashUnitCost;
+      const mullionTotalCost = mullionMeters * profMullionUnitCost;
+      const hokTotalCost = hokMeters * profHokUnitCost;
+
+      // Calculate Glass / Panel Cost
+      const glassObj = catalog.glasses[pos.glass] || catalog.glasses.DC4164SN;
+      const glassTotalCost = netGlassArea * glassObj.price;
+
+      // Hardware Set Selection & Cost
+      let hardwareCode = 'TEK_CIFT_ACILIM';
+      if (pos.type === 'SABIT') hardwareCode = 'VASISTAS';
+      else if (pos.type === 'YATAY_BOLUNMUS') hardwareCode = 'VASISTAS';
+      else if (pos.type === 'HOK_CIFTKANAT') hardwareCode = 'HOK_SET';
+      else if (pos.type.startsWith('KAPI_TEK')) hardwareCode = 'KAPI_LOK';
+      else if (pos.type === 'KAPI_DEKORATIF') hardwareCode = 'BINA_GIRIS_3KANCALI';
+      else if (pos.type === 'KAPI_CIFT') hardwareCode = 'HOK_KAPI_SET';
+      else if (pos.type === 'SURME_PERGE') hardwareCode = 'SURME_PERGE_SET';
+      else if (pos.type === 'HEBESCHIEBE_AKDENIZ') hardwareCode = 'HEBESCHIEBE_160KG';
+
+      const hwObj = catalog.hardware[hardwareCode] || catalog.hardware.TEK_CIFT_ACILIM;
+      const hardwareTotalCost = hwObj.price;
+
+      // Extras Costs
+      const shutterTotalCost = pos.hasShutter ? shutterArea * catalog.extras.SHUTTER_MONO_195.price : 0;
+      const thresholdTotalCost = hasLowThreshold ? aluThresholdMeters * catalog.extras.ALU_THRESHOLD_20MM.price : 0;
+      const muntinTotalCost = pos.hasMuntin ? muntinMeters * catalog.extras.GRID_MUNTIN.price : 0;
+      const frameExtTotalCost = pos.hasFrameExt ? frameExtMeters * (catalog.extras.FRAME_EXT_35X70[colorTier] || 5.61) : 0;
+
+      let flyscreenPricePerMt = 0;
+      if (pos.flyscreen === 'SABIT') flyscreenPricePerMt = catalog.extras.FLYSCREEN_SABIT.price;
+      else if (pos.flyscreen === 'MENTESELI') flyscreenPricePerMt = catalog.extras.FLYSCREEN_MENTESELI.price;
+      else if (pos.flyscreen && pos.flyscreen !== 'NONE') flyscreenPricePerMt = catalog.extras.FLYSCREEN_PILELI.price;
+
+      const flyscreenTotalCost = flyscreenMeters * flyscreenPricePerMt;
+
+      // Position Unit Base Cost (EUR)
+      const unitCostEUR = frameTotalCost + winSashTotalCost + doorSashTotalCost + mullionTotalCost +
+                          hokTotalCost + glassTotalCost + hardwareTotalCost + shutterTotalCost +
+                          thresholdTotalCost + muntinTotalCost + frameExtTotalCost + flyscreenTotalCost;
+
+      const lineTotalEUR = unitCostEUR * qty;
+
+      // Overall Thermal Transmittance Uw Calculation
+      const grossArea = (W * H_total) / 1000000;
+      const frameArea = Math.max(0.1, grossArea - netGlassArea);
+      const uf = series.uf || 1.3;
+      const ug = glassObj.ug || 1.0;
+      const uw = Math.round(((netGlassArea * ug + frameArea * uf + 0.05) / grossArea) * 100) / 100;
+
+      return {
+        series,
+        colorObj,
+        glassObj,
+        hwObj,
+        W,
+        H_total,
+        H_frame,
+        qty,
+        grossArea,
+        netGlassArea,
+        shutterArea,
+        glassPanes,
+        uw,
+        takeoff: {
+          frameMeters,
+          winSashMeters,
+          doorSashMeters,
+          mullionMeters,
+          hokMeters,
+          aluThresholdMeters,
+          muntinMeters,
+          frameExtMeters,
+          flyscreenMeters
+        },
+        costsEUR: {
+          frameTotalCost,
+          winSashTotalCost,
+          doorSashTotalCost,
+          mullionTotalCost,
+          hokTotalCost,
+          glassTotalCost,
+          hardwareTotalCost,
+          shutterTotalCost,
+          thresholdTotalCost,
+          muntinTotalCost,
+          frameExtTotalCost,
+          flyscreenTotalCost,
+          unitCostEUR,
+          lineTotalEUR
+        }
+      };
+    }
+
+    /* ==========================================================================
+       6. AUTHENTIC ABT / PENCAD SVG TECHNICAL DRAWING ENGINE
+       ========================================================================== */
+    function renderPositionSVG(pos, containerWidth = 500, containerHeight = 360) {
+      const calc = calculatePositionBOM(pos);
+      const W = calc.W;
+      const H = calc.H_total;
+      const H_frame = calc.H_frame;
+
+      const colorObj = calc.colorObj;
+      const strokeColor = colorObj.stroke || '#000000';
+      const fillColor = colorObj.fill || '#FFFFFF';
+
+      const padding = 55;
+      const availW = containerWidth - padding * 2;
+      const availH = containerHeight - padding * 2;
+
+      const scale = Math.min(availW / W, availH / H);
+      const dw = W * scale;
+      const dh = H * scale;
+
+      const offsetX = (containerWidth - dw) / 2;
+      const offsetY = (containerHeight - dh) / 2;
+
+      const frameThick = Math.max(12, 60 * scale);
+      const sashThick = Math.max(10, 50 * scale);
+
+      let svg = `<svg width="100%" height="100%" viewBox="0 0 ${containerWidth} ${containerHeight}" xmlns="http://www.w3.org/2000/svg" class="select-none font-mono">`;
+
+      // SVG Definitions & Patterns
+      svg += `
+        <defs>
+          <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35"/>
+            <stop offset="50%" stop-color="#0284c7" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#0369a1" stop-opacity="0.4"/>
+          </linearGradient>
+          <pattern id="panelPattern" width="20" height="20" patternUnits="userSpaceOnUse">
+            <rect width="20" height="20" fill="#f5e6d3"/>
+            <line x1="0" y1="0" x2="20" y2="0" stroke="#d4b896" stroke-width="1"/>
+          </pattern>
+          <marker id="arrowRed" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626" />
+          </marker>
+        </defs>
+      `;
+
+      let topY = offsetY;
+      let frameDrawH = H_frame * scale;
+
+      // 1) Render Monoblock Shutter Box if enabled
+      if (pos.hasShutter) {
+        let boxH = 195 * scale;
+        svg += `
+          <g id="shutter-box">
+            <rect x="${offsetX}" y="${offsetY}" width="${dw}" height="${boxH}" fill="#475569" stroke="#0f172a" stroke-width="1.5" rx="2"/>
+            <line x1="${offsetX}" y1="${offsetY + boxH}" x2="${offsetX + dw}" y2="${offsetY + boxH}" stroke="#1e293b" stroke-width="2"/>
+            <text x="${offsetX + dw/2}" y="${offsetY + boxH/2 + 4}" fill="#ef4444" font-size="10" font-weight="bold" text-anchor="middle">MONOBLOK PANJUR 195x195</text>
+          </g>
+        `;
+        topY = offsetY + boxH;
+      }
+
+      // 2) Outer Main PVC Frame with 45° Miter Corners
+      const hasLowThreshold = pos.threshold === 'ALU_20MM' && pos.type.startsWith('KAPI_');
+      
+      svg += `<g id="main-frame">`;
+      // Outer Frame Polygon
+      svg += `<rect x="${offsetX}" y="${topY}" width="${dw}" height="${frameDrawH}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2" rx="1"/>`;
+      
+      // Inner Frame Cutout Polygon
+      let innerFX = offsetX + frameThick;
+      let innerFY = topY + frameThick;
+      let innerFW = dw - 2 * frameThick;
+      let innerFH = frameDrawH - (hasLowThreshold ? frameThick + 8 : 2 * frameThick);
+
+      svg += `<rect x="${innerFX}" y="${innerFY}" width="${innerFW}" height="${innerFH}" fill="url(#glassGrad)" stroke="${strokeColor}" stroke-width="1.5"/>`;
+
+      // 45° Miter Lines at Frame Corners
+      svg += `<line x1="${offsetX}" y1="${topY}" x2="${innerFX}" y2="${innerFY}" stroke="${strokeColor}" stroke-width="1"/>`;
+      svg += `<line x1="${offsetX + dw}" y1="${topY}" x2="${innerFX + innerFW}" y2="${innerFY}" stroke="${strokeColor}" stroke-width="1"/>`;
+      if (!hasLowThreshold) {
+        svg += `<line x1="${offsetX}" y1="${topY + frameDrawH}" x2="${innerFX}" y2="${innerFY + innerFH}" stroke="${strokeColor}" stroke-width="1"/>`;
+        svg += `<line x1="${offsetX + dw}" y1="${topY + frameDrawH}" x2="${innerFX + innerFW}" y2="${innerFY + innerFH}" stroke="${strokeColor}" stroke-width="1"/>`;
+      } else {
+        // Metallic Alum Low Threshold Sill Bar
+        let sillY = topY + frameDrawH - 10;
+        svg += `<rect x="${offsetX}" y="${sillY}" width="${dw}" height="10" fill="#94a3b8" stroke="#334155" stroke-width="1.5"/>`;
+        // ABT Signature Protruding Tick
+        svg += `<path d="M ${offsetX + dw} ${sillY} L ${offsetX + dw + 6} ${sillY + 14}" stroke="#000000" stroke-width="2"/>`;
+      }
+      svg += `</g>`;
+
+      // 3) Sashes & Openings Drawing (Inside View Lines)
+      const type = pos.type;
+
+      if (type === 'TEK_SOL' || type === 'TEK_SAG' || type === 'TEK_CIFT_ACILIM' || type.startsWith('KAPI_TEK')) {
+        let sx = innerFX + 2;
+        let sy = innerFY + 2;
+        let sw = innerFW - 4;
+        let sh = innerFH - 4;
+
+        // Sash Frame Profile
+        svg += `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" fill="none" stroke="${strokeColor}" stroke-width="2"/>`;
+        svg += `<rect x="${sx + sashThick}" y="${sy + sashThick}" width="${sw - 2*sashThick}" height="${sh - 2*sashThick}" fill="url(#glassGrad)" stroke="${strokeColor}" stroke-width="1"/>`;
+
+        // Handle Placement
+        let handleY = sy + sh / 2;
+        let isLeft = type === 'TEK_SOL' || type === 'KAPI_TEK_SOL';
+        let handleX = isLeft ? sx + sw - 6 : sx + 6;
+
+        // Draw Lever Handle
+        svg += `<rect x="${handleX - 3}" y="${handleY - 12}" width="6" height="24" fill="#64748b" rx="2"/>`;
+        svg += `<line x1="${handleX}" y1="${handleY}" x2="${handleX + (isLeft ? -14 : 14)}" y2="${handleY}" stroke="#334155" stroke-width="4" stroke-linecap="round"/>`;
+
+        // Inside View Opening Lines
+        if (isLeft) {
+          // Sol Açılım Triangles (Hinge on Left, Handle on Right)
+          svg += `<path d="M ${sx} ${sy} L ${sx + sw} ${handleY} L ${sx} ${sy + sh}" fill="none" stroke="#000000" stroke-width="1.5"/>`;
+        } else {
+          // Sağ Açılım Triangles (Hinge on Right, Handle on Left)
+          svg += `<path d="M ${sx + sw} ${sy} L ${sx} ${handleY} L ${sx + sw} ${sy + sh}" fill="none" stroke="#000000" stroke-width="1.5"/>`;
+        }
+
+        // Tilt Line if Çift Açılım
+        if (type === 'TEK_CIFT_ACILIM') {
+          svg += `<path d="M ${sx} ${sy + sh} L ${sx + sw/2} ${sy} L ${sx + sw} ${sy + sh}" fill="none" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4"/>`;
+        }
+      } 
+      else if (type === 'HOK_CIFTKANAT' || type === 'KAPI_CIFT') {
+        let halfW = innerFW / 2;
+        
+        // Active Sash (Right) & Passive Sash (Left)
+        let s1x = innerFX + 2;
+        let s1w = halfW - 3;
+        let s2x = innerFX + halfW + 1;
+        let s2w = halfW - 3;
+        let sy = innerFY + 2;
+        let sh = innerFH - 4;
+
+        // Left Sash (Passive)
+        svg += `<rect x="${s1x}" y="${sy}" width="${s1w}" height="${sh}" fill="none" stroke="${strokeColor}" stroke-width="2"/>`;
+        // Right Sash (Active)
+        svg += `<rect x="${s2x}" y="${sy}" width="${s2w}" height="${sh}" fill="none" stroke="${strokeColor}" stroke-width="2"/>`;
+
+        // Central Meeting Astragal / HOK Line
+        svg += `<line x1="${innerFX + halfW}" y1="${sy}" x2="${innerFX + halfW}" y2="${sy + sh}" stroke="#000000" stroke-width="2.5"/>`;
+
+        // Active Sash Handle
+        let handleY = sy + sh / 2;
+        svg += `<rect x="${s2x + 4}" y="${handleY - 12}" width="6" height="24" fill="#64748b"/>`;
+
+        // Opening Triangles (Active T&T, Passive Turn)
+        svg += `<path d="M ${s1x} ${sy} L ${s1x + s1w} ${handleY} L ${s1x} ${sy + sh}" fill="none" stroke="#000000" stroke-width="1.5"/>`;
+        svg += `<path d="M ${s2x + s2w} ${sy} L ${s2x} ${handleY} L ${s2x + s2w} ${sy + sh}" fill="none" stroke="#000000" stroke-width="1.5"/>`;
+        svg += `<path d="M ${s2x} ${sy + sh} L ${s2x + s2w/2} ${sy} L ${s2x + s2w} ${sy + sh}" fill="none" stroke="#000000" stroke-width="1.5" stroke-dasharray="4,4"/>`;
+
+        // Sash Numbers 1 & 2
+        svg += `<text x="${s1x + s1w/2}" y="${sy + sh - 10}" fill="#0f172a" font-size="11" font-weight="bold" text-anchor="middle">1</text>`;
+        svg += `<text x="${s2x + s2w/2}" y="${sy + sh - 10}" fill="#0f172a" font-size="11" font-weight="bold" text-anchor="middle">2</text>`;
+      }
+      else if (type === 'SURME_PERGE') {
+        let halfW = innerFW / 2;
+        // Sliding Sash 1 & 2
+        svg += `<rect x="${innerFX + 2}" y="${innerFY + 2}" width="${halfW}" height="${innerFH - 4}" fill="none" stroke="${strokeColor}" stroke-width="2"/>`;
+        svg += `<rect x="${innerFX + halfW - 2}" y="${innerFY + 2}" width="${halfW}" height="${innerFH - 4}" fill="none" stroke="${strokeColor}" stroke-width="2"/>`;
+
+        // Opposing Sliding Arrows
+        let centerY = innerFY + innerFH / 2;
+        svg += `<path d="M ${innerFX + halfW/2 - 20} ${centerY} L ${innerFX + halfW/2 + 20} ${centerY}" stroke="#000000" stroke-width="2" marker-end="url(#arrowRed)"/>`;
+        svg += `<path d="M ${innerFX + 3*halfW/2 + 20} ${centerY} L ${innerFX + 3*halfW/2 - 20} ${centerY}" stroke="#000000" stroke-width="2" marker-end="url(#arrowRed)"/>`;
+      }
+      else if (type === 'HEBESCHIEBE_AKDENIZ') {
+        let halfW = innerFW / 2;
+        // Fixed Half (Left)
+        svg += `<rect x="${innerFX}" y="${innerFY}" width="${halfW}" height="${innerFH}" fill="url(#glassGrad)" stroke="${strokeColor}" stroke-width="1.5"/>`;
+        svg += `<text x="${innerFX + halfW/2}" y="${innerFY + innerFH/2}" fill="#475569" font-size="12" font-weight="bold" text-anchor="middle">SABİT</text>`;
+
+        // Active Lift-Slide Sash (Right)
+        let sx = innerFX + halfW;
+        svg += `<rect x="${sx + 2}" y="${innerFY + 2}" width="${halfW - 4}" height="${innerFH - 4}" fill="none" stroke="${strokeColor}" stroke-width="3"/>`;
+        
+        // L-shaped Lift Arrow
+        svg += `<path d="M ${sx + halfW/2 - 10} ${innerFY + innerFH/2 + 10} L ${sx + halfW/2 - 10} ${innerFY + innerFH/2 - 10} L ${sx + halfW/2 + 15} ${innerFY + innerFH/2 - 10}" fill="none" stroke="#dc2626" stroke-width="3" marker-end="url(#arrowRed)"/>`;
+      }
+
+      // 4) Glass Spec Overlay & Pane Dimensions
+      let pane = calc.glassPanes[0] || { w: W - 190, h: H_frame - 190 };
+      svg += `
+        <g id="glass-label">
+          <rect x="${containerWidth/2 - 65}" y="${topY + frameDrawH/2 - 14}" width="130" height="28" fill="#ffffff" opacity="0.85" rx="4" stroke="#94a3b8"/>
+          <text x="${containerWidth/2}" y="${topY + frameDrawH/2 - 1}" fill="#0f172a" font-size="9" font-weight="bold" text-anchor="middle">${calc.glassObj.name.split(' ')[0]}</text>
+          <text x="${containerWidth/2}" y="${topY + frameDrawH/2 + 10}" fill="#2563eb" font-size="9" font-weight="bold" text-anchor="middle">${pane.w} x ${pane.h} mm</text>
+        </g>
+      `;
+
+      // 5) Outer Red Engineering Dimension Lines & Arrowheads
+      // Width Dimension (Bottom)
+      let dimY = topY + frameDrawH + 20;
+      svg += `
+        <g id="dim-width">
+          <line x1="${offsetX}" y1="${topY + frameDrawH + 5}" x2="${offsetX}" y2="${dimY + 8}" stroke="#dc2626" stroke-width="1"/>
+          <line x1="${offsetX + dw}" y1="${topY + frameDrawH + 5}" x2="${offsetX + dw}" y2="${dimY + 8}" stroke="#dc2626" stroke-width="1"/>
+          <line x1="${offsetX}" y1="${dimY}" x2="${offsetX + dw}" y2="${dimY}" stroke="#dc2626" stroke-width="1.5" marker-start="url(#arrowRed)" marker-end="url(#arrowRed)"/>
+          <rect x="${containerWidth/2 - 30}" y="${dimY - 9}" width="60" height="16" fill="#ffffff" rx="2" stroke="#dc2626"/>
+          <text x="${containerWidth/2}" y="${dimY + 3}" fill="#dc2626" font-size="10" font-weight="bold" text-anchor="middle">${W} mm</text>
+        </g>
+      `;
+
+      // Height Dimension (Right side)
+      let dimX = offsetX + dw + 20;
+      svg += `
+        <g id="dim-height">
+          <line x1="${offsetX + dw + 5}" y1="${offsetY}" x2="${dimX + 8}" y2="${offsetY}" stroke="#dc2626" stroke-width="1"/>
+          <line x1="${offsetX + dw + 5}" y1="${offsetY + dh}" x2="${dimX + 8}" y2="${offsetY + dh}" stroke="#dc2626" stroke-width="1"/>
+          <line x1="${dimX}" y1="${offsetY}" x2="${dimX}" y2="${offsetY + dh}" stroke="#dc2626" stroke-width="1.5" marker-start="url(#arrowRed)" marker-end="url(#arrowRed)"/>
+          <rect x="${dimX - 8}" y="${offsetY + dh/2 - 12}" width="45" height="16" fill="#ffffff" rx="2" stroke="#dc2626"/>
+          <text x="${dimX + 14}" y="${offsetY + dh/2 + 0}" fill="#dc2626" font-size="10" font-weight="bold" text-anchor="middle">${H} mm</text>
+        </g>
+      `;
+
+      svg += `</svg>`;
+      return svg;
+    }
+
+    /* ==========================================================================
+       7. UI CONTROLLERS & VIEW ROUTING
+       ========================================================================== */
+    function switchView(viewName) {
+      const views = ['cad', 'quote', 'bom', 'catalog', 'gemini'];
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        const tab = document.getElementById(`tab-${v}`);
+        if (v === viewName) {
+          if (el) el.classList.remove('hidden');
+          if (tab) {
+            tab.className = "px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all bg-blue-600 text-white shadow-md";
+          }
+        } else {
+          if (el) el.classList.add('hidden');
+          if (tab) {
+            tab.className = "px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 flex items-center space-x-2 transition-all";
+          }
+        }
+      });
+
+      if (viewName === 'quote') renderCustomerQuote();
+      if (viewName === 'bom') renderBOMView();
+      if (viewName === 'catalog') renderCatalogView();
+      if (viewName === 'gemini') renderGeminiView();
+    }
+
+    function renderActivePositionCAD() {
+      const pos = project.positions[activePositionIndex];
+      if (!pos) return;
+
+      // Fill Input Controls
+      document.getElementById('input-pos-title').value = pos.title || '';
+      document.getElementById('input-pos-qty').value = pos.qty || 1;
+      document.getElementById('input-pos-width').value = pos.width || 1000;
+      document.getElementById('input-pos-height').value = pos.height || 1400;
+      document.getElementById('input-pos-type').value = pos.type || 'TEK_CIFT_ACILIM';
+      document.getElementById('input-pos-series').value = pos.series || 'ATLANTİK_750';
+      document.getElementById('input-pos-color').value = pos.color || 'WHITE';
+      document.getElementById('input-pos-glass').value = pos.glass || 'DC4164SN';
+      document.getElementById('input-pos-has-shutter').checked = !!pos.hasShutter;
+      document.getElementById('input-pos-threshold').value = pos.threshold || 'PVC_4KENAR';
+      document.getElementById('input-pos-flyscreen').value = pos.flyscreen || 'NONE';
+      document.getElementById('input-pos-muntin').checked = !!pos.hasMuntin;
+      document.getElementById('input-pos-frame-ext').checked = !!pos.hasFrameExt;
+
+      // Toggle Shutter Box Sub-options
+      const shutterBox = document.getElementById('shutter-options-box');
+      if (pos.hasShutter) shutterBox.classList.remove('hidden');
+      else shutterBox.classList.add('hidden');
+
+      // Update Position Tabs Ribbon
+      const tabsBar = document.getElementById('position-tabs-bar');
+      tabsBar.innerHTML = '';
+      project.positions.forEach((p, idx) => {
+        const btn = document.createElement('button');
+        btn.onclick = () => { activePositionIndex = idx; renderActivePositionCAD(); };
+        btn.className = `px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 whitespace-nowrap border ${
+          idx === activePositionIndex
+            ? 'bg-blue-600 text-white border-blue-400 shadow-lg'
+            : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
+        }`;
+        btn.innerHTML = `
+          <span class="font-mono text-amber-300">POZ ${idx + 1}</span>
+          <span class="truncate max-w-[120px]">${p.title}</span>
+          <span class="bg-slate-950/60 px-1.5 py-0.2 rounded text-[10px]">${p.qty} Ad</span>
+        `;
+        tabsBar.appendChild(btn);
+      });
+
+      // Render SVG Drawing
+      const svgContainer = document.getElementById('svg-drawing-container');
+      svgContainer.innerHTML = renderPositionSVG(pos, 520, 380);
+
+      // Calculations & Header Badge Update
+      const calc = calculatePositionBOM(pos);
+      document.getElementById('cad-pos-code').innerText = `POZ ${activePositionIndex + 1}`;
+      document.getElementById('cad-pos-title').innerText = pos.title;
+      document.getElementById('cad-dimensions-badge').innerText = `${calc.W} x ${calc.H_total} mm`;
+      document.getElementById('cad-area-badge').innerText = `${calc.grossArea.toFixed(2)} m²`;
+      document.getElementById('cad-uw-badge').innerText = `Uw: ${calc.uw} W/m²K`;
+
+      document.getElementById('cad-spec-series').innerText = calc.series.name.split(' ')[0];
+      document.getElementById('cad-spec-color').innerText = calc.colorObj.name.split(' ')[0];
+      document.getElementById('cad-spec-glass').innerText = calc.glassObj.name;
+      document.getElementById('cad-spec-price').innerText = formatMoney(calc.costsEUR.unitCostEUR);
+
+      document.getElementById('nav-pos-count').innerText = project.positions.length;
+    }
+
+    function updateActivePosition() {
+      const pos = project.positions[activePositionIndex];
+      if (!pos) return;
+
+      pos.title = document.getElementById('input-pos-title').value;
+      pos.qty = parseInt(document.getElementById('input-pos-qty').value) || 1;
+      pos.width = parseDimension(document.getElementById('input-pos-width').value);
+      pos.height = parseDimension(document.getElementById('input-pos-height').value);
+      pos.type = document.getElementById('input-pos-type').value;
+      pos.series = document.getElementById('input-pos-series').value;
+      pos.color = document.getElementById('input-pos-color').value;
+      pos.glass = document.getElementById('input-pos-glass').value;
+      pos.hasShutter = document.getElementById('input-pos-has-shutter').checked;
+      
+      const shutterRadios = document.getElementsByName('shutter-deduct');
+      for (let r of shutterRadios) { if (r.checked) pos.shutterDeduct = r.value; }
+
+      pos.threshold = document.getElementById('input-pos-threshold').value;
+      pos.flyscreen = document.getElementById('input-pos-flyscreen').value;
+      pos.hasMuntin = document.getElementById('input-pos-muntin').checked;
+      pos.hasFrameExt = document.getElementById('input-pos-frame-ext').checked;
+
+      renderActivePositionCAD();
+    }
+
+    function createNewPosition() {
+      const newPos = {
+        id: `POS-${Date.now()}`,
+        title: `Yeni Pencere Pozu #${project.positions.length + 1}`,
+        qty: 1,
+        width: 1000,
+        height: 1400,
+        type: "TEK_CIFT_ACILIM",
+        series: "ATLANTİK_750",
+        color: "WHITE",
+        glass: "DC4164SN",
+        hasShutter: false,
+        shutterDeduct: "subtract",
+        threshold: "PVC_4KENAR",
+        flyscreen: "NONE",
+        hasMuntin: false,
+        hasFrameExt: false
+      };
+      project.positions.push(newPos);
+      activePositionIndex = project.positions.length - 1;
+      renderActivePositionCAD();
+      showToast("Yeni poz başarıyla eklendi.", "success");
+    }
+
+    function cloneCurrentPosition() {
+      const pos = project.positions[activePositionIndex];
+      if (!pos) return;
+      const cloned = JSON.parse(JSON.stringify(pos));
+      cloned.id = `POS-${Date.now()}`;
+      cloned.title += " (Kopya)";
+      project.positions.push(cloned);
+      activePositionIndex = project.positions.length - 1;
+      renderActivePositionCAD();
+      showToast("Poz kopyalandı.", "info");
+    }
+
+    function deleteCurrentPosition() {
+      if (project.positions.length <= 1) {
+        showToast("Projeden son pozu silemezsiniz!", "error");
+        return;
+      }
+      project.positions.splice(activePositionIndex, 1);
+      activePositionIndex = Math.max(0, activePositionIndex - 1);
+      renderActivePositionCAD();
+      showToast("Poz silindi.", "info");
+    }
+
+    function changeCurrency(curr) {
+      catalog.activeCurrency = curr;
+      project.currency = curr;
+      renderActivePositionCAD();
+      if (!document.getElementById('view-quote').classList.contains('hidden')) renderCustomerQuote();
+      if (!document.getElementById('view-bom').classList.contains('hidden')) renderBOMView();
+      showToast(`Para birimi ${curr} olarak güncellendi.`, "info");
+    }
+
+    /* Populate Dropdowns for Series, Color & Glass */
+    function populateDropdowns() {
+      const seriesSelect = document.getElementById('input-pos-series');
+      seriesSelect.innerHTML = '';
+      Object.keys(catalog.series).forEach(k => {
+        const s = catalog.series[k];
+        seriesSelect.innerHTML += `<option value="${k}">${s.name}</option>`;
+      });
+
+      const colorSelect = document.getElementById('input-pos-color');
+      colorSelect.innerHTML = '';
+      Object.keys(catalog.colors).forEach(k => {
+        const c = catalog.colors[k];
+        colorSelect.innerHTML += `<option value="${k}">${c.name}</option>`;
+      });
+
+      const glassSelect = document.getElementById('input-pos-glass');
+      glassSelect.innerHTML = '';
+      Object.keys(catalog.glasses).forEach(k => {
+        const g = catalog.glasses[k];
+        glassSelect.innerHTML += `<option value="${k}">${g.name} (${g.price} €/m²)</option>`;
+      });
+    }
+
+    /* ==========================================================================
+       8. CUSTOMER QUOTE RENDERER (Multi-Language, 2 Cards/A4 Page)
+       ========================================================================== */
+    function setQuoteLanguage(lang) {
+      project.language = lang;
+      ['TR', 'EN', 'DE', 'IT', 'RU', 'FR'].forEach(l => {
+        const btn = document.getElementById(`lang-btn-${l}`);
+        if (l === lang) btn.className = "px-2.5 py-1 rounded text-xs font-bold transition bg-blue-600 text-white";
+        else btn.className = "px-2.5 py-1 rounded text-xs font-bold transition text-slate-400 hover:text-white";
+      });
+      renderCustomerQuote();
+    }
+
+    function solveTargetPrice() {
+      let targetStr = prompt("Lütfen ulaşmak istediğiniz HEDEF GENEL TOPLAM tutarını girin:", "10000");
+      if (!targetStr) return;
+      let target = parseFloat(targetStr.replace(',', '.'));
+      if (isNaN(target) || target <= 0) return;
+
+      // Calculate current un-discounted grand total
+      project.discountPercent = 0;
+      let calcTotals = calculateProjectTotals();
+      let rawGrandTotal = calcTotals.grandTotal;
+
+      if (target >= rawGrandTotal) {
+        showToast("Hedef fiyat mevcut tutardan büyük veya eşit!", "error");
+        return;
+      }
+
+      let requiredDiscountPercent = ((rawGrandTotal - target) / rawGrandTotal) * 100;
+      project.discountPercent = Math.round(requiredDiscountPercent * 10) / 10;
+      document.getElementById('commercial-discount-percent').value = project.discountPercent;
+      renderCustomerQuote();
+      showToast(`Hedef tutara ulaşmak için %${project.discountPercent} iskonto uygulandı.`, "success");
+    }
+
+    function calculateProjectTotals() {
+      let productsEUR = 0;
+      let totalGrossArea = 0;
+
+      project.positions.forEach(pos => {
+        const calc = calculatePositionBOM(pos);
+        productsEUR += calc.costsEUR.lineTotalEUR;
+        totalGrossArea += calc.grossArea * pos.qty;
+      });
+
+      // Stepped Palletizing EUR Rule: Area 0..30m² = 400 EUR; every +20m² = +200 EUR
+      let palletizingEUR = 400;
+      if (totalGrossArea > 30) {
+        palletizingEUR += Math.ceil((totalGrossArea - 30) / 20) * 200;
+      }
+      if (project.palletizingManualOverride !== null) palletizingEUR = project.palletizingManualOverride;
+
+      // Transport EUR Rule: Every 30m² = 1000 EUR
+      let transportEUR = Math.ceil(totalGrossArea / 30) * 1000;
+      if (project.currency === 'USD') transportEUR = 0; // Default 0 for USD unless overridden
+      if (project.transportManualOverride !== null) transportEUR = project.transportManualOverride;
+
+      // Packaging Wood Crate: 15 EUR/m²
+      let packagingEUR = totalGrossArea * catalog.extras.PACKAGING_EXPORT.price;
+
+      let subtotalEUR = productsEUR + palletizingEUR + transportEUR + packagingEUR;
+      let discountAmountEUR = subtotalEUR * (project.discountPercent / 100);
+      let netTotalEUR = subtotalEUR - discountAmountEUR;
+      let grandTotalEUR = netTotalEUR; // 0% Export VAT
+
+      return {
+        productsEUR,
+        totalGrossArea,
+        palletizingEUR,
+        transportEUR,
+        packagingEUR,
+        subtotalEUR,
+        discountAmountEUR,
+        netTotalEUR,
+        grandTotalEUR
+      };
+    }
+
+    function renderCustomerQuote() {
+      const L = LOCALIZATION[project.language || 'TR'];
+      const paper = document.getElementById('customer-quote-paper');
+      const totals = calculateProjectTotals();
+
+      let html = `
+        <!-- QUOTE COMPANY HEADER BLOCK -->
+        <div class="border-b-2 border-slate-900 pb-4 flex flex-wrap justify-between items-start gap-4">
+          <div>
+            <div class="text-3xl font-black text-slate-900 tracking-wider">ÖZKANOGLU</div>
+            <div class="text-xs font-bold text-blue-800 tracking-widest uppercase">${L.companySlogan}</div>
+            <div class="text-[11px] text-slate-600 font-medium mt-1">ÖZKANOĞLU İNŞAAT TAAHHÜT VE TİCARET LTD. ŞTİ.</div>
+            <div class="text-[10px] text-slate-500">Yapraklı Bulvarı Şht. A.Kadir Acar Sok. No: 8 / ÇANKIRI - TÜRKİYE</div>
+            <div class="text-[10px] text-slate-500">Tel: 444 0 884 | +90 376 212 20 23 | info@ozkanoglu.com.tr</div>
+          </div>
+          <div class="text-right">
+            <div class="text-base font-extrabold text-blue-900 uppercase tracking-tight">${L.quoteTitle}</div>
+            <div class="mt-2 text-xs font-mono space-y-0.5">
+              <div><span class="text-slate-500">${L.quoteNo}:</span> <strong class="text-slate-900">#${project.quoteNo}</strong></div>
+              <div><span class="text-slate-500">${L.orderDate}:</span> <strong class="text-slate-900">${project.orderDate}</strong></div>
+              <div><span class="text-slate-500">${L.drawnBy}:</span> <strong class="text-slate-900">${project.drawnBy}</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CLIENT & DEALER INFO BAR -->
+        <div class="grid grid-cols-2 gap-4 bg-slate-100 p-3 rounded-lg border border-slate-300 text-xs">
+          <div><span class="text-slate-500 font-semibold">${L.customer}:</span> <strong class="text-slate-900">${project.customer}</strong></div>
+          <div><span class="text-slate-500 font-semibold">${L.dealer}:</span> <strong class="text-slate-900">${project.dealer}</strong></div>
+        </div>
+
+        <!-- POSITION CARDS GRID (2 Cards per A4 Page) -->
+        <div class="space-y-6">
+      `;
+
+      project.positions.forEach((pos, idx) => {
+        const calc = calculatePositionBOM(pos);
+        const svgHTML = renderPositionSVG(pos, 280, 200);
+
+        html += `
+          <div class="border border-slate-300 rounded-xl p-4 bg-white shadow-sm page-break-inside-avoid grid grid-cols-1 md:grid-cols-12 gap-4">
+            
+            <!-- Position SVG Drawing (5 Cols) -->
+            <div class="md:col-span-5 bg-slate-50 rounded-lg p-2 border border-slate-200 flex flex-col items-center justify-center">
+              <div class="w-full flex justify-between text-[10px] text-slate-500 font-mono mb-1">
+                <span>POZ #${idx + 1}</span>
+                <span>${calc.W} x ${calc.H_total} mm</span>
+              </div>
+              <div class="w-full h-48 flex items-center justify-center">
+                ${svgHTML}
+              </div>
+            </div>
+
+            <!-- Position Specs & Pricing (7 Cols) -->
+            <div class="md:col-span-7 flex flex-col justify-between space-y-2 text-xs">
+              <div>
+                <div class="flex justify-between items-start border-b border-slate-200 pb-1.5">
+                  <h3 class="font-bold text-slate-900 text-sm">${idx + 1}. ${pos.title}</h3>
+                  <span class="bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded text-xs">${pos.qty} ${L.qtyHeader}</span>
+                </div>
+
+                <!-- Technical Specs Bullets -->
+                <ul class="mt-2 text-[11px] space-y-1 text-slate-700 font-sans">
+                  <li><strong>Seri / Sistem:</strong> ${calc.series.name}</li>
+                  <li><strong>Renk:</strong> ${calc.colorObj.name}</li>
+                  <li><strong>Cam / Dolgu:</strong> ${calc.glassObj.name}</li>
+                  <li><strong>Isı Geçirgenliği:</strong> Uw = ${calc.uw} W/m²K</li>
+                  ${pos.hasShutter ? `<li><strong>Panjur:</strong> 195 mm Monoblok Motorlu Panjur Sistemli</li>` : ''}
+                  ${pos.threshold === 'ALU_20MM' ? `<li><strong>Eşik:</strong> 20 mm Alüminyum Düşük Eşik</li>` : ''}
+                  ${pos.flyscreen !== 'NONE' ? `<li><strong>Sineklik:</strong> ${pos.flyscreen} Sineklikli</li>` : ''}
+                </ul>
+              </div>
+
+              <!-- Price Box -->
+              <div class="bg-slate-100 p-2.5 rounded-lg border border-slate-300 flex justify-between items-center font-mono">
+                <div>
+                  <span class="text-[10px] text-slate-500 block">${L.unitPriceHeader}</span>
+                  <span class="font-bold text-slate-800">${formatMoney(calc.costsEUR.unitCostEUR)}</span>
+                </div>
+                <div class="text-right">
+                  <span class="text-[10px] text-slate-500 block">${L.totalHeader}</span>
+                  <span class="font-extrabold text-blue-900 text-sm">${formatMoney(calc.costsEUR.lineTotalEUR)}</span>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        `;
+      });
+
+      html += `</div><!-- END POSITIONS GRID -->
+
+        <!-- COMMERCIAL SUMMARY & EXPORT TERMS BLOCK -->
+        <div class="pt-4 border-t-2 border-slate-900 grid grid-cols-1 md:grid-cols-12 gap-6 page-break-inside-avoid">
+          
+          <!-- Terms & IBAN (7 Cols) -->
+          <div class="md:col-span-7 space-y-4 text-[10px] text-slate-700">
+            <div>
+              <h4 class="font-bold text-slate-900 text-xs mb-1 uppercase tracking-wider">${L.termsTitle}</h4>
+              <ol class="list-decimal list-inside space-y-0.5 text-slate-600">
+                ${L.terms.map(t => `<li>${t}</li>`).join('')}
+              </ol>
+            </div>
+
+            ${document.getElementById('toggle-bank-iban').checked ? `
+            <div class="bg-blue-50/80 p-3 rounded-lg border border-blue-200">
+              <h4 class="font-bold text-blue-950 text-xs mb-1 uppercase">${L.bankTitle}</h4>
+              <p><strong>Banka:</strong> YAPI VE KREDİ BANKASI A.Ş. — Çankırı Şubesi</p>
+              <p><strong>Hesap Adı:</strong> ÖZKANOĞLU İNŞAAT TAAHHÜT LTD. ŞTİ.</p>
+              <p><strong>IBAN (EUR):</strong> TR50 0006 7010 0000 0029 1132 63</p>
+              <p><strong>SWIFT Kodu:</strong> YAPITRISXXX</p>
+            </div>
+            ` : ''}
+          </div>
+
+          <!-- Price Totals Box (5 Cols) -->
+          <div class="md:col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-300 space-y-2 text-xs font-mono">
+            <div class="flex justify-between text-slate-600">
+              <span>${L.totalProducts}:</span>
+              <strong>${formatMoney(totals.productsEUR)}</strong>
+            </div>
+            <div class="flex justify-between text-slate-600">
+              <span>${L.packaging}:</span>
+              <strong>${formatMoney(totals.packagingEUR)}</strong>
+            </div>
+            <div class="flex justify-between text-slate-600">
+              <span>${L.palletizing}:</span>
+              <strong>${formatMoney(totals.palletizingEUR)}</strong>
+            </div>
+            <div class="flex justify-between text-slate-600">
+              <span>${L.freight}:</span>
+              <strong>${formatMoney(totals.transportEUR)}</strong>
+            </div>
+            <div class="border-t border-slate-300 pt-1.5 flex justify-between font-bold text-slate-800">
+              <span>${L.subtotal}:</span>
+              <span>${formatMoney(totals.subtotalEUR)}</span>
+            </div>
+            ${project.discountPercent > 0 ? `
+            <div class="flex justify-between text-amber-700 font-bold">
+              <span>${L.discount} (%${project.discountPercent}):</span>
+              <span>-${formatMoney(totals.discountAmountEUR)}</span>
+            </div>
+            ` : ''}
+            <div class="border-t-2 border-blue-900 pt-2 flex justify-between font-black text-blue-950 text-base">
+              <span>${L.grandTotal}:</span>
+              <span>${formatMoney(totals.grandTotalEUR)}</span>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      paper.innerHTML = html;
+    }
+
+    function updateCommercials() {
+      project.discountPercent = parseFloat(document.getElementById('commercial-discount-percent').value) || 0;
+      renderCustomerQuote();
+    }
+
+    /* ==========================================================================
+       9. INTERNAL COST & METRAJ TAKEOFF VIEW RENDERER
+       ========================================================================== */
+    function renderBOMView() {
+      const container = document.getElementById('bom-view-container');
+      
+      let html = `
+        <!-- POSITION-BY-POSITION TAKEOFF TABLE -->
+        <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3">
+          <h2 class="text-sm font-bold text-amber-400 flex items-center gap-2">
+            <i class="fa-solid fa-[#0055A5] fa-ruler-combined"></i>
+            <span>Poz Bazında Metraj İcmali (Takeoff Summary)</span>
+          </h2>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-2">Poz No</th>
+                  <th class="p-2">Ölçü (W x H)</th>
+                  <th class="p-2">Seri</th>
+                  <th class="p-2">Kasa Mt</th>
+                  <th class="p-2">Win Kanat Mt</th>
+                  <th class="p-2">Kapı Kanat Mt</th>
+                  <th class="p-2">Ortakayıt Mt</th>
+                  <th class="p-2">HOK Mt</th>
+                  <th class="p-2">Net Cam m²</th>
+                  <th class="p-2">Panjur m²</th>
+                  <th class="p-2">Maliyet</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800 text-slate-200">
+      `;
+
+      let totalFrameM = 0, totalWinSashM = 0, totalDoorSashM = 0, totalMullionM = 0, totalGlassM2 = 0;
+
+      project.positions.forEach((pos, idx) => {
+        const calc = calculatePositionBOM(pos);
+        const t = calc.takeoff;
+
+        totalFrameM += t.frameMeters * pos.qty;
+        totalWinSashM += t.winSashMeters * pos.qty;
+        totalDoorSashM += t.doorSashMeters * pos.qty;
+        totalMullionM += t.mullionMeters * pos.qty;
+        totalGlassM2 += calc.netGlassArea * pos.qty;
+
+        html += `
+          <tr class="hover:bg-slate-800/50">
+            <td class="p-2 font-bold text-amber-400">POZ ${idx + 1}</td>
+            <td class="p-2">${calc.W} x ${calc.H_total}</td>
+            <td class="p-2">${calc.series.name.split(' ')[0]}</td>
+            <td class="p-2">${(t.frameMeters * pos.qty).toFixed(2)}</td>
+            <td class="p-2">${(t.winSashMeters * pos.qty).toFixed(2)}</td>
+            <td class="p-2">${(t.doorSashMeters * pos.qty).toFixed(2)}</td>
+            <td class="p-2">${(t.mullionMeters * pos.qty).toFixed(2)}</td>
+            <td class="p-2">${(t.hokMeters * pos.qty).toFixed(2)}</td>
+            <td class="p-2 text-emerald-400 font-bold">${(calc.netGlassArea * pos.qty).toFixed(2)}</td>
+            <td class="p-2 text-red-400">${(calc.shutterArea * pos.qty).toFixed(2)}</td>
+            <td class="p-2 font-bold text-blue-300">${formatMoney(calc.costsEUR.lineTotalEUR)}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+              </tbody>
+              <tfoot class="bg-slate-950 font-bold text-white border-t border-slate-700">
+                <tr>
+                  <td class="p-2" colspan="3">GENEL TOPLAM METRAJ</td>
+                  <td class="p-2 text-blue-400">${totalFrameM.toFixed(2)} Mt</td>
+                  <td class="p-2 text-blue-400">${totalWinSashM.toFixed(2)} Mt</td>
+                  <td class="p-2 text-blue-400">${totalDoorSashM.toFixed(2)} Mt</td>
+                  <td class="p-2 text-blue-400">${totalMullionM.toFixed(2)} Mt</td>
+                  <td class="p-2">-</td>
+                  <td class="p-2 text-emerald-400">${totalGlassM2.toFixed(2)} m²</td>
+                  <td class="p-2" colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function exportBOMToCSV() {
+      let csv = "PozNo;Tanım;Genişlik;Yükseklik;Adet;Seri;Renk;Cam;Tutar_EUR\n";
+      project.positions.forEach((pos, idx) => {
+        const calc = calculatePositionBOM(pos);
+        csv += `POZ ${idx + 1};${pos.title};${calc.W};${calc.H_total};${pos.qty};${calc.series.name};${calc.colorObj.name};${calc.glassObj.name};${calc.costsEUR.lineTotalEUR.toFixed(2)}\n`;
+      });
+      
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Ozkanoglu_Metraj_Teklif_${project.quoteNo}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("CSV dosyası indirildi.", "success");
+    }
+
+    /* ==========================================================================
+       10. PRICE & CATALOG MANAGEMENT RENDERER & ACTIONS
+       ========================================================================== */
+    function renderCatalogView() {
+      const container = document.getElementById('catalog-tables-container');
+      
+      let html = `
+        <!-- SERIES TABLE -->
+        <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3">
+          <h2 class="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-layer-group"></i>
+            <span>Profil Serileri & Metre Fiyatları (EUR Base)</span>
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-2">Seri Anahtarı</th>
+                  <th class="p-2">Seri İsmi</th>
+                  <th class="p-2">Kalınlık</th>
+                  <th class="p-2">Uf Değeri</th>
+                  <th class="p-2">Kasa (Beyaz/Renkli €)</th>
+                  <th class="p-2">Kanat (Beyaz/Renkli €)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800 text-slate-200">
+      `;
+
+      Object.keys(catalog.series).forEach(k => {
+        const s = catalog.series[k];
+        html += `
+          <tr>
+            <td class="p-2 font-bold text-amber-400">${k}</td>
+            <td class="p-2">${s.name}</td>
+            <td class="p-2">${s.thickness} mm</td>
+            <td class="p-2">${s.uf}</td>
+            <td class="p-2">
+              <input type="number" step="0.1" value="${s.profiles.frame.white}" onchange="catalog.series['${k}'].profiles.frame.white = parseFloat(this.value)" class="w-16 bg-slate-950 border border-slate-700 rounded p-1 text-white"> /
+              <input type="number" step="0.1" value="${s.profiles.frame.colored}" onchange="catalog.series['${k}'].profiles.frame.colored = parseFloat(this.value)" class="w-16 bg-slate-950 border border-slate-700 rounded p-1 text-amber-300">
+            </td>
+            <td class="p-2">
+              <input type="number" step="0.1" value="${s.profiles.winSash.white}" onchange="catalog.series['${k}'].profiles.winSash.white = parseFloat(this.value)" class="w-16 bg-slate-950 border border-slate-700 rounded p-1 text-white"> /
+              <input type="number" step="0.1" value="${s.profiles.winSash.colored}" onchange="catalog.series['${k}'].profiles.winSash.colored = parseFloat(this.value)" class="w-16 bg-slate-950 border border-slate-700 rounded p-1 text-amber-300">
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- GLASS TABLE -->
+        <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3">
+          <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-border-all"></i>
+            <span>Cam & Panel Birim m² Fiyatları (EUR Base)</span>
+          </h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-2">Cam Kodu</th>
+                  <th class="p-2">Açıklama</th>
+                  <th class="p-2">Ug Değeri</th>
+                  <th class="p-2">Birim Fiyat (€/m²)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800 text-slate-200">
+      `;
+
+      Object.keys(catalog.glasses).forEach(k => {
+        const g = catalog.glasses[k];
+        html += `
+          <tr>
+            <td class="p-2 font-bold text-emerald-400">${k}</td>
+            <td class="p-2">${g.name}</td>
+            <td class="p-2">${g.ug}</td>
+            <td class="p-2">
+              <input type="number" step="0.5" value="${g.price}" onchange="catalog.glasses['${k}'].price = parseFloat(this.value)" class="w-24 bg-slate-950 border border-slate-700 rounded p-1 text-emerald-300 font-bold"> €
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function applyBulkPriceAdjustment() {
+      const cat = document.getElementById('bulk-category-select').value;
+      const pct = parseFloat(document.getElementById('bulk-percent-input').value) || 0;
+
+      if (pct === 0) return;
+      const factor = 1 + (pct / 100);
+
+      if (cat === 'ALL' || cat === 'SERIES') {
+        Object.keys(catalog.series).forEach(k => {
+          const s = catalog.series[k];
+          Object.keys(s.profiles).forEach(pk => {
+            s.profiles[pk].white = Math.round(s.profiles[pk].white * factor * 100) / 100;
+            s.profiles[pk].colored = Math.round(s.profiles[pk].colored * factor * 100) / 100;
+          });
+        });
+      }
+
+      if (cat === 'ALL' || cat === 'GLASS') {
+        Object.keys(catalog.glasses).forEach(k => {
+          catalog.glasses[k].price = Math.round(catalog.glasses[k].price * factor * 100) / 100;
+        });
+      }
+
+      saveCatalogToLocalStorage();
+      renderCatalogView();
+      showToast(`Tüm seçili kalemlere %${pct} oranında toplu fiyat güncellemesi uygulandı.`, "success");
+    }
+
+    function saveCatalogToLocalStorage() {
+      localStorage.setItem('ozkanoglu_catalog', JSON.stringify(catalog));
+      populateDropdowns();
+      renderActivePositionCAD();
+      showToast("Tüm kataloğ ve fiyat güncellemeleri kaydedildi.", "success");
+    }
+
+    function resetCatalogToFactory() {
+      if (confirm("Katalog ve fiyat listesini fabrika varsayılan ayarlarına sıfırlamak istiyor musunuz?")) {
+        catalog = JSON.parse(JSON.stringify(DEFAULT_CATALOG));
+        saveCatalogToLocalStorage();
+        renderCatalogView();
+        showToast("Fabrika ayarlarına dönüldü.", "info");
+      }
+    }
+
+    /* ==========================================================================
+       11. GEMINI AI BRIDGE & LOCAL PROJECTS
+       ========================================================================== */
+    function renderGeminiView() {
+      const listContainer = document.getElementById('saved-projects-list');
+      const saved = JSON.parse(localStorage.getItem('ozkanoglu_saved_projects')) || [];
+
+      if (saved.length === 0) {
+        listContainer.innerHTML = `<div class="text-xs text-slate-500 italic p-3">Henüz kaydedilmiş yerel proje yok.</div>`;
+        return;
+      }
+
+      let html = '';
+      saved.forEach((p, idx) => {
+        html += `
+          <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+            <div>
+              <div class="font-bold text-white">#${p.quoteNo} — ${p.customer}</div>
+              <div class="text-[10px] text-slate-400">${p.positions.length} Poz | Tarih: ${p.orderDate}</div>
+            </div>
+            <button onclick="loadSavedProject(${idx})" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs">
+              Projeyi Yükle
+            </button>
+          </div>
+        `;
+      });
+      listContainer.innerHTML = html;
+    }
+
+    function copyCurrentProjectJSON() {
+      const jsonStr = JSON.stringify(project.positions, null, 2);
+      document.getElementById('gemini-json-input').value = jsonStr;
+      
+      // Clipboard copy fallback
+      const tempArea = document.createElement("textarea");
+      tempArea.value = jsonStr;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempArea);
+
+      showToast("Mevcut proje JSON kodu kopyalandı!", "success");
+    }
+
+    function importJSONFromGemini() {
+      try {
+        const raw = document.getElementById('gemini-json-input').value;
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) throw new Error("JSON dizisi beklemekteydi!");
+
+        project.positions = parsed;
+        activePositionIndex = 0;
+        populateDropdowns();
+        renderActivePositionCAD();
+        switchView('cad');
+        showToast("Gemini JSON projesi başarıyla yüklendi!", "success");
+      } catch (err) {
+        showToast("Hatalı JSON formatı! Lütfen geçerli bir JSON dizisi girin.", "error");
+      }
+    }
+
+    function saveCurrentProjectToLocal() {
+      let saved = JSON.parse(localStorage.getItem('ozkanoglu_saved_projects')) || [];
+      saved.push(JSON.parse(JSON.stringify(project)));
+      localStorage.setItem('ozkanoglu_saved_projects', JSON.stringify(saved));
+      renderGeminiView();
+      showToast("Mevcut proje yerel depolamaya kaydedildi.", "success");
+    }
+
+    function loadSavedProject(index) {
+      let saved = JSON.parse(localStorage.getItem('ozkanoglu_saved_projects')) || [];
+      if (saved[index]) {
+        project = saved[index];
+        activePositionIndex = 0;
+        renderActivePositionCAD();
+        switchView('cad');
+        showToast("Seçilen proje yüklendi.", "success");
+      }
+    }
+
+    function loadSampleProject(sampleKey) {
+      if (sampleKey === 'SAMPLE_1') {
+        project.quoteNo = "1858";
+        project.customer = "3 Poz Atlantik 750 Beyaz Test Projesi";
+        project.positions = [
+          { title: "Mutfak Tek Kanat Çift Açılım", qty: 2, width: 900, height: 1300, type: "TEK_CIFT_ACILIM", series: "ATLANTİK_750", color: "WHITE", glass: "DC4164SN" },
+          { title: "Salon Çift Kanat HOK", qty: 1, width: 1500, height: 1900, type: "HOK_CIFTKANAT", series: "ATLANTİK_750", color: "WHITE", glass: "DC4164SN" },
+          { title: "Balkon Kapısı Dilli Kilitli", qty: 1, width: 950, height: 2150, type: "KAPI_TEK_SAG", series: "ATLANTİK_750", color: "WHITE", glass: "DC4124SN", threshold: "ALU_20MM" }
+        ];
+      } else if (sampleKey === 'SAMPLE_2') {
+        project.quoteNo = "1859";
+        project.customer = "İtalya Villa Projesi — Pasifik 888 Altın Meşe";
+        project.currency = "EUR";
+        project.positions = [
+          { title: "Villa Giriş Çift Kanat Kapı", qty: 1, width: 1800, height: 2300, type: "KAPI_CIFT", series: "PASIFIK_888", color: "GOLDEN_OAK", glass: "SN4164TP146SN", threshold: "ALU_20MM" },
+          { title: "Salon Veranda Hebeschiebe", qty: 2, width: 3200, height: 2400, type: "HEBESCHIEBE_AKDENIZ", series: "AKDENIZ_HEBESCHIEBE", color: "GOLDEN_OAK", glass: "SN4164TP146SN" },
+          { title: "Yatak Odası Panjurlu Pencere", qty: 4, width: 1200, height: 1600, type: "TEK_CIFT_ACILIM", series: "PASIFIK_888", color: "GOLDEN_OAK", glass: "SN4164TP146SN", hasShutter: true, hasMuntin: true }
+        ];
+      } else if (sampleKey === 'SAMPLE_3') {
+        project.quoteNo = "1860";
+        project.customer = "USA Sunroom Siyah Hebeschiebe";
+        project.currency = "USD";
+        project.positions = [
+          { title: "Sunroom Front Slider", qty: 2, width: 3600, height: 2500, type: "HEBESCHIEBE_AKDENIZ", series: "AKDENIZ_HEBESCHIEBE", color: "BLACK", glass: "SN4164TP146KF" },
+          { title: "Side Perge Slider", qty: 2, width: 2000, height: 2000, type: "SURME_PERGE", series: "PERGE_SURME", color: "BLACK", glass: "DC4124SN" }
+        ];
+      }
+
+      activePositionIndex = 0;
+      renderActivePositionCAD();
+      switchView('cad');
+      showToast("Örnek demo proje yüklendi.", "success");
+    }
+
+    function triggerPrint() {
+      renderCustomerQuote();
+      window.print();
+    }
+
+    /* ==========================================================================
+       12. WINDOW ONLOAD INITIALIZATION
+       ========================================================================== */
+    window.onload = function() {
+      populateDropdowns();
+      renderActivePositionCAD();
+    };
+  </script>
+</body>
+</html>
