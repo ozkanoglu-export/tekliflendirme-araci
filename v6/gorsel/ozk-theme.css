@@ -1,0 +1,189 @@
+/* ==========================================================================
+   Özkanoğlu PenCAD 6.1 — Tema & göz sağlığı katmanı
+   Gece: koyu, düşük parlaklık, sıcak beyaz yazı (saf #fff yerine) — gözü yormaz
+   Gündüz: saf beyaz yerine yumuşak kâğıt tonu, düşük kontrastlı gri yazı
+   Göz koruma: mavi ışığı azaltan hafif amber filtre (baskıya çıkmaz)
+   ========================================================================== */
+
+/* ---------- Cam renkleri: çizim tuvali (gece) ---------- */
+:root {
+  --ozk-spacer: #20252b;
+  --ozkg-clear-0c: #a9dcf2; --ozkg-clear-0o: 0.34; --ozkg-clear-1c: #2f7fae; --ozkg-clear-1o: 0.24; --ozkg-clear-2c: #7cc6ea; --ozkg-clear-2o: 0.36;
+  --ozkg-lowe-0c: #a6e3dc; --ozkg-lowe-0o: 0.34; --ozkg-lowe-1c: #2a8784; --ozkg-lowe-1o: 0.24; --ozkg-lowe-2c: #78c8c0; --ozkg-lowe-2o: 0.36;
+  --ozkg-solar-0c: #a3bcd8; --ozkg-solar-0o: 0.4; --ozkg-solar-1c: #2e4a6d; --ozkg-solar-1o: 0.34; --ozkg-solar-2c: #7f9fc6; --ozkg-solar-2o: 0.4;
+  --ozkg-triple-0c: #9fdcd2; --ozkg-triple-0o: 0.42; --ozkg-triple-1c: #1d6a6d; --ozkg-triple-1o: 0.36; --ozkg-triple-2c: #69b8b0; --ozkg-triple-2o: 0.42;
+  --ozkg-reflect-0c: #dfe8f1; --ozkg-reflect-0o: 0.82; --ozkg-reflect-1c: #56718b; --ozkg-reflect-1o: 0.74; --ozkg-reflect-2c: #c6d4e3; --ozkg-reflect-2o: 0.82;
+  --ozkg-tint-0c: #c2a27a; --ozkg-tint-0o: 0.52; --ozkg-tint-1c: #5a4330; --ozkg-tint-1o: 0.52; --ozkg-tint-2c: #a88a68; --ozkg-tint-2o: 0.52;
+  --ozkg-lam-0c: #c3e6f4; --ozkg-lam-0o: 0.42; --ozkg-lam-1c: #3d8fb8; --ozkg-lam-1o: 0.3; --ozkg-lam-2c: #9fd3ec; --ozkg-lam-2o: 0.42;
+  --ozkg-lamAc-0c: #c9d4f5; --ozkg-lamAc-0o: 0.44; --ozkg-lamAc-1c: #4b62b0; --ozkg-lamAc-1o: 0.32; --ozkg-lamAc-2c: #a6b5ea; --ozkg-lamAc-2o: 0.44;
+  --ozkg-satin-0c: #e9eff3; --ozkg-satin-0o: 0.82; --ozkg-satin-1c: #cdd8e0; --ozkg-satin-1o: 0.8; --ozkg-satin-2c: #edf2f5; --ozkg-satin-2o: 0.82;
+  --ozkg-pattern-0c: #e1e9ee; --ozkg-pattern-0o: 0.8; --ozkg-pattern-1c: #c3cfd8; --ozkg-pattern-1o: 0.78; --ozkg-pattern-2c: #e6edf1; --ozkg-pattern-2o: 0.8;
+  --ozkg-blinds-0c: #a9dcf2; --ozkg-blinds-0o: 0.34; --ozkg-blinds-1c: #2f7fae; --ozkg-blinds-1o: 0.24; --ozkg-blinds-2c: #7cc6ea; --ozkg-blinds-2o: 0.36;
+}
+
+/* ---------- Cam renkleri: çizim tuvali (gündüz) ---------- */
+html[data-ozk-theme='day'] {
+  --ozk-spacer: #4b5563;
+  --ozkg-clear-0c: #d6edf8; --ozkg-clear-0o: 0.96; --ozkg-clear-1c: #a4cfe8; --ozkg-clear-1o: 0.92; --ozkg-clear-2c: #ddf1fa; --ozkg-clear-2o: 0.96;
+  --ozkg-lowe-0c: #d8f0ea; --ozkg-lowe-0o: 0.96; --ozkg-lowe-1c: #a6d6cb; --ozkg-lowe-1o: 0.92; --ozkg-lowe-2c: #dff4ef; --ozkg-lowe-2o: 0.96;
+  --ozkg-solar-0c: #d6e1ed; --ozkg-solar-0o: 0.96; --ozkg-solar-1c: #a9bdd4; --ozkg-solar-1o: 0.92; --ozkg-solar-2c: #dce6f0; --ozkg-solar-2o: 0.96;
+  --ozkg-triple-0c: #cfeae4; --ozkg-triple-0o: 0.97; --ozkg-triple-1c: #93c8bc; --ozkg-triple-1o: 0.93; --ozkg-triple-2c: #d7eee9; --ozkg-triple-2o: 0.97;
+  --ozkg-reflect-0c: #e9eef4; --ozkg-reflect-0o: 1; --ozkg-reflect-1c: #9cb0c5; --ozkg-reflect-1o: 0.96; --ozkg-reflect-2c: #eef2f6; --ozkg-reflect-2o: 1;
+  --ozkg-tint-0c: #eadccb; --ozkg-tint-0o: 0.97; --ozkg-tint-1c: #c4a888; --ozkg-tint-1o: 0.93; --ozkg-tint-2c: #eee3d5; --ozkg-tint-2o: 0.97;
+  --ozkg-lam-0c: #dcf0f9; --ozkg-lam-0o: 0.97; --ozkg-lam-1c: #b3d8ec; --ozkg-lam-1o: 0.93; --ozkg-lam-2c: #e3f3fa; --ozkg-lam-2o: 0.97;
+  --ozkg-lamAc-0c: #e0e5f8; --ozkg-lamAc-0o: 0.97; --ozkg-lamAc-1c: #b9c4ee; --ozkg-lamAc-1o: 0.93; --ozkg-lamAc-2c: #e6eafa; --ozkg-lamAc-2o: 0.97;
+  --ozkg-satin-0c: #f3f6f8; --ozkg-satin-0o: 0.98; --ozkg-satin-1c: #e4eaee; --ozkg-satin-1o: 0.98; --ozkg-satin-2c: #f5f8f9; --ozkg-satin-2o: 0.98;
+  --ozkg-pattern-0c: #edf2f5; --ozkg-pattern-0o: 0.98; --ozkg-pattern-1c: #dbe4ea; --ozkg-pattern-1o: 0.98; --ozkg-pattern-2c: #f0f4f7; --ozkg-pattern-2o: 0.98;
+  --ozkg-blinds-0c: #d6edf8; --ozkg-blinds-0o: 0.96; --ozkg-blinds-1c: #a4cfe8; --ozkg-blinds-1o: 0.92; --ozkg-blinds-2c: #ddf1fa; --ozkg-blinds-2o: 0.96;
+}
+
+/* ---------- Gece: göz dostu ince ayar ---------- */
+html[data-ozk-theme='night'] body {
+  background-color: #0c0f14;
+}
+/* Saf beyaz yerine sıcak kırık beyaz: kontrast yeterli, parlama az */
+html[data-ozk-theme='night'] .text-white:not(.ozk-paper *):not([class*='bg-'][class*='-600']):not([class*='bg-'][class*='-500']) {
+  color: #ece8df;
+}
+html[data-ozk-theme='night'] .text-ink-100 {
+  color: #e2e3e2;
+}
+
+/* ---------- Tema düğmesi ---------- */
+#ozk-theme-ui {
+  position: fixed;
+  left: calc(50% + 40px);
+  bottom: 9px;
+  z-index: 9990;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  font: 600 11px/1 Inter, system-ui, sans-serif;
+  background: rgba(20, 26, 36, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 24px -10px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+#ozk-theme-ui:hover {
+  opacity: 1;
+}
+#ozk-theme-ui button {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #b8c0cc;
+  font-size: 12px;
+}
+#ozk-theme-ui button span {
+  font-size: 10.5px;
+  display: none;
+}
+#ozk-theme-ui:hover button span {
+  display: inline;
+}
+#ozk-theme-ui button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+#ozk-theme-ui button[aria-pressed='true'] {
+  color: #1b1405;
+  background: #d4af37;
+}
+#ozk-theme-ui i {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  margin: 0 3px;
+}
+html[data-ozk-theme='day'] #ozk-theme-ui {
+  background: rgba(250, 248, 243, 0.8);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 8px 24px -12px rgba(60, 50, 30, 0.35);
+}
+html[data-ozk-theme='day'] #ozk-theme-ui button {
+  color: #5c574d;
+}
+html[data-ozk-theme='day'] #ozk-theme-ui button:hover {
+  color: #1f1d19;
+  background: rgba(0, 0, 0, 0.05);
+}
+html[data-ozk-theme='day'] #ozk-theme-ui i {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* ---------- Göz koruma (mavi ışık) filtresi ---------- */
+#ozk-eye-filter {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9989;
+  mix-blend-mode: multiply;
+  background: transparent;
+  transition: background 0.4s;
+}
+html[data-ozk-eye='1'][data-ozk-theme='night'] #ozk-eye-filter {
+  background: rgba(255, 196, 140, 0.09);
+}
+html[data-ozk-eye='1'][data-ozk-theme='day'] #ozk-eye-filter {
+  background: rgba(255, 228, 196, 0.12);
+}
+
+@media print {
+  /* 6.0'da teklifin etrafındaki koyu kap da basılıyordu: kâğıt çevresi beyaz */
+  body,
+  #root,
+  #root *:has(.print-sheet) {
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+  .ozk-no-print,
+  #ozk-theme-ui,
+  #ozk-eye-filter {
+    display: none !important;
+  }
+}
+
+/* ---------- Gündüz modu ----------
+   6.0 arayüzü koyu tasarlandığı için tüm uygulama tek bir "akıllı ters çevirme"
+   filtresiyle açık temaya alınır (renk tonları korunur, saf beyaz yerine yumuşak
+   kâğıt tonu). Gerçek renkli olması gereken her şey filtreden hariç tutulur:
+   teklif kâğıdı, logolar, renk kartelası, 3D görüntü ve çizimler. */
+@media screen {
+  html[data-ozk-theme='day'] #root {
+    filter: invert(1) hue-rotate(180deg) contrast(0.9) brightness(1.04) sepia(0.06);
+  }
+  html[data-ozk-theme='day'] #root img,
+  html[data-ozk-theme='day'] #root canvas,
+  html[data-ozk-theme='day'] #root video,
+  html[data-ozk-theme='day'] #root svg.ozk-canvas,
+  html[data-ozk-theme='day'] #root .print-sheet,
+  html[data-ozk-theme='day'] #root [style*='background'],
+  html[data-ozk-theme='day'] #root .bg-white:not(.print-sheet):not(.print-sheet *):not(.bg-white .bg-white) {
+    filter: invert(1) hue-rotate(180deg);
+  }
+  html[data-ozk-theme='day'] #root .print-sheet img,
+  html[data-ozk-theme='day'] #root .print-sheet canvas,
+  html[data-ozk-theme='day'] #root .print-sheet svg,
+  html[data-ozk-theme='day'] #root .print-sheet [style*='background'],
+  html[data-ozk-theme='day'] #root [style*='background'] img,
+  html[data-ozk-theme='day'] #root [style*='background'] svg,
+  html[data-ozk-theme='day'] #root [style*='background'] [style*='background'],
+  html[data-ozk-theme='day'] #root svg.ozk-canvas [style*='background'],
+  html[data-ozk-theme='day'] #root .bg-white:not(.print-sheet) img,
+  html[data-ozk-theme='day'] #root .bg-white:not(.print-sheet) svg,
+  html[data-ozk-theme='day'] #root .bg-white:not(.print-sheet) canvas {
+    filter: none;
+  }
+}
+
+/* Çizim tuvali (gündüz): koyu tuval renk sabitleri → teklif kâğıdı renk eşdeğerleri */
+__OZK_CANVAS_DAY__

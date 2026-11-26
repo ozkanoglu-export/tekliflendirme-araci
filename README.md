@@ -1,4 +1,8 @@
-# Özkanoğlu PenCAD Stüdyo 5
+# Özkanoğlu PenCAD Stüdyo
+
+> **Güncel sürüm: 6.1** → `release/Ozkanoglu-PenCAD-6.1.html`
+> Furkan'ın 6.0'ı üzerine görsel katman eklendi: gerçekçi cam türleri, REHAU kartelası, folyo dokuları, gece/gündüz modu, 3D. Ayrıntılar: [v6/README.md](v6/README.md)
+> Aşağıdaki bölüm ilk React sürümünü (5.x, `app/`) anlatır.
 
 PVC pencere, kapı ve sürme sistemleri için **çizim → reçete → kesim → teklif** aracı.
 Şimdilik Adopen serileriyle çalışıyor (Atlantik 750, Pasifik 888, Perge Sürme, Akdeniz Hebeschiebe).
