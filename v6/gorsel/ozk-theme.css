@@ -1004,3 +1004,70 @@ button:hover > .ozk-star-mini {
 #ozk-ai .ozk-ai-t td.op {
   min-width: 280px;
 }
+
+/* ⚙ Araçlar menüsü + varyant çubuğu */
+#ozk-pop.ozk-pop-tools {
+  min-width: 260px;
+}
+.ozk-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ozk-tools button {
+  text-align: start;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: transparent;
+  color: inherit;
+  font: 600 12.5px/1.2 Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+.ozk-tools button:hover {
+  background: rgba(148, 163, 184, 0.16);
+}
+#ozk-var {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+#ozk-theme-ui .ozk-varb {
+  font: 700 10.5px/1 Inter, system-ui, sans-serif;
+  padding: 5px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+#ozk-theme-ui .ozk-varb.on {
+  background: linear-gradient(135deg, #f5c542, #d4af37);
+  color: #0b1220;
+}
+#ozk-pop.ozk-pop-tools {
+  width: auto;
+  padding: 8px;
+}
+#ozk-theme-ui .ozk-varb:not(.on) {
+  background: rgba(148, 163, 184, 0.16);
+}
+#ozk-var {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  white-space: nowrap;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(12, 18, 28, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+#ozk-var::before {
+  content: 'Varyant';
+  font: 700 9.5px/1 Inter, system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  padding: 0 6px 0 8px;
+}

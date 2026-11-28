@@ -194,6 +194,20 @@ sub(rf'value:{E(KE)}\.threshold,onChange:({ID})=>\{{const ({ID})=\1\.target\.val
                f'{m.group(3)}({{threshold:{m.group(2)}}}),{OZ}&&!{VL}({KE}.root)&&{VT}({{ozkWinThr:{m.group(2)}==="alu20"}})'), 'eşik: seçim pencerelere de işler')
 sub(r'"Kapı Eşik Tipi "', '"Eşik Tipi (kapı + pencere) "', 'eşik: etiket')
 
+
+# ------------------------------------------------------------ toplu profil değişimi: serinin temel camı fonksiyonu dışarı açılır
+mbg = find1(rf'function ({ID})\(({ID}),({ID})\)\{{const ({ID})=\3\?\?({ID});if\(!\2\|\|\2\.isAluPanelDoor\)return"DC4164SN";', 'serinin temel camı')
+sub(E(mbg.group(0)), (f'window.OZKV&&(OZKV.basicGlass=function(s,c){{return {mbg.group(1)}(s,c)}});' + mbg.group(0)).replace('\\', '\\\\'), 'temel cam fonksiyonu katmana açıldı')
+
+
+# ------------------------------------------------------------ ana bileşen bağlantısı (sekme değiştirmeden proje okuma / yükleme)
+mapp = find1(rf'project:({ID}),savedProjects:{ID},catalog:({ID}),settings:({ID}),grandTotal:{ID}\.grand,onLoadProject:({ID})=>\{{({ID})\(({ID})\(\4,\2\)\),({ID})\(0\),({ID})\("studio"\)\}},onImportBundle:{ID},onSaveProject:({ID})', 'ana bileşen proje bağlantısı')
+A_P, A_C, A_S, A_SET, A_XA, A_SEL, A_SAVE = mapp.group(1), mapp.group(2), mapp.group(3), mapp.group(5), mapp.group(6), mapp.group(7), mapp.group(9)
+sub(rf'const ({ID})=\(\)=>\{{const\[({ID}),({ID})\]=({ID})\.useState\("studio"\)',
+    lambda m: (f'const {m.group(1)}=()=>{{{OZ}&&OZKV.bindApp&&OZKV.bindApp({{getProject:()=>{A_P},getCatalog:()=>{A_C},getSettings:()=>{A_S},'
+               f'load:__z=>{{{A_SET}({A_XA}(__z,{A_C})),{A_SEL}(0)}},save:__z=>{A_SAVE}(__z)}});'
+               f'const[{m.group(2)},{m.group(3)}]={m.group(4)}.useState("studio")'), 'ana bileşen bağlandı')
+
 # ------------------------------------------------------------ 3D
 
 # ------------------------------------------------------------ 3D: gerçekçi kol, katmanlı cam, HOK levye, vasistas

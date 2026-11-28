@@ -1329,6 +1329,8 @@
       ui.querySelectorAll('[data-v]').forEach(function (b) {
         b.setAttribute('aria-pressed', b.getAttribute('data-v') === pref ? 'true' : 'false')
       })
+      var cy = ui.querySelector('[data-cycle]')
+      if (cy) cy.innerHTML = { day: '☀<span>Gündüz</span>', night: '☾<span>Gece</span>', auto: '◐<span>Oto</span>' }[pref] || '◐<span>Oto</span>'
       var eb = ui.querySelector('[data-eye]')
       if (eb) eb.setAttribute('aria-pressed', getPref(EKEY, '1') === '1' ? 'true' : 'false')
     }
@@ -2814,7 +2816,26 @@
     })
     return d
   }
+  var APP = null
+  function bindApp(a) {
+    APP = a
+    if (!bindApp._raf)
+      bindApp._raf = requestAnimationFrame(function () {
+        bindApp._raf = 0
+        refreshVariantBar()
+      })
+  }
   async function ensurePJ() {
+    if (APP) {
+      try {
+        PJ.project = APP.getProject()
+        PJ.catalog = APP.getCatalog()
+        PJ.load = APP.load
+        PJ.save = APP.save
+        PJ.t = Date.now()
+        return
+      } catch (e) {}
+    }
     if (PJ.catalog && Date.now() - PJ.t < 5000) return
     clickNav(/^Projeler/)
     for (var k = 0; k < 30 && !(PJ.catalog && Date.now() - PJ.t < 3000); k++) await sleep(100)
@@ -3001,7 +3022,7 @@
   function glassBulkOpen() {
     var m0 = aiModal('<div class="ozk-ai-h"><b>🪟 Tüm Camları Değiştir</b><button data-x>✕</button></div><p class="ozk-ai-p">Proje bilgileri yükleniyor…</p>')
     m0.querySelector('[data-x]').onclick = aiClose
-    var back = currentTab()
+    var back = APP ? null : currentTab()
     ensurePJ().then(function () {
       if (back) clickTab(back)
       var cat = PJ.catalog || {},
@@ -3077,6 +3098,255 @@
         toast('Cam değiştirildi: ' + changed + ' poz → ' + ((G[nk] && G[nk].name) || nk))
       }
     })
+  }
+
+  // ---- Tüm projedeki profil serisini tek seferde değiştir (aynı ölçülerle başka sistemden teklif)
+  function seriesBulkOpen() {
+    var m0 = aiModal('<div class="ozk-ai-h"><b>🧱 Profil Sistemini Değiştir</b><button data-x>✕</button></div><p class="ozk-ai-p">Proje bilgileri yükleniyor…</p>')
+    m0.querySelector('[data-x]').onclick = aiClose
+    var back = APP ? null : currentTab()
+    ensurePJ().then(function () {
+      if (back) clickTab(back)
+      var cat = PJ.catalog || {},
+        pr = PJ.project
+      if (!pr || !cat.series) return (m0.querySelector('.ozk-ai-p').textContent = 'Proje okunamadı, tekrar deneyin.')
+      var S = cat.series,
+        G = cat.glasses || {}
+      function swappable(k) {
+        var x = S[k]
+        return x && x.kind === 'casement' && !x.isAluPanelDoor
+      }
+      var count = {}
+      ;(pr.positions || []).forEach(function (p) {
+        count[p.series] = (count[p.series] || 0) + (Math.max(1, p.qty) || 1)
+      })
+      var used = Object.keys(count)
+        .map(function (k) {
+          return '<li>' + esc((S[k] && S[k].name) || k) + ' — <b>' + count[k] + ' adet</b>' + (swappable(k) ? '' : ' <small>(değişmez: sürme / panel kapı)</small>') + '</li>'
+        })
+        .join('')
+      var m = aiModal(
+        '<div class="ozk-ai-h"><b>🧱 Profil Sistemini Değiştir</b><button data-x>✕</button></div>' +
+          '<p class="ozk-ai-p">Aynı çizim ve ölçülerle başka bir profil sisteminden teklif hazırlar. Projede şu an:</p><ul class="ozk-ai-used">' + used + '</ul>' +
+          '<label class="ozk-ai-lbl">Yeni profil sistemi<select data-s>' + opts(S, null, function (x) { return x.kind === 'casement' && !x.isAluPanelDoor }) + '</select></label>' +
+          '<label class="ozk-ai-lbl">Hangi pozlar<select data-from><option value="">Tüm pencere / kapı pozları</option>' +
+          Object.keys(count)
+            .filter(swappable)
+            .map(function (k) {
+              return '<option value="' + esc(k) + '">Yalnızca: ' + esc((S[k] && S[k].name) || k) + '</option>'
+            })
+            .join('') +
+          '</select></label>' +
+          '<label class="ozk-ai-lbl">Camlar<select data-gm><option value="fit">Aynı kalsın (yeni serinin cam kanalına sığmayanlar serinin temel camına geçer)</option><option value="basic">Hepsi yeni serinin temel camına geçsin</option></select></label>' +
+          '<label class="ozk-ai-chk"><input type="checkbox" data-units checked> Birleşik pozların diğer birimlerini de değiştir</label>' +
+          '<p class="ozk-ai-p">Sürmeler ve alüminyum panel kapılar değişmez. Kasa tipi yeni seride yoksa standart kasaya döner.</p>' +
+          '<div class="ozk-ai-f"><span data-msg></span>' +
+          '<button class="ozk-ai-go ghost" data-here>Bu projede değiştir</button>' +
+          '<button class="ozk-ai-go" data-variant title="Mevcut teklif korunur; yeni sistem ayrı bir varyant olur, alttaki çubuktan tek tıkla geçilir">＋ Varyant olarak ekle</button></div>',
+      )
+      m.querySelector('[data-x]').onclick = aiClose
+      async function apply(variant) {
+        var ns = m.querySelector('[data-s]').value,
+          from = m.querySelector('[data-from]').value,
+          gm = m.querySelector('[data-gm]').value,
+          units = m.querySelector('[data-units]').checked
+        var nsr = S[ns]
+        var basic = OZKV.basicGlass ? OZKV.basicGlass(nsr, cat) : 'DC4164SN'
+        function okS(k) {
+          return swappable(k) && (!from || k === from)
+        }
+        function fitGlass(gk) {
+          if (gm === 'basic') return basic
+          var g = G[gk]
+          if (!g || g.panel) return gk
+          var t = g.thicknessMm || 24
+          if ((nsr.maxGlassMm && t > nsr.maxGlassMm) || (nsr.minGlassMm && t < nsr.minGlassMm)) return basic
+          return gk
+        }
+        function walk(r) {
+          if (!r) return r
+          if (r.kind === 'leaf') return r.glass && !r.panelModel && G[r.glass] && !G[r.glass].panel ? Object.assign({}, r, { glass: fitGlass(r.glass) }) : r
+          if (r.children)
+            return Object.assign({}, r, {
+              children: r.children.map(function (c) {
+                return Object.assign({}, c, { field: walk(c.field) })
+              }),
+            })
+          return r
+        }
+        var changed = 0,
+          glassChanged = 0
+        await ensurePJ()
+        var cur = PJ.project
+        var positions = (cur.positions || []).map(function (p) {
+          if (!okS(p.series)) return p
+          var q = Object.assign({}, p, { series: ns })
+          if (p.series !== ns) changed++
+          var ng = fitGlass(p.glass)
+          if (ng !== p.glass) glassChanged++
+          q.glass = ng
+          q.root = walk(p.root)
+          if (units && Array.isArray(p.coupledUnits))
+            q.coupledUnits = p.coupledUnits.map(function (u) {
+              var u2 = Object.assign({}, u)
+              if (!u.series || okS(u.series)) {
+                if (u.series) u2.series = ns
+                if (u.glass) u2.glass = fitGlass(u.glass)
+                u2.root = walk(u.root)
+              }
+              return u2
+            })
+          return q
+        })
+        var short = (nsr.shortName || nsr.name || ns).split(' (')[0]
+        if (variant) addVariant(cur, Object.assign({}, cur, { positions: positions }), short)
+        else PJ.load(Object.assign({}, cur, { positions: positions }))
+        aiClose()
+        toast(changed + ' poz → ' + short + (glassChanged ? ' · ' + glassChanged + ' pozda cam uyumlu cama geçti' : '') + (variant ? ' · varyantlar arasında alttaki çubuktan geçebilirsiniz' : ''))
+      }
+      m.querySelector('[data-here]').onclick = function () {
+        apply(false)
+      }
+      m.querySelector('[data-variant]').onclick = function () {
+        apply(true)
+      }
+    })
+  }
+
+  /* ============================================= VARYANTLAR: aynı çizim, farklı profil sistemi (6.2) */
+  var VKEY = 'ozk.variants'
+  function vAll() {
+    try {
+      return JSON.parse(localStorage.getItem(VKEY) || '{}') || {}
+    } catch (e) {
+      return {}
+    }
+  }
+  function vSave(o) {
+    try {
+      localStorage.setItem(VKEY, JSON.stringify(o))
+      return true
+    } catch (e) {
+      toast('Varyant kaydedilemedi: tarayıcı kayıt alanı dolu')
+      return false
+    }
+  }
+  function mainSeriesLabel(pr) {
+    var cat = (APP && APP.getCatalog()) || PJ.catalog || {}
+    var cnt = {}
+    ;(pr.positions || []).forEach(function (p) {
+      cnt[p.series] = (cnt[p.series] || 0) + 1
+    })
+    var k = Object.keys(cnt).sort(function (a, b) {
+      return cnt[b] - cnt[a]
+    })[0]
+    var s0 = cat.series && cat.series[k]
+    return s0 ? (s0.shortName || s0.name).split(' (')[0] : 'Varyant'
+  }
+  function addVariant(cur, next, label) {
+    var all = vAll()
+    var gid = cur.ozkVarGroup
+    if (!gid || !all[gid]) {
+      gid = 'vg_' + Date.now().toString(36)
+      all[gid] = { items: [{ label: mainSeriesLabel(cur), project: Object.assign({}, cur, { ozkVarGroup: gid }) }], active: 0 }
+    }
+    var g = all[gid]
+    g.items[g.active].project = Object.assign({}, cur, { ozkVarGroup: gid })
+    var same = g.items.filter(function (x) {
+      return x.label === label
+    })[0]
+    var item = { label: same ? label + ' ' + (g.items.length + 1) : label, project: Object.assign({}, next, { ozkVarGroup: gid }) }
+    g.items.push(item)
+    g.active = g.items.length - 1
+    if (vSave(all)) PJ.load(item.project)
+  }
+  function switchVariant(i) {
+    ensurePJ().then(function () {
+      var cur = PJ.project,
+        all = vAll(),
+        g = cur && all[cur.ozkVarGroup]
+      if (!g || !g.items[i] || i === g.active) return
+      g.items[g.active].project = cur // mevcut düzenlemeler kendi varyantında saklanır
+      g.active = i
+      if (vSave(all)) {
+        PJ.load(g.items[i].project)
+        toast('Varyant: ' + g.items[i].label)
+      }
+    })
+  }
+  function removeVariant() {
+    ensurePJ().then(function () {
+      var cur = PJ.project,
+        all = vAll(),
+        gid = cur && cur.ozkVarGroup,
+        g = all[gid]
+      if (!g || g.items.length < 2) return toast('Silinecek varyant yok')
+      if (!confirm('“' + g.items[g.active].label + '” varyantı silinsin mi? (Diğer varyantlar kalır)')) return
+      g.items.splice(g.active, 1)
+      g.active = 0
+      if (g.items.length === 1) {
+        var only = g.items[0].project
+        delete all[gid]
+        vSave(all)
+        PJ.load(Object.assign({}, only, { ozkVarGroup: undefined }))
+      } else if (vSave(all)) PJ.load(g.items[0].project)
+    })
+  }
+  function refreshVariantBar() {
+    var bar = document.getElementById('ozk-var')
+    if (!bar || !APP) return
+    var pr
+    try {
+      pr = APP.getProject()
+    } catch (e) {
+      return
+    }
+    var g = pr && pr.ozkVarGroup ? vAll()[pr.ozkVarGroup] : null
+    var key = g ? pr.ozkVarGroup + ':' + g.active + ':' + g.items.map(function (x) { return x.label }).join('|') : ''
+    if (bar.getAttribute('data-k') === key) return
+    bar.setAttribute('data-k', key)
+    if (!g || g.items.length < 2) {
+      bar.innerHTML = ''
+      bar.style.display = 'none'
+      return
+    }
+    bar.style.display = ''
+    bar.innerHTML =
+      g.items
+        .map(function (x, i) {
+          return '<button data-var="' + i + '" class="ozk-varb' + (i === g.active ? ' on' : '') + '" title="Bu profil sisteminin teklifine geç">' + esc(x.label) + '</button>'
+        })
+        .join('')
+  }
+
+  // ⚙ Araçlar menüsü (alt çubuğu sade tutmak için)
+  function toolsPop() {
+    var g = null
+    try {
+      var pr = APP && APP.getProject()
+      g = pr && pr.ozkVarGroup ? vAll()[pr.ozkVarGroup] : null
+    } catch (e) {}
+    openPop(
+      '<div class="ozk-tools">' +
+        '<button data-t="series">🧱 Profil sistemi değiştir / varyant ekle</button>' +
+        '<button data-t="glass">🪟 Tüm camları değiştir</button>' +
+        '<button data-t="color">🎨 Renk ekle</button>' +
+        (g && g.items.length > 1 ? '<button data-t="delvar">✕ Bu varyantı sil</button>' : '') +
+        '</div>',
+      function (p) {
+        p.classList.add('ozk-pop-tools')
+        p.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-t]')
+          if (!b) return
+          var t = b.getAttribute('data-t')
+          closePop()
+          if (t === 'series') seriesBulkOpen()
+          else if (t === 'glass') glassBulkOpen()
+          else if (t === 'color') colorPop()
+          else if (t === 'delvar') removeVariant()
+        })
+      },
+    )
   }
   function currentTab() {
     var b = Array.prototype.slice.call(document.querySelectorAll('header button')).filter(function (x) {
@@ -3264,8 +3534,7 @@
       if (d.blocked.length) return (msg.innerHTML = '<b style="color:#ef4444">Onaylanmamış / geçersiz ölçü: ' + esc(d.blocked.join(', ')) + '</b>')
       if (!d.positions.length) return (msg.textContent = 'Eklenecek poz seçilmedi')
       msg.textContent = 'Projeye işleniyor…'
-      clickNav(/^Projeler/)
-      for (var k = 0; k < 30 && !(PJ.load && Date.now() - PJ.t < 3000); k++) await sleep(100)
+      await ensurePJ()
       if (!PJ.load || !PJ.project) return (msg.textContent = 'Projeler ekranına ulaşılamadı; tekrar deneyin')
       var cur = PJ.project
       if (mode === 'new') {
@@ -3447,22 +3716,26 @@
     d.id = 'ozk-theme-ui'
     d.className = 'ozk-no-print'
     d.innerHTML =
-      '<button data-v="day" title="Gündüz modu — açık, yumuşak kâğıt tonu">☀<span>Gündüz</span></button>' +
-      '<button data-v="night" title="Gece modu — koyu, düşük parlaklık">☾<span>Gece</span></button>' +
-      '<button data-v="auto" title="Otomatik: 07:00–19:00 gündüz, diğer saatler gece">◐<span>Oto</span></button>' +
-      '<i></i><button data-eye title="Göz koruma — mavi ışığı azaltan sıcak filtre">◉<span>Göz koruma</span></button>' +
+      '<button data-cycle title="Tema: tıkla → Gündüz / Gece / Oto (07–19 gündüz)"></button>' +
+      '<button data-eye title="Göz koruma — mavi ışığı azaltan sıcak filtre">◉<span>Göz koruma</span></button>' +
       '<i></i><button data-user title="Çizen / teklif veren kişi">👤<span class="ozk-keep">' + esc(userName()) + '</span></button>' +
-      '<button data-color title="Kendi rengini ekle">🎨<span>Renk ekle</span></button>' +
       '<button data-ai title="AI ölçü okuma — belge / fotoğraftan poz çıkar">✨<span class="ozk-keep">AI Ölçü</span></button>' +
-      '<button data-glass title="Projedeki tüm camları tek seferde değiştir">🪟<span>Tüm camlar</span></button>'
+      '<button data-tools title="Toplu işlemler: profil sistemi / varyant, tüm camlar, renk ekle">⚙<span>Araçlar</span></button>' +
+      '<span id="ozk-var" style="display:none"></span>'
     d.addEventListener('click', function (ev) {
       var b = ev.target.closest('button')
       if (!b) return
-      if (b.hasAttribute('data-eye')) setPref(EKEY, getPref(EKEY, '1') === '1' ? '0' : '1')
+      if (b.hasAttribute('data-var')) return switchVariant(+b.getAttribute('data-var'))
+      if (b.hasAttribute('data-tools')) return toolsPop()
+      if (b.hasAttribute('data-cycle')) {
+        var order = ['day', 'night', 'auto']
+        setPref(TKEY, order[(order.indexOf(getPref(TKEY, 'auto')) + 1) % 3])
+      } else if (b.hasAttribute('data-eye')) setPref(EKEY, getPref(EKEY, '1') === '1' ? '0' : '1')
       else if (b.hasAttribute('data-user')) return userPop()
       else if (b.hasAttribute('data-color')) return colorPop()
       else if (b.hasAttribute('data-ai')) return window.OZKV && OZKV.aiOpen ? OZKV.aiOpen() : toast('AI ölçü okuma yükleniyor…')
       else if (b.hasAttribute('data-glass')) return glassBulkOpen()
+      else if (b.hasAttribute('data-series')) return seriesBulkOpen()
       else setPref(TKEY, b.getAttribute('data-v'))
       applyTheme()
     })
@@ -3528,6 +3801,7 @@
     anim3D: anim3D,
     _reg: REG,
     exportCustomer3D: exportCustomer3D,
+    bindApp: bindApp,
     aiOpen: aiOpen,
     _tilt: TILT,
     useFav: useFav,
