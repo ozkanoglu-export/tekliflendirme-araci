@@ -52,7 +52,7 @@ html[data-ozk-theme='night'] .text-ink-100 {
 /* ---------- Tema düğmesi ---------- */
 #ozk-theme-ui {
   position: fixed;
-  left: calc(50% + 40px);
+  left: calc(50% - 60px);
   bottom: 9px;
   z-index: 9990;
   display: flex;
@@ -187,3 +187,261 @@ html[data-ozk-eye='1'][data-ozk-theme='day'] #ozk-eye-filter {
 
 /* Çizim tuvali (gündüz): koyu tuval renk sabitleri → teklif kâğıdı renk eşdeğerleri */
 __OZK_CANVAS_DAY__
+
+/* ---------- Vinesso imzası (teklif) ---------- */
+.ozk-vin {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  line-height: 1;
+}
+.ozk-vin-logo {
+  height: 22px;
+  width: auto;
+}
+.ozk-vin-by {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 600 7.5px/1 Inter, system-ui, sans-serif;
+  letter-spacing: 0.22em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+.ozk-vin-by i {
+  font-style: italic;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-size: 9px;
+  color: #94a3b8;
+}
+.ozk-vin-by b {
+  color: #2e3192;
+  font-weight: 800;
+}
+.ozk-vin-mark {
+  height: 10px;
+  width: 10px;
+  object-fit: contain;
+}
+
+/* =====================================================================
+   LIQUID GLASS — uygulama geneli (gece ve gündüz)
+   Arka planda yumuşak renk ışıkları; paneller buzlu yarı saydam cam.
+   ===================================================================== */
+@media screen {
+  html[data-ozk-theme='night'] body {
+    background:
+      radial-gradient(46vmax 38vmax at 4% -4%, rgba(11, 107, 196, 0.42), transparent 70%),
+      radial-gradient(40vmax 34vmax at 102% 10%, rgba(56, 189, 248, 0.2), transparent 70%),
+      radial-gradient(48vmax 40vmax at 88% 108%, rgba(20, 184, 166, 0.24), transparent 70%),
+      radial-gradient(34vmax 30vmax at 20% 104%, rgba(212, 175, 55, 0.14), transparent 70%),
+      linear-gradient(160deg, #0b1830 0%, #081120 50%, #070e19 100%) fixed;
+  }
+  html[data-ozk-theme='day'] body {
+    background:
+      radial-gradient(46vmax 38vmax at 4% -4%, rgba(255, 170, 90, 0.4), transparent 70%),
+      radial-gradient(40vmax 34vmax at 102% 10%, rgba(255, 140, 110, 0.22), transparent 70%),
+      radial-gradient(48vmax 40vmax at 88% 108%, rgba(255, 110, 120, 0.24), transparent 70%),
+      radial-gradient(34vmax 30vmax at 20% 104%, rgba(45, 80, 200, 0.16), transparent 70%),
+      linear-gradient(160deg, #f6e9d6 0%, #f7efe6 50%, #f4ece4 100%) fixed;
+  }
+  /* uygulama kabuğu saydam: ışıklar panellerin arkasından süzülür */
+  html[data-ozk-theme] #root > div.bg-ink-950:first-child,
+  html[data-ozk-theme] #root > div:first-child > main .bg-ink-950.flex-1 {
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  html[data-ozk-theme] #root header.bg-ink-950\/95,
+  html[data-ozk-theme] #root :is(.bg-ink-950\/90, .bg-ink-950\/95):not(.print-sheet *) {
+    background-color: rgba(10, 14, 22, 0.55) !important;
+  }
+  /* katı koyu yüzeyler → yarı saydam buzlu cam */
+  html[data-ozk-theme] #root .bg-ink-950:not(.print-sheet *) {
+    background-color: rgba(10, 14, 22, 0.5) !important;
+    backdrop-filter: blur(22px) saturate(165%);
+    -webkit-backdrop-filter: blur(22px) saturate(165%);
+  }
+  html[data-ozk-theme] #root .bg-ink-900:not(.print-sheet *) {
+    background-color: rgba(20, 27, 40, 0.46) !important;
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+  }
+  html[data-ozk-theme] #root :is(.bg-ink-900\/70, .bg-ink-900\/80, .bg-ink-900\/85, .bg-ink-900\/90, .bg-ink-900\/95, .bg-ink-950\/80, .bg-ink-950\/85, .bg-ink-950\/90, .bg-ink-950\/95):not(.print-sheet *) {
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.09),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.02);
+  }
+  html[data-ozk-theme] #root :is(.rounded-xl, .rounded-2xl).border:not(.print-sheet *):not(.print-sheet) {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 14px 34px -20px rgba(0, 0, 0, 0.55);
+  }
+}
+
+/* ---------- dock (alt araç çubuğu) ek düğmeler ---------- */
+#ozk-theme-ui:hover button span.ozk-keep {
+  display: inline;
+}
+.ozk-glass {
+  background: linear-gradient(180deg, rgba(34, 46, 70, 0.78), rgba(16, 24, 38, 0.74));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 30px 60px -24px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(26px) saturate(180%);
+  -webkit-backdrop-filter: blur(26px) saturate(180%);
+  color: #e6e9ef;
+}
+#ozk-pop {
+  position: fixed;
+  left: 50%;
+  bottom: 54px;
+  transform: translateX(-50%);
+  z-index: 9995;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(72vh, 760px);
+  overflow: auto;
+  border-radius: 18px;
+  padding: 16px 18px;
+  font: 13px/1.45 Inter, system-ui, sans-serif;
+}
+#ozk-pop h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+#ozk-pop h5 {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9aa4b4;
+}
+#ozk-pop .ozk-mut {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  color: #9aa4b4;
+}
+#ozk-pop input:not([type='radio']):not([type='checkbox']):not([type='color']),
+#ozk-pop select,
+#ozk-pop textarea {
+  width: 100%;
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.25);
+  color: #f1f4f8;
+  font: inherit;
+  outline: none;
+}
+#ozk-pop textarea {
+  height: auto;
+  padding: 8px 10px;
+}
+#ozk-pop input:focus,
+#ozk-pop select:focus,
+#ozk-pop textarea:focus {
+  border-color: #3a87d6;
+  box-shadow: 0 0 0 3px rgba(58, 135, 214, 0.25);
+}
+#ozk-pop .ozk-row {
+  display: grid;
+  grid-template-columns: 22px 1.3fr 1fr 1.2fr 26px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+#ozk-pop .ozk-row.on input[data-f='name'] {
+  border-color: rgba(212, 175, 55, 0.6);
+}
+#ozk-pop button {
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e6e9ef;
+  border-radius: 9px;
+  height: 32px;
+  padding: 0 12px;
+  font: 600 12px Inter, system-ui, sans-serif;
+}
+#ozk-pop button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+#ozk-pop button.pri {
+  background: #d4af37;
+  border-color: #d4af37;
+  color: #1b1405;
+}
+#ozk-pop button[data-del],
+#ozk-pop button[data-delc] {
+  width: 26px;
+  padding: 0;
+  height: 26px;
+  color: #fca5a5;
+}
+#ozk-pop .ozk-act {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+#ozk-pop .ozk-form {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 44px;
+  gap: 8px;
+  align-items: center;
+}
+#ozk-pop .ozk-form input[type='color'] {
+  width: 44px;
+  height: 32px;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+#ozk-pop .ozk-chk {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: #cbd2dc;
+}
+#ozk-pop .ozk-crow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+#ozk-pop .ozk-crow span {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+#ozk-pop .ozk-crow small {
+  color: #9aa4b4;
+}
+#ozk-pop .ozk-crow button {
+  margin-left: auto;
+}
+.ozk-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 60px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(16, 24, 38, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font: 600 12.5px Inter, system-ui, sans-serif;
+  backdrop-filter: blur(14px);
+}

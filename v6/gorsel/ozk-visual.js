@@ -12,6 +12,8 @@
 (function () {
   'use strict'
   var TEX = __OZK_TEX__ // { p03: "data:image/jpeg;base64,...", ... }
+  var ASSETS = __OZK_ASSETS__ // antet, profil kesitleri vb.
+  var NEW_ADDRESS = 'Fatih Mah. Şht. A.Kadir Acar Sok. No: 8/A Merkez / ÇANKIRI — TÜRKİYE'
   var REHAU = __OZK_REHAU__ // kartela verisi
 
   /* ---------------------------------------------------------------- yardımcı */
@@ -39,12 +41,39 @@
       fill: r.fill,
       stroke: r.stroke,
       woodgrain: r.kind === 'wood' ? true : undefined,
+      matte: /matt/i.test(r.nameEN) ? true : undefined,
+      category: 'other',
       rehau: { series: r.series, renolit: r.renolit, nameEN: r.nameEN, kind: r.kind },
     }
     texByColorKey[r.key] = r.tex
   })
   // 6.0'daki mevcut ahşap renklerini aynı desenin gerçek dokusuna bağla
-  var LEGACY_TEX = { GOLDEN_OAK: 'p06', WINCHESTER: 'p05', IRISH_OAK: 'p04', DARK_OAK: 'p10' }
+  var LEGACY_TEX = {
+    GOLDEN_OAK: 'p06', WINCHESTER: 'p05', IRISH_OAK: 'p04', DARK_OAK: 'p10',
+    ANTHRACITE: 'p20', ANTHRACITE_SMOOTH: 'p21', TROMPET: 'p46', BLACK: 'p35', QUARTZ_GREY: 'p16',
+  }
+
+  /* Kullanıcının eklediği renkler (Katalog'a kalıcı eklenir; fiyat sınıfı: renkli) */
+  var CKEY = 'ozk.customColors'
+  function customColors() {
+    try {
+      var list = JSON.parse(localStorage.getItem(CKEY) || '[]')
+      var o = {}
+      list.forEach(function (c) {
+        if (c && c.key && c.fill) o[c.key] = { key: c.key, code: c.code || '-', name: c.name, tier: 'colored', fill: c.fill, stroke: c.stroke || c.fill, woodgrain: c.woodgrain || undefined, category: 'other', custom: true }
+      })
+      return o
+    } catch (e) {
+      return {}
+    }
+  }
+  function extraColors() {
+    var o = {}
+    for (var k in rehauColors) o[k] = rehauColors[k]
+    var c = customColors()
+    for (var k2 in c) o[k2] = c[k2]
+    return o
+  }
 
   function texFor(color) {
     if (!color) return null
@@ -775,6 +804,87 @@
     } catch (e) {}
   }
 
+  /* ------------------------------------------------ kullanıcı profilleri */
+  // ERP'ye geçince giriş yapan kullanıcıdan gelecek; şimdilik bu bilgisayarda seçilir.
+  var UKEY = 'ozk.users',
+    AKEY = 'ozk.activeUser'
+  var DEFAULT_USERS = [
+    { id: 'tarik', name: 'Tarık Buğra', phone: '', email: '' },
+    { id: 'furkan', name: 'Furkan', phone: '', email: '' },
+    { id: 'volkan', name: 'Volkan', phone: '', email: '' },
+  ]
+  function users() {
+    try {
+      var u = JSON.parse(localStorage.getItem(UKEY) || 'null')
+      return Array.isArray(u) && u.length ? u : DEFAULT_USERS.slice()
+    } catch (e) {
+      return DEFAULT_USERS.slice()
+    }
+  }
+  function saveUsers(list) {
+    setPref(UKEY, JSON.stringify(list))
+  }
+  function activeUser() {
+    var list = users()
+    var id = getPref(AKEY, list[0].id)
+    return list.filter(function (u) {
+      return u.id === id
+    })[0] || list[0]
+  }
+  function userName() {
+    return activeUser().name
+  }
+  var PLACEHOLDER_DRAWN = /^(abt cad|özkanoğlu cad|ozkanoglu cad|abt)?$/i
+  function fixDrawn(v) {
+    v = String(v || '').trim()
+    return PLACEHOLDER_DRAWN.test(v) ? userName() : v
+  }
+  // Teklifte "Çizen / Teklif veren": ad soyad + telefon
+  function drawnByLabel(v) {
+    var name = fixDrawn(v)
+    var u = users().filter(function (x) {
+      return x.name.toLocaleLowerCase('tr') === name.toLocaleLowerCase('tr')
+    })[0]
+    var extra = u ? [u.phone, u.email].filter(Boolean).join(' · ') : ''
+    return extra ? name + ' · ' + extra : name
+  }
+
+  /* -------------------------------------------- Vinesso imzası (by Özkanoğlu) */
+  function vinessoLockup(n, src, mark) {
+    return n.jsxs('span', {
+      className: 'ozk-vin',
+      children: [
+        n.jsx('img', { src: src, alt: 'VINESSO', className: 'ozk-vin-logo' }, 'v'),
+        n.jsxs(
+          'span',
+          {
+            className: 'ozk-vin-by',
+            children: [
+              n.jsx('i', { children: 'by' }, 'b'),
+              mark ? n.jsx('img', { src: mark, alt: '', className: 'ozk-vin-mark' }, 'm') : null,
+              n.jsx('b', { children: 'ÖZKANOĞLU' }, 'o'),
+            ],
+          },
+          'by',
+        ),
+      ],
+    })
+  }
+
+  /* ------------------------------------------------ kayıtlı veri: adres */
+  ;(function migrateAddress() {
+    try {
+      var k = 'ozkanoglu_pencad60_settings'
+      var raw = localStorage.getItem(k)
+      if (!raw) return
+      var st = JSON.parse(raw)
+      if (st && st.company && /Yapraklı Bulvarı/.test(st.company.address || '')) {
+        st.company.address = NEW_ADDRESS
+        localStorage.setItem(k, JSON.stringify(st))
+      }
+    } catch (e) {}
+  })()
+
   /* ------------------------------------------------------ tema & göz koruma */
   var TKEY = 'ozk.ui.theme',
     EKEY = 'ozk.ui.eye'
@@ -817,6 +927,147 @@
       if (eb) eb.setAttribute('aria-pressed', getPref(EKEY, '1') === '1' ? 'true' : 'false')
     }
   }
+  /* ------------------------------------------------ alt araç çubuğu (dock) */
+  function esc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    })
+  }
+  function closePop() {
+    var p = document.getElementById('ozk-pop')
+    if (p) p.remove()
+  }
+  function openPop(html, onMount) {
+    closePop()
+    var p = document.createElement('div')
+    p.id = 'ozk-pop'
+    p.className = 'ozk-no-print ozk-glass'
+    p.innerHTML = html
+    document.body.appendChild(p)
+    if (onMount) onMount(p)
+    return p
+  }
+  function toast(msg) {
+    var t = document.createElement('div')
+    t.className = 'ozk-toast ozk-no-print'
+    t.textContent = msg
+    document.body.appendChild(t)
+    setTimeout(function () {
+      t.remove()
+    }, 2600)
+  }
+
+  function userPop() {
+    var list = users()
+    var act = activeUser().id
+    openPop(
+      '<h4>Çizen / teklif veren kişi</h4><p class="ozk-mut">Teklifte bu kişinin adı ve telefonu yazar. ERP\'ye geçince giriş yapan kullanıcıdan otomatik gelecek.</p>' +
+        list
+          .map(function (u, i) {
+            return (
+              '<div class="ozk-row' + (u.id === act ? ' on' : '') + '" data-i="' + i + '">' +
+              '<label><input type="radio" name="ozk-u" ' + (u.id === act ? 'checked' : '') + '></label>' +
+              '<input data-f="name" value="' + esc(u.name) + '" placeholder="Ad Soyad">' +
+              '<input data-f="phone" value="' + esc(u.phone) + '" placeholder="Telefon">' +
+              '<input data-f="email" value="' + esc(u.email) + '" placeholder="E-posta">' +
+              '<button data-del title="Sil">✕</button></div>'
+            )
+          })
+          .join('') +
+        '<div class="ozk-act"><button data-add>+ Kişi ekle</button><button data-save class="pri">Kaydet</button></div>',
+      function (p) {
+        p.addEventListener('click', function (e) {
+          var row = e.target.closest('.ozk-row')
+          if (e.target.matches('[data-add]')) {
+            list.push({ id: 'u' + Date.now().toString(36), name: '', phone: '', email: '' })
+            saveUsers(collect(p, list))
+            userPop()
+          } else if (e.target.matches('[data-del]') && row) {
+            var l2 = collect(p, list)
+            l2.splice(+row.dataset.i, 1)
+            if (l2.length) saveUsers(l2)
+            userPop()
+          } else if (e.target.matches('[data-save]')) {
+            var l3 = collect(p, list).filter(function (u) {
+              return u.name.trim()
+            })
+            saveUsers(l3)
+            var sel = p.querySelector('input[name=ozk-u]:checked')
+            var idx = sel ? +sel.closest('.ozk-row').dataset.i : 0
+            setPref(AKEY, (l3[idx] || l3[0]).id)
+            closePop()
+            refreshDock()
+            toast('Çizen kişi: ' + userName())
+          }
+        })
+      },
+    )
+    function collect(p, base) {
+      return Array.prototype.map.call(p.querySelectorAll('.ozk-row'), function (r, i) {
+        var o = { id: (base[i] && base[i].id) || 'u' + i }
+        r.querySelectorAll('input[data-f]').forEach(function (inp) {
+          o[inp.dataset.f] = inp.value.trim()
+        })
+        return o
+      })
+    }
+  }
+
+  function colorPop() {
+    var list = []
+    try {
+      list = JSON.parse(localStorage.getItem(CKEY) || '[]')
+    } catch (e) {}
+    openPop(
+      '<h4>Renk ekle</h4><p class="ozk-mut">Eklenen renk tüm renk listelerine ve katalog fiyatına (renkli sınıf) girer. Kaydedince sayfa yenilenir, projeniz kaybolmaz.</p>' +
+        '<div class="ozk-form"><input id="ozk-cn" placeholder="Renk adı (ör. Antrasit Mat 7016)">' +
+        '<input id="ozk-cc" placeholder="Kod (ör. 7016 05)"><input id="ozk-cf" type="color" value="#8a6a4a">' +
+        '<label class="ozk-chk"><input id="ozk-cw" type="checkbox"> Ahşap desenli</label></div>' +
+        '<div class="ozk-act"><button data-addc class="pri">Ekle ve uygula</button></div>' +
+        (list.length
+          ? '<h5>Eklediğiniz renkler</h5>' +
+            list
+              .map(function (c, i) {
+                return '<div class="ozk-crow"><span style="background:' + esc(c.fill) + '"></span>' + esc(c.name) + ' <small>' + esc(c.code) + '</small><button data-delc="' + i + '">✕</button></div>'
+              })
+              .join('')
+          : ''),
+      function (p) {
+        p.addEventListener('click', function (e) {
+          if (e.target.matches('[data-addc]')) {
+            var name = p.querySelector('#ozk-cn').value.trim()
+            if (!name) return toast('Renk adı yazın')
+            var fill = p.querySelector('#ozk-cf').value
+            list.push({ key: 'USR_' + Date.now().toString(36).toUpperCase(), name: name + ' (Özel)', code: p.querySelector('#ozk-cc').value.trim() || '-', fill: fill, stroke: shade(fill, -0.45), woodgrain: p.querySelector('#ozk-cw').checked })
+            localStorage.setItem(CKEY, JSON.stringify(list))
+            location.reload()
+          } else if (e.target.matches('[data-delc]')) {
+            list.splice(+e.target.dataset.delc, 1)
+            localStorage.setItem(CKEY, JSON.stringify(list))
+            location.reload()
+          }
+        })
+      },
+    )
+  }
+  function shade(hex, f) {
+    var n = parseInt(hex.slice(1), 16)
+    var r = (n >> 16) & 255,
+      g = (n >> 8) & 255,
+      b = n & 255
+    var t = f < 0 ? 0 : 255,
+      k = Math.abs(f)
+    function c(v) {
+      return Math.round((t - v) * k + v)
+    }
+    return '#' + ((1 << 24) + (c(r) << 16) + (c(g) << 8) + c(b)).toString(16).slice(1)
+  }
+
+  function refreshDock() {
+    var b = document.querySelector('#ozk-theme-ui [data-user] span')
+    if (b) b.textContent = userName()
+  }
+
   function buildUI() {
     if (document.getElementById('ozk-theme-ui')) return
     var d = document.createElement('div')
@@ -826,13 +1077,23 @@
       '<button data-v="day" title="Gündüz modu — açık, yumuşak kâğıt tonu">☀<span>Gündüz</span></button>' +
       '<button data-v="night" title="Gece modu — koyu, düşük parlaklık">☾<span>Gece</span></button>' +
       '<button data-v="auto" title="Otomatik: 07:00–19:00 gündüz, diğer saatler gece">◐<span>Oto</span></button>' +
-      '<i></i><button data-eye title="Göz koruma — mavi ışığı azaltan sıcak filtre">◉<span>Göz koruma</span></button>'
+      '<i></i><button data-eye title="Göz koruma — mavi ışığı azaltan sıcak filtre">◉<span>Göz koruma</span></button>' +
+      '<i></i><button data-user title="Çizen / teklif veren kişi">👤<span class="ozk-keep">' + esc(userName()) + '</span></button>' +
+      '<button data-color title="Kendi rengini ekle">🎨<span>Renk ekle</span></button>' +
+      '<button data-ai title="AI ölçü okuma — belge / fotoğraftan poz çıkar">✨<span class="ozk-keep">AI Ölçü</span></button>'
     d.addEventListener('click', function (ev) {
       var b = ev.target.closest('button')
       if (!b) return
       if (b.hasAttribute('data-eye')) setPref(EKEY, getPref(EKEY, '1') === '1' ? '0' : '1')
+      else if (b.hasAttribute('data-user')) return userPop()
+      else if (b.hasAttribute('data-color')) return colorPop()
+      else if (b.hasAttribute('data-ai')) return window.OZKV && OZKV.aiOpen ? OZKV.aiOpen() : toast('AI ölçü okuma yükleniyor…')
       else setPref(TKEY, b.getAttribute('data-v'))
       applyTheme()
+    })
+    document.addEventListener('mousedown', function (e) {
+      var p = document.getElementById('ozk-pop')
+      if (p && !p.contains(e.target) && !d.contains(e.target)) closePop()
     })
     document.body.appendChild(d)
     var f = document.createElement('div')
@@ -851,6 +1112,19 @@
   window.OZKV = {
     version: '6.1',
     rehauColors: rehauColors,
+    extraColors: extraColors,
+    users: users,
+    saveUsers: saveUsers,
+    activeUser: activeUser,
+    userName: userName,
+    fixDrawn: fixDrawn,
+    drawnByLabel: drawnByLabel,
+    vinessoLockup: vinessoLockup,
+    NEW_ADDRESS: NEW_ADDRESS,
+    toast: toast,
+    openPop: openPop,
+    closePop: closePop,
+    esc: esc,
     defs: defs,
     glassFill: glassFill,
     paneFx: paneFx,
