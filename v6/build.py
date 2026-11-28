@@ -253,6 +253,34 @@ sub(rf'({ID})\.add\(({ID})\)\}}\),({ID})\.current&&\(\3\.current\.target\.set\(0
     rf'\1.add(\2)}}),\3.current&&(\3.current.target.set(0,\4/2,0),\3.current.update()),{OZ}&&OZKV.fix3D(\1,{CT},{SCENE_REF}.current,{POS3D})}}',
     '3D: ortam ışığı + doku yönü + tema arka planı')
 
+
+# ------------------------------------------------------------ aksesuar: menteşe kapakları + tahliye kapakları (aksesuar rengi)
+OUTV = find1(rf'outsideView:({ID})=!1', 'dış görünüm değişkeni').group(1)
+msf = find1(rf'({ID})\(({ID}),({ID}),({ID}),({ID}),({ID})\.face,({ID})\.fill,({ID})\.stroke,!1\)', '2D kanat çerçevesi')
+hw_all = [m for m in re.finditer(rf'({ID})=({ID})\(({ID})\(({ID})\.techSpecs,\4\.color\)\),', js[:msf.start()])]
+if not hw_all:
+    sys.exit('2D aksesuar rengi bulunamadı')
+HW2D = hw_all[-1].group(1)
+sub(E(msf.group(0)), (msf.group(0) + f',{OZ}?OZKV.sashHw({JSX},{msf.group(6)},{HW2D},{OUTV},{O},{P}):null').replace('\\', '\\\\'), '2D: menteşe kapakları (aksesuar rengi)')
+sub(rf':({ID})\(0,0,({ID})\.W,\2\.H,({ID}),({ID})\.fill,\4\.stroke,\2\.threshold\)',
+    lambda m: f':({OZ}?OZKV.frameHw({JSX},{m.group(1)}(0,0,{m.group(2)}.W,{m.group(2)}.H,{m.group(3)},{m.group(4)}.fill,{m.group(4)}.stroke,{m.group(2)}.threshold),{m.group(2)},{HW2D},{OUTV},{O},{P},{m.group(3)}):{m.group(1)}(0,0,{m.group(2)}.W,{m.group(2)}.H,{m.group(3)},{m.group(4)}.fill,{m.group(4)}.stroke,{m.group(2)}.threshold))',
+    '2D: tahliye delik kapakları (aksesuar rengi)')
+mpe = find1(rf'const ({ID})=new ({ID});\1\.position\.set\(({ID}),({ID}),0\);const ({ID})=({ID})\(({ID})\.W,\7\.H,\7\.shape\)', '3D birim grubu')
+pre = js[:mpe.start()]
+mBD = [m for m in re.finditer(rf'({ID})=({ID})\.H\*({ID}),({ID})=\2\.W\*\3', pre)][-1]
+mZf = [m for m in re.finditer(rf'({ID})=\(({ID})\.faces\.frame\|\|58\)\*({ID})', pre)][-1]
+mNe = [m for m in re.finditer(rf'({ID})=\(({ID})\.thickness\|\|70\)\*({ID})', pre)][-1]
+mUt = [m for m in re.finditer(rf'({ID})=({ID})\(({ID})\(({ID})\.techSpecs,\4\.color\)\),({ID})=new ({ID})\(\{{color:\1', pre)][-1]
+sub(E(mpe.group(0)), (f'const {mpe.group(1)}=new {mpe.group(2)};{mpe.group(1)}.position.set({mpe.group(3)},{mpe.group(4)},0);'
+                      f'{mpe.group(1)}.userData.ozkF={{w:{mBD.group(4)},h:{mBD.group(1)},face:{mZf.group(1)},depth:{mNe.group(1)},thr:!!{mpe.group(7)}.threshold,hw:{mUt.group(5)},M:{C3}}};'
+                      f'const {mpe.group(5)}={mpe.group(6)}({mpe.group(7)}.W,{mpe.group(7)}.H,{mpe.group(7)}.shape)').replace('\\', '\\\\'), '3D: birim bilgisi (tahliye kapakları için)')
+
+# ------------------------------------------------------------ varyant fiyatları: toplam hesap ve para biçimi katmana açılır
+mn1 = find1(rf'function ({ID})\(({ID}),({ID}),({ID}),({ID}),({ID})\)\{{const ({ID})=\2\.map\(\(?({ID})\)?=>({ID})\(\8,\3,\4,\5,\6\)\);', 'toplam hesap fonksiyonu')
+sub(E(mn1.group(0)), (f'window.OZKV&&(OZKV.calcTotals=function(a,b,c,d,f){{return {mn1.group(1)}(a,b,c,d,f)}});' + mn1.group(0)).replace('\\', '\\\\'), 'toplam hesap katmana açıldı')
+mfs = find1(rf'function ({ID})\(({ID}),({ID}),({ID}),({ID})=2\)\{{const ({ID})=\4\.exchangeRates\[\3\]\?\?1', 'para biçimi fonksiyonu')
+sub(E(mfs.group(0)), (f'window.OZKV&&(OZKV.fmt=function(a,b,c){{return {mfs.group(1)}(a,b,c)}});' + mfs.group(0)).replace('\\', '\\\\'), 'para biçimi katmana açıldı')
+
 # ------------------------------------------------------------ tema CSS
 CANVAS_TO_PAPER = {
     '#94a3b8': '#475569', '#38bdf8': '#0284c7', '#7dd3fc': '#0369a1', '#334155': '#94a3b8', '#fbbf24': '#b45309',

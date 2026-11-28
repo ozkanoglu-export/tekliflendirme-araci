@@ -1071,3 +1071,64 @@ button:hover > .ozk-star-mini {
   color: #94a3b8;
   padding: 0 6px 0 8px;
 }
+#ozk-theme-ui .ozk-varb em {
+  font-style: normal;
+  font-weight: 600;
+  opacity: 0.75;
+  margin-inline-start: 4px;
+  font-family: ui-monospace, monospace;
+}
+#ozk-theme-ui .ozk-varm {
+  padding: 5px 8px;
+}
+.ozk-vm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 300px;
+}
+.ozk-vm small {
+  color: #94a3b8;
+  line-height: 1.35;
+}
+.ozk-vm-r {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.08);
+}
+.ozk-vm-r.on {
+  outline: 1px solid rgba(245, 197, 66, 0.6);
+}
+.ozk-vm-r label {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ozk-vm-r span {
+  font-family: ui-monospace, monospace;
+  color: #f5c542;
+}
+.ozk-vm-r button,
+.ozk-vm-add {
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.ozk-vm-add {
+  padding: 8px;
+  font-weight: 700;
+}
+.ozk-spec .ozk-spec {
+  border-top: 0;
+  padding-top: 0;
+  margin-bottom: 14px;
+}

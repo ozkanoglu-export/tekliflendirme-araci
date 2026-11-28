@@ -1056,6 +1056,9 @@
       if (!z) return orig(j, O)
       REG.add(j)
       tagPivot(j, z)
+      try {
+        hinge3D(j)
+      } catch (e) {}
       var op = j.opening
       if (op !== 'turn' && op !== 'tiltturn') return orig(j, O)
       var s = z.sash
@@ -1148,6 +1151,103 @@
     } catch (e) {}
   }
 
+
+  /* ============================================= AKSESUAR: menteşe kapakları + tahliye kapakları (6.2) */
+  // Renk: programın aksesuar / kol rengi (Beyaz, Gümüş Gri, Koyu Kahve, Siyah …)
+  function capRect(n, k, x, y, w, h, hw, O) {
+    return n.jsxs(
+      'g',
+      {
+        className: 'pointer-events-none',
+        children: [
+          // renk style ile: gündüz modunun çizim renk eşlemesi aksesuar rengini değiştirmesin
+          n.jsx('rect', { x: x, y: y, width: w, height: h, rx: Math.min(w, h) * 0.35, style: { fill: hw.body, stroke: hw.stroke, strokeWidth: Math.max(0.8, O * 0.55) } }),
+          n.jsx('rect', { x: x + w * 0.18, y: y + h * 0.14, width: w * 0.64, height: Math.max(1, h * 0.12), rx: 1, style: { fill: hw.lever, fillOpacity: 0.55 } }),
+        ],
+      },
+      k,
+    )
+  }
+  // 2D kanat: menteşe tarafında kapaklar (pencere 2, kapı 3); içe açılan kanatta içeriden, dışa açılanda dışarıdan görünür
+  function sashHw(n, s, hw, outside, O, P) {
+    try {
+      if (!s || !hw || !s.rect) return null
+      if (s.opening !== 'turn' && s.opening !== 'tiltturn') return null
+      var inward = s.openDirection !== 'outward'
+      if (inward === !!outside) return null
+      var r = s.rect,
+        w = Math.max(14, Math.min(22, (s.face || 60) * 0.32)),
+        h = s.door ? 110 : 72
+      var x = (s.hinge === 'right' ? r.x + r.w : r.x) - w / 2
+      var ys = s.door ? [r.y + 180, r.y + r.h / 2 - h / 2, r.y + r.h - 180 - h] : [r.y + 40, r.y + r.h - 40 - h]
+      return n.jsx(
+        'g',
+        {
+          children: ys.map(function (y, i) {
+            return capRect(n, 'hc' + i, x, y, w, h, hw, O)
+          }),
+        },
+        'ozk-hinge',
+      )
+    } catch (e) {
+      return null
+    }
+  }
+  // 2D kasa: dış görünümde alt kasada tahliye delik kapakları
+  function frameHw(n, frame, W, hw, outside, O, P, D) {
+    try {
+      if (!outside || !hw || !W || W.threshold || !(W.W > 300)) return frame
+      var cnt = Math.max(2, Math.round(W.W / 650)),
+        cw = 40,
+        ch = Math.max(7, Math.min(10, (D || 60) * 0.16)),
+        y = W.H - (D || 60) / 2 - ch / 2
+      var caps = []
+      for (var i = 0; i < cnt; i++) {
+        var cx = (W.W * (i + 0.5)) / cnt
+        caps.push(capRect(n, 'dr' + i, cx - cw / 2, y, cw, ch, hw, O))
+      }
+      return n.jsxs('g', { children: [frame, n.jsx('g', { children: caps }, 'ozk-drain')] })
+    } catch (e) {
+      return frame
+    }
+  }
+  // 3D: menteşe kapakları (kanat grubunda, kanatla birlikte döner)
+  function hinge3D(j) {
+    var z = j.__ozk
+    if (!z || z.hinges || (j.opening !== 'turn' && j.opening !== 'tiltturn')) return
+    z.hinges = true
+    var C = z.C,
+      mat = z.hw && z.hw.clone ? z.hw.clone() : z.hw
+    if (mat && mat.metalness != null) mat.metalness = 0.35
+    var x = z.sash.hinge === 'right' ? z.w : 0
+    var side = z.sash.openDirection === 'outward' ? -1 : 1
+    var zz = side * (z.depth * 0.5 + 0.004)
+    var ys = z.sash.door ? [z.h - 0.24, z.h / 2, 0.24] : [z.h - 0.075, 0.075]
+    ys.forEach(function (y) {
+      var m = new C.M(new C.B(0.018, z.sash.door ? 0.11 : 0.072, 0.012), mat)
+      m.position.set(x, y, zz)
+      m.castShadow = true
+      z.inner.add(m)
+    })
+  }
+  // 3D: kasa dış yüzünde tahliye kapakları
+  function drain3D(group) {
+    group.traverse(function (o) {
+      var f = o.userData && o.userData.ozkF
+      if (!f || o.userData.ozkDrain || f.thr || !(f.w > 0.3)) return
+      o.userData.ozkDrain = true
+      var C = f.M,
+        mat = f.hw && f.hw.clone ? f.hw.clone() : f.hw
+      if (mat && mat.metalness != null) mat.metalness = 0.25
+      var cnt = Math.max(2, Math.round(f.w / 0.65))
+      for (var i = 0; i < cnt; i++) {
+        var m = new C.M(new C.B(0.04, 0.009, 0.006), mat)
+        m.position.set((f.w * (i + 0.5)) / cnt, f.face / 2, -f.depth / 2 - 0.003)
+        o.add(m)
+      }
+    })
+  }
+
   var SCENES = []
   function envTexture(CT) {
     var c = document.createElement('canvas')
@@ -1206,6 +1306,9 @@
         mm.userData = { ozkTexClone: true }
         o.material = mm
       })
+      try {
+        drain3D(group)
+      } catch (e) {}
       setTimeout(tiltUI, 60)
     } catch (e) {}
   }
@@ -1533,7 +1636,7 @@
           return cat.glasses && cat.glasses[k]
         })
         .filter(Boolean)
-      if (!series.length && !glasses.length) return null
+      if (!series.length && !glasses.length) return altSection(n, project, c)
       function row(k, v) {
         return v === undefined || v === null || v === ''
           ? null
@@ -1585,6 +1688,7 @@
       return n.jsxs('div', {
         className: 'ozk-spec print-avoid-break',
         children: [
+          altSection(n, project, c),
           n.jsx('h4', { className: 'ozk-spec-title', children: T.spec }),
           cards.length ? n.jsx('div', { className: 'ozk-spec-grid', children: cards }) : null,
           gRows.length
@@ -3199,8 +3303,11 @@
           return q
         })
         var short = (nsr.shortName || nsr.name || ns).split(' (')[0]
-        if (variant) addVariant(cur, Object.assign({}, cur, { positions: positions }), short)
-        else PJ.load(Object.assign({}, cur, { positions: positions }))
+        if (variant) {
+          aiClose()
+          return addVariantNew(ns, gm)
+        }
+        PJ.load(Object.assign({}, cur, { positions: positions }))
         aiClose()
         toast(changed + ' poz → ' + short + (glassChanged ? ' · ' + glassChanged + ' pozda cam uyumlu cama geçti' : '') + (variant ? ' · varyantlar arasında alttaki çubuktan geçebilirsiniz' : ''))
       }
@@ -3213,83 +3320,173 @@
     })
   }
 
-  /* ============================================= VARYANTLAR: aynı çizim, farklı profil sistemi (6.2) */
-  var VKEY = 'ozk.variants'
-  function vAll() {
-    try {
-      return JSON.parse(localStorage.getItem(VKEY) || '{}') || {}
-    } catch (e) {
-      return {}
-    }
+  /* ============================================= VARYANTLAR: pozlar ortak, profil sistemi farklı (6.2) */
+  // project.ozkVariants = { active, items: [{ id, label, series, glass, inQuote, map: { posId: {series, glass, units} } }] }
+  // Çizilen / silinen her poz tüm varyantlarda geçerlidir; varyant yalnızca seri + cam seçimini tutar.
+  function vCat() {
+    return (APP && APP.getCatalog()) || PJ.catalog || {}
   }
-  function vSave(o) {
-    try {
-      localStorage.setItem(VKEY, JSON.stringify(o))
-      return true
-    } catch (e) {
-      toast('Varyant kaydedilemedi: tarayıcı kayıt alanı dolu')
-      return false
-    }
+  function swappableS(cat, k) {
+    var x = cat.series && cat.series[k]
+    return !!(x && x.kind === 'casement' && !x.isAluPanelDoor)
   }
-  function mainSeriesLabel(pr) {
-    var cat = (APP && APP.getCatalog()) || PJ.catalog || {}
+  function seriesShort(cat, k) {
+    var x = cat.series && cat.series[k]
+    return x ? (x.shortName || x.name).split(' (')[0] : k
+  }
+  function dominantSeries(pr) {
     var cnt = {}
     ;(pr.positions || []).forEach(function (p) {
-      cnt[p.series] = (cnt[p.series] || 0) + 1
+      cnt[p.series] = (cnt[p.series] || 0) + (Math.max(1, p.qty) || 1)
     })
-    var k = Object.keys(cnt).sort(function (a, b) {
-      return cnt[b] - cnt[a]
+    return Object.keys(cnt).sort(function (x, y) {
+      return cnt[y] - cnt[x]
     })[0]
-    var s0 = cat.series && cat.series[k]
-    return s0 ? (s0.shortName || s0.name).split(' (')[0] : 'Varyant'
   }
-  function addVariant(cur, next, label) {
-    var all = vAll()
-    var gid = cur.ozkVarGroup
-    if (!gid || !all[gid]) {
-      gid = 'vg_' + Date.now().toString(36)
-      all[gid] = { items: [{ label: mainSeriesLabel(cur), project: Object.assign({}, cur, { ozkVarGroup: gid }) }], active: 0 }
+  function fitGlassFor(cat, nsr, gk, mode, basic) {
+    var G = cat.glasses || {}
+    if (mode === 'basic') return basic
+    var g = G[gk]
+    if (!g || g.panel) return gk
+    var t = g.thicknessMm || 24
+    if ((nsr.maxGlassMm && t > nsr.maxGlassMm) || (nsr.minGlassMm && t < nsr.minGlassMm)) return basic
+    return gk
+  }
+  function snapshot(positions) {
+    var m = {}
+    ;(positions || []).forEach(function (p) {
+      m[p.id] = {
+        series: p.series,
+        glass: p.glass,
+        units: (p.coupledUnits || []).map(function (u) {
+          return [u.series || null, u.glass || null]
+        }),
+      }
+    })
+    return m
+  }
+  // seri değiştir (tek poz); mode: 'fit' | 'basic' | glassKey
+  function convertPos(cat, p, ns, mode) {
+    var nsr = cat.series[ns]
+    if (!nsr || !swappableS(cat, p.series)) return p
+    var basic = OZKV.basicGlass ? OZKV.basicGlass(nsr, cat) : 'DC4164SN'
+    var gm = mode === 'basic' || mode === 'fit' ? mode : 'fit'
+    var fixedG = mode && mode !== 'basic' && mode !== 'fit' && cat.glasses && cat.glasses[mode] ? mode : null
+    var G = cat.glasses || {}
+    function fg(k) {
+      return fixedG || fitGlassFor(cat, nsr, k, gm, basic)
     }
-    var g = all[gid]
-    g.items[g.active].project = Object.assign({}, cur, { ozkVarGroup: gid })
-    var same = g.items.filter(function (x) {
-      return x.label === label
-    })[0]
-    var item = { label: same ? label + ' ' + (g.items.length + 1) : label, project: Object.assign({}, next, { ozkVarGroup: gid }) }
-    g.items.push(item)
-    g.active = g.items.length - 1
-    if (vSave(all)) PJ.load(item.project)
+    function walk(r) {
+      if (!r) return r
+      if (r.kind === 'leaf') return r.glass && !r.panelModel && G[r.glass] && !G[r.glass].panel ? Object.assign({}, r, { glass: fg(r.glass) }) : r
+      if (r.children)
+        return Object.assign({}, r, {
+          children: r.children.map(function (c) {
+            return Object.assign({}, c, { field: walk(c.field) })
+          }),
+        })
+      return r
+    }
+    var q = Object.assign({}, p, { series: ns, glass: fg(p.glass), root: walk(p.root) })
+    if (Array.isArray(p.coupledUnits))
+      q.coupledUnits = p.coupledUnits.map(function (u) {
+        if (u.series && !swappableS(cat, u.series)) return u
+        var u2 = Object.assign({}, u, { root: walk(u.root) })
+        if (u.series) u2.series = ns
+        if (u.glass) u2.glass = fg(u.glass)
+        return u2
+      })
+    return q
+  }
+  function applyVariant(cat, positions, item) {
+    return (positions || []).map(function (p) {
+      var m = item.map && item.map[p.id]
+      if (m && cat.series[m.series]) {
+        var q = Object.assign({}, p, { series: m.series, glass: m.glass || p.glass })
+        if (Array.isArray(p.coupledUnits) && m.units)
+          q.coupledUnits = p.coupledUnits.map(function (u, i) {
+            var mu = m.units[i]
+            return mu ? Object.assign({}, u, mu[0] ? { series: mu[0] } : {}, mu[1] ? { glass: mu[1] } : {}) : u
+          })
+        return q
+      }
+      return convertPos(cat, p, item.series, item.glass || 'fit')
+    })
+  }
+  function vState(pr) {
+    var v = pr && pr.ozkVariants
+    return v && Array.isArray(v.items) && v.items.length ? v : null
+  }
+  function addVariantNew(ns, glassMode) {
+    ensurePJ().then(function () {
+      var cur = PJ.project,
+        cat = vCat()
+      var v = vState(cur)
+      v = v ? JSON.parse(JSON.stringify(v)) : null
+      if (!v) {
+        var ds = dominantSeries(cur)
+        v = { active: 0, items: [{ id: 'v' + Date.now().toString(36), label: seriesShort(cat, ds), series: ds, glass: null, inQuote: true, map: {} }] }
+      }
+      v.items[v.active].map = snapshot(cur.positions)
+      var label = seriesShort(cat, ns),
+        n2 = 2
+      while (
+        v.items.some(function (x) {
+          return x.label === label
+        })
+      )
+        label = seriesShort(cat, ns) + ' ' + n2++
+      var item = { id: 'v' + Date.now().toString(36) + v.items.length, label: label, series: ns, glass: glassMode === 'basic' ? 'basic' : null, inQuote: true, map: {} }
+      var positions = applyVariant(cat, cur.positions, item)
+      item.map = snapshot(positions)
+      v.items.push(item)
+      v.active = v.items.length - 1
+      PJ.load(Object.assign({}, cur, { positions: positions, ozkVariants: v }))
+      toast('Varyant eklendi: ' + label + ' — alttaki şeritten tek tıkla geçin')
+    })
   }
   function switchVariant(i) {
     ensurePJ().then(function () {
       var cur = PJ.project,
-        all = vAll(),
-        g = cur && all[cur.ozkVarGroup]
-      if (!g || !g.items[i] || i === g.active) return
-      g.items[g.active].project = cur // mevcut düzenlemeler kendi varyantında saklanır
-      g.active = i
-      if (vSave(all)) {
-        PJ.load(g.items[i].project)
-        toast('Varyant: ' + g.items[i].label)
-      }
+        cat = vCat(),
+        v0 = vState(cur)
+      if (!v0 || !v0.items[i] || i === v0.active) return
+      var v = JSON.parse(JSON.stringify(v0))
+      v.items[v.active].map = snapshot(cur.positions) // bu varyanttaki seri/cam seçimleri saklanır
+      var positions = applyVariant(cat, cur.positions, v.items[i])
+      v.active = i
+      PJ.load(Object.assign({}, cur, { positions: positions, ozkVariants: v }))
     })
   }
-  function removeVariant() {
+  function updateVariants(fn) {
     ensurePJ().then(function () {
       var cur = PJ.project,
-        all = vAll(),
-        gid = cur && cur.ozkVarGroup,
-        g = all[gid]
-      if (!g || g.items.length < 2) return toast('Silinecek varyant yok')
-      if (!confirm('“' + g.items[g.active].label + '” varyantı silinsin mi? (Diğer varyantlar kalır)')) return
-      g.items.splice(g.active, 1)
-      g.active = 0
-      if (g.items.length === 1) {
-        var only = g.items[0].project
-        delete all[gid]
-        vSave(all)
-        PJ.load(Object.assign({}, only, { ozkVarGroup: undefined }))
-      } else if (vSave(all)) PJ.load(g.items[0].project)
+        v0 = vState(cur)
+      if (!v0) return
+      var v = JSON.parse(JSON.stringify(v0))
+      var res = fn(v, cur)
+      if (res === false) return
+      if (v.items.length < 2) {
+        var c2 = Object.assign({}, cur)
+        delete c2.ozkVariants
+        PJ.load(c2)
+      } else PJ.load(Object.assign({}, cur, { positions: res && res.positions ? res.positions : cur.positions, ozkVariants: v }))
+    })
+  }
+  function variantTotals(pr) {
+    var v = vState(pr)
+    if (!v || !OZKV.calcTotals || !APP) return []
+    var cat = vCat(),
+      st = APP.getSettings(),
+      c = pr.commercial || {}
+    return v.items.map(function (it, i) {
+      try {
+        var pos = i === v.active ? pr.positions : applyVariant(cat, pr.positions, it)
+        var t = OZKV.calcTotals(pos, cat, c, st, pr.priceOverrides || {})
+        return { label: it.label, grand: t.grand, text: OZKV.fmt ? OZKV.fmt(t.grand, c.currency || 'EUR', cat) : String(Math.round(t.grand)), active: i === v.active, inQuote: it.inQuote !== false }
+      } catch (e) {
+        return { label: it.label, grand: 0, text: '–', active: i === v.active, inQuote: it.inQuote !== false }
+      }
     })
   }
   function refreshVariantBar() {
@@ -3301,22 +3498,108 @@
     } catch (e) {
       return
     }
-    var g = pr && pr.ozkVarGroup ? vAll()[pr.ozkVarGroup] : null
-    var key = g ? pr.ozkVarGroup + ':' + g.active + ':' + g.items.map(function (x) { return x.label }).join('|') : ''
-    if (bar.getAttribute('data-k') === key) return
-    bar.setAttribute('data-k', key)
-    if (!g || g.items.length < 2) {
-      bar.innerHTML = ''
+    var v = vState(pr)
+    if (!v || v.items.length < 2) {
+      if (bar.innerHTML) bar.innerHTML = ''
       bar.style.display = 'none'
+      bar.removeAttribute('data-k')
       return
     }
+    var key = JSON.stringify([v.active, v.items.map(function (x) { return x.label }), pr.positions.length, pr.positions.map(function (p) { return p.series + p.glass + p.qty + p.width + p.height }).join()])
+    if (bar.getAttribute('data-k') === key) return
+    bar.setAttribute('data-k', key)
+    var tot = variantTotals(pr)
     bar.style.display = ''
     bar.innerHTML =
-      g.items
+      tot
         .map(function (x, i) {
-          return '<button data-var="' + i + '" class="ozk-varb' + (i === g.active ? ' on' : '') + '" title="Bu profil sisteminin teklifine geç">' + esc(x.label) + '</button>'
+          return '<button data-var="' + i + '" class="ozk-varb' + (x.active ? ' on' : '') + '" title="Bu profil sistemine geç (pozlar aynı kalır)">' + esc(x.label) + ' <em>' + esc(x.text) + '</em></button>'
         })
-        .join('')
+        .join('') + '<button data-varm class="ozk-varb ozk-varm" title="Varyantları yönet: teklife ekle / sil">⋯</button>'
+  }
+  function variantManage() {
+    var pr = APP && APP.getProject()
+    var tot = variantTotals(pr)
+    openPop(
+      '<div class="ozk-vm"><b>Varyantlar</b><small>Pozlar tüm varyantlarda ortaktır. İşaretli varyantlar teklife “alternatif sistem fiyatı” olarak eklenir.</small>' +
+        tot
+          .map(function (x, i) {
+            return '<div class="ozk-vm-r' + (x.active ? ' on' : '') + '"><label><input type="checkbox" data-q="' + i + '"' + (x.inQuote ? ' checked' : '') + '> ' + esc(x.label) + '</label><span>' + esc(x.text) + '</span><button data-del="' + i + '" title="Varyantı sil">✕</button></div>'
+          })
+          .join('') +
+        '<button class="ozk-vm-add" data-add>＋ Yeni varyant (profil sistemi)</button></div>',
+      function (p) {
+        p.classList.add('ozk-pop-tools')
+        p.addEventListener('change', function (e) {
+          var q = e.target.getAttribute('data-q')
+          if (q == null) return
+          updateVariants(function (v) {
+            v.items[+q].inQuote = e.target.checked
+          })
+        })
+        p.addEventListener('click', function (e) {
+          var d = e.target.closest('[data-del]'),
+            ad = e.target.closest('[data-add]')
+          if (ad) {
+            closePop()
+            return seriesBulkOpen()
+          }
+          if (!d) return
+          var i = +d.getAttribute('data-del')
+          if (!confirm('“' + tot[i].label + '” varyantı silinsin mi? Pozlar silinmez.')) return
+          closePop()
+          updateVariants(function (v, cur) {
+            var wasActive = i === v.active
+            v.items[v.active].map = snapshot(cur.positions)
+            v.items.splice(i, 1)
+            if (v.active >= v.items.length || wasActive) v.active = 0
+            else if (i < v.active) v.active--
+            return wasActive ? { positions: applyVariant(vCat(), cur.positions, v.items[v.active]) } : null
+          })
+        })
+      },
+    )
+  }
+  // Teklif: alternatif sistem fiyatları
+  function altSection(n, project, c) {
+    try {
+      var tot = variantTotals(project).filter(function (x) {
+        return x.inQuote
+      })
+      if (tot.length < 2) return null
+      var TR = String(c.language || 'TR').toUpperCase() === 'TR'
+      return n.jsxs('div', {
+        className: 'ozk-spec print-avoid-break',
+        children: [
+          n.jsx('h4', { className: 'ozk-spec-title', children: TR ? 'Alternatif Profil Sistemleri — Aynı Pozlar' : 'Alternative Profile Systems — Same Positions' }),
+          n.jsxs('table', {
+            className: 'ozk-spec-glass',
+            children: [
+              n.jsx('thead', { children: n.jsxs('tr', { children: [n.jsx('th', { children: TR ? 'Profil sistemi' : 'Profile system' }), n.jsx('th', { children: TR ? 'Genel toplam' : 'Grand total' })] }) }),
+              n.jsx('tbody', {
+                children: tot.map(function (x, i) {
+                  return n.jsxs(
+                    'tr',
+                    {
+                      children: [
+                        n.jsx('td', { children: x.label + (x.active ? (TR ? '  (bu teklif)' : '  (this offer)') : '') }),
+                        n.jsx('td', { style: { fontWeight: 700 }, children: x.text }),
+                      ],
+                    },
+                    i,
+                  )
+                }),
+              }),
+            ],
+          }),
+        ],
+      })
+    } catch (e) {
+      return null
+    }
+  }
+  function removeVariant() {
+    variantManage()
   }
 
   // ⚙ Araçlar menüsü (alt çubuğu sade tutmak için)
@@ -3324,14 +3607,14 @@
     var g = null
     try {
       var pr = APP && APP.getProject()
-      g = pr && pr.ozkVarGroup ? vAll()[pr.ozkVarGroup] : null
+      g = vState(pr)
     } catch (e) {}
     openPop(
       '<div class="ozk-tools">' +
         '<button data-t="series">🧱 Profil sistemi değiştir / varyant ekle</button>' +
         '<button data-t="glass">🪟 Tüm camları değiştir</button>' +
         '<button data-t="color">🎨 Renk ekle</button>' +
-        (g && g.items.length > 1 ? '<button data-t="delvar">✕ Bu varyantı sil</button>' : '') +
+        (g ? '<button data-t="delvar">⋯ Varyantları yönet</button>' : '') +
         '</div>',
       function (p) {
         p.classList.add('ozk-pop-tools')
@@ -3343,7 +3626,7 @@
           if (t === 'series') seriesBulkOpen()
           else if (t === 'glass') glassBulkOpen()
           else if (t === 'color') colorPop()
-          else if (t === 'delvar') removeVariant()
+          else if (t === 'delvar') variantManage()
         })
       },
     )
@@ -3720,13 +4003,16 @@
       '<button data-eye title="Göz koruma — mavi ışığı azaltan sıcak filtre">◉<span>Göz koruma</span></button>' +
       '<i></i><button data-user title="Çizen / teklif veren kişi">👤<span class="ozk-keep">' + esc(userName()) + '</span></button>' +
       '<button data-ai title="AI ölçü okuma — belge / fotoğraftan poz çıkar">✨<span class="ozk-keep">AI Ölçü</span></button>' +
-      '<button data-tools title="Toplu işlemler: profil sistemi / varyant, tüm camlar, renk ekle">⚙<span>Araçlar</span></button>' +
+      '<button data-series title="Profil sistemini değiştir — tüm pozlar tek seferde / varyant ekle">🧱<span class="ozk-keep">Profil</span></button>' +
+      '<button data-tools title="Toplu işlemler: tüm camlar, renk ekle, varyantlar">⚙<span>Araçlar</span></button>' +
       '<span id="ozk-var" style="display:none"></span>'
     d.addEventListener('click', function (ev) {
       var b = ev.target.closest('button')
       if (!b) return
       if (b.hasAttribute('data-var')) return switchVariant(+b.getAttribute('data-var'))
       if (b.hasAttribute('data-tools')) return toolsPop()
+      if (b.hasAttribute('data-series')) return seriesBulkOpen()
+      if (b.hasAttribute('data-varm')) return variantManage()
       if (b.hasAttribute('data-cycle')) {
         var order = ['day', 'night', 'auto']
         setPref(TKEY, order[(order.indexOf(getPref(TKEY, 'auto')) + 1) % 3])
@@ -3735,7 +4021,6 @@
       else if (b.hasAttribute('data-color')) return colorPop()
       else if (b.hasAttribute('data-ai')) return window.OZKV && OZKV.aiOpen ? OZKV.aiOpen() : toast('AI ölçü okuma yükleniyor…')
       else if (b.hasAttribute('data-glass')) return glassBulkOpen()
-      else if (b.hasAttribute('data-series')) return seriesBulkOpen()
       else setPref(TKEY, b.getAttribute('data-v'))
       applyTheme()
     })
@@ -3802,6 +4087,8 @@
     _reg: REG,
     exportCustomer3D: exportCustomer3D,
     bindApp: bindApp,
+    sashHw: sashHw,
+    frameHw: frameHw,
     aiOpen: aiOpen,
     _tilt: TILT,
     useFav: useFav,
