@@ -127,6 +127,32 @@ mv = find1(rf'children:(\[({ID})\.jsx\("img",\{{src:({ID})\.VINESSO,alt:"VINESSO
 sub(E(mv.group(0)), f'children:{OZ}?[OZKV.vinessoLockup({mv.group(2)},{mv.group(3)}.VINESSO,{mv.group(3)}.OZKANOGLU_MARK)]:{mv.group(1)}'.replace('\\','\\\\'),
     'teklif: Vinesso imzası "by ÖZKANOĞLU" ("ihracat markamız" kaldırıldı)')
 
+
+# ------------------------------------------------------------ teklif: montaj, dahil/hariç, profil bölümü
+# Toplam fonksiyonu: montaj yalnızca tikliyse eklenir; tiksizken toplamlar 6.0 ile birebir aynı
+mt = find1(rf'const ({ID})=({ID})\(({ID})\+({ID})\+({ID})\+({ID})\),({ID})=\2\(\1\*Math\.min\(100,Math\.max\(0,({ID})\.discountPercent\)\)/100\)', 'toplam fonksiyonu')
+TV = mt.group(8)
+sub(E(mt.group(0)), (f'const __oI={OZ}&&{TV}.includeInstallation?Math.max(0,+{TV}.installationPrice||0):0,{mt.group(1)}={mt.group(2)}({mt.group(3)}+{mt.group(4)}+{mt.group(5)}+{mt.group(6)}+__oI),'
+                     f'{mt.group(7)}={mt.group(2)}({mt.group(1)}*Math.min(100,Math.max(0,{TV}.discountPercent))/100)').replace('\\', '\\\\'), 'toplam: montaj bedeli')
+sub(rf'(packaging:{ID},pallet:{ID},freight:{ID},)(subtotal:)', r'\1installation:__oI,\2', 'toplam: montaj alanı')
+sub(rf'(grossProfit:{ID}-{ID}-{ID}-{ID}-{ID}-{ID})\}}', r'\1-__oI}', 'toplam: brüt kâr montaj düşümü')
+
+# Teklif bileşeni değişkenleri
+mq = find1(rf'\(\{{project:({ID}),totals:({ID}),catalog:({ID}),settings:({ID}),onUpdateProject:({ID}),notify:({ID})\}}\)=>\{{const ({ID})=\1\.commercial,({ID})=({ID})\[\7\.language\]\?\?\9\.TR', 'teklif bileşeni')
+QP, QE, QC, QCOM, QH = mq.group(1), mq.group(2), mq.group(3), mq.group(7), mq.group(8)
+mf2 = find1(rf'({ID})\.jsx\("input",\{{type:"checkbox",checked:{E(QCOM)}\.includeFreight,onChange:\(?({ID})\)?=>({ID})\(\{{includeFreight:', 'nakliye kutusu')
+QJ, QB = mf2.group(1), mf2.group(3)
+QG = find1(rf'children:({ID})\({E(QE)}\.freight\)\}}\)\]\}}\),{E(QCOM)}\.includeFreight&&', 'para biçimi').group(1)
+print(f'  teklif: project={QP} totals={QE} catalog={QC} comm={QCOM} dict={QH} jsx={QJ} upd={QB} fmt={QG}')
+
+sub(r'children:"Nakliye, Palet & Ambalaj Seçenekleri"\}\)',
+    f'children:"Nakliye, Palet, Ambalaj & Montaj"}}),{OZ}?OZKV.montajUI({QJ},{QCOM},{QB},{QG},{QE}):null', 'panel: montaj + antet')
+sub(rf'(\{{children:\[{E(QH)}\.freight,":"\]\}}\),{E(QJ)}\.jsx\("strong",\{{children:{E(QG)}\({E(QE)}\.freight\)\}}\)\]\}}\))',
+    rf'\1,{OZ}?OZKV.montajLine({QJ},{QCOM},{QE},{QG},{QCOM}.language):null', 'özet: montaj satırı')
+sub(rf'{E(QH)}\.termsList\.map\(', f'({OZ}?OZKV.terms({QH}.termsList,{QCOM},{QH}):{QH}.termsList).map(', 'şartlar: dahil / dahil değil')
+sub(rf'({E(QJ)}\.jsxs\("div",\{{className:"print-avoid-break grid grid-cols-1 gap-5 border-t-2 border-\[#002b5c\] pt-4 md:grid-cols-\[1fr_260px\]")',
+    rf'{OZ}?OZKV.specSection({QJ},{QP},{QC},{QCOM},{QE}):null,\1', 'profil sistemleri & cam özeti')
+
 # ------------------------------------------------------------ 3D
 mg = find1(rf'({ID})=({ID})\.colors\[({ID})\.color\]\?\?\2\.colors\.WHITE,({ID})=\2\.colors\[\3\.colorOutside\|\|\3\.color\]\?\?\1,({ID})=new ({ID})\((\{{color:8246268,transparent:!0,opacity:\.34,roughness:\.08,metalness:\.1,reflectivity:\.9,side:{ID}\}})\)', '3D cam malzemesi')
 cat3, pos3, glassObj = mg.group(2), mg.group(3), mg.group(7)

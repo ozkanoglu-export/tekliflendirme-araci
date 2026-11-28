@@ -445,3 +445,117 @@ __OZK_CANVAS_DAY__
   font: 600 12.5px Inter, system-ui, sans-serif;
   backdrop-filter: blur(14px);
 }
+
+/* =====================================================================
+   PREMİUM TEKLİF (6.2): antet, profil sistemleri, cam özeti
+   ===================================================================== */
+/* Antet açıkken teklifteki logo tekrar etmesin (antette zaten var) */
+html[data-ozk-antet='1'] .print-sheet img[alt^='Özkanoğlu —'] {
+  display: none !important;
+}
+html[data-ozk-antet='1'] .print-sheet img[alt^='Özkanoğlu —'] + div {
+  border-inline-start: 0 !important;
+  padding-inline-start: 0 !important;
+}
+/* Ekranda: antetin üst ve alt bandı teklif kâğıdında görünür (baskı önizlemesi gibi) */
+@media screen {
+  html[data-ozk-antet='1'] .print-sheet:not(.print-only) {
+    background-image: var(--ozk-antet-top), var(--ozk-antet-bottom);
+    background-repeat: no-repeat, no-repeat;
+    background-position: top center, bottom center;
+    background-size: 100% auto, 100% auto;
+    padding-top: 16.5% !important;
+    padding-bottom: 33% !important;
+  }
+}
+.ozk-spec {
+  border-top: 2px solid #002b5c;
+  padding-top: 14px;
+  color: #0f172a;
+}
+.ozk-spec-title {
+  margin: 0 0 10px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #002b5c;
+}
+.ozk-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 10px;
+}
+.ozk-spec-card {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: linear-gradient(160deg, #ffffff 0%, #f5f8fc 100%);
+  padding: 8px 10px;
+  break-inside: avoid;
+}
+.ozk-spec-img {
+  width: 74px;
+  height: 128px;
+  object-fit: contain;
+  flex: none;
+  mix-blend-mode: multiply;
+}
+.ozk-spec-body {
+  flex: 1;
+  min-width: 0;
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+.ozk-spec-brand {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #b08d3c;
+}
+.ozk-spec-name {
+  font-size: 11px;
+  font-weight: 800;
+  color: #002b5c;
+  margin-bottom: 4px;
+}
+.ozk-spec-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px dotted #d5dde8;
+  padding: 1.5px 0;
+}
+.ozk-spec-row span {
+  color: #64748b;
+}
+.ozk-spec-row b {
+  text-align: end;
+  font-weight: 700;
+  color: #0f172a;
+}
+.ozk-spec-glass {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  font-size: 9.5px;
+}
+.ozk-spec-glass th {
+  background: #002b5c;
+  color: #fff;
+  font-weight: 700;
+  text-align: start;
+  padding: 4px 6px;
+}
+.ozk-spec-glass td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 3.5px 6px;
+}
+.ozk-spec-glass td:first-child {
+  font-weight: 600;
+}
+.ozk-spec-glass tr:nth-child(even) td {
+  background: #f8fafc;
+}

@@ -927,6 +927,278 @@
       if (eb) eb.setAttribute('aria-pressed', getPref(EKEY, '1') === '1' ? 'true' : 'false')
     }
   }
+
+  /* ============================================= PREMİUM TEKLİF (6.2) */
+  var QT = {
+    TR: { inst: 'Montaj', incl: 'Fiyata dahildir', excl: 'Fiyata dahil değildir', vat: 'Alıcı ülke KDV’si (VAT)', spec: 'Kullanılan Profil Sistemleri & Ürün Detayları', depth: 'Profil derinliği', ch: 'Odacık', seal: 'Conta sistemi', gr: 'Cam kapasitesi', cls: 'Profil sınıfı', hw: 'Donanım', glass: 'Kullanılan Camlar', thick: 'Kalınlık', g: 'g değeri', lt: 'Işık geçirgenliği', rw: 'Ses yalıtımı', pos: 'Poz', brand: 'Marka' },
+    EN: { inst: 'Installation', incl: 'Included in the price', excl: 'Not included in the price', vat: 'Buyer country VAT', spec: 'Profile Systems & Product Details', depth: 'Profile depth', ch: 'Chambers', seal: 'Gasket system', gr: 'Glazing range', cls: 'Profile class', hw: 'Hardware', glass: 'Glazing Used', thick: 'Thickness', g: 'g-value', lt: 'Light transmittance', rw: 'Sound insulation', pos: 'Pos.', brand: 'Brand' },
+    DE: { inst: 'Montage', incl: 'Im Preis enthalten', excl: 'Nicht im Preis enthalten', vat: 'Mehrwertsteuer des Käuferlandes', spec: 'Profilsysteme & Produktdetails', depth: 'Bautiefe', ch: 'Kammern', seal: 'Dichtungssystem', gr: 'Glasstärken', cls: 'Profilklasse', hw: 'Beschlag', glass: 'Verwendete Verglasungen', thick: 'Dicke', g: 'g-Wert', lt: 'Lichtdurchlässigkeit', rw: 'Schalldämmung', pos: 'Pos.', brand: 'Marke' },
+    NL: { inst: 'Montage', incl: 'Inbegrepen in de prijs', excl: 'Niet inbegrepen in de prijs', vat: 'Btw van het land van de koper', spec: 'Profielsystemen & productdetails', depth: 'Bouwdiepte', ch: 'Kamers', seal: 'Dichtingssysteem', gr: 'Glasdiktes', cls: 'Profielklasse', hw: 'Beslag', glass: 'Gebruikte beglazing', thick: 'Dikte', g: 'g-waarde', lt: 'Lichttoetreding', rw: 'Geluidsisolatie', pos: 'Pos.', brand: 'Merk' },
+    FR: { inst: 'Pose / installation', incl: 'Inclus dans le prix', excl: 'Non inclus dans le prix', vat: 'TVA du pays de l’acheteur', spec: 'Systèmes de profilés & détails produit', depth: 'Profondeur', ch: 'Chambres', seal: 'Système de joints', gr: 'Épaisseurs de vitrage', cls: 'Classe de profilé', hw: 'Quincaillerie', glass: 'Vitrages utilisés', thick: 'Épaisseur', g: 'Facteur g', lt: 'Transmission lumineuse', rw: 'Isolation acoustique', pos: 'Pos.', brand: 'Marque' },
+    IT: { inst: 'Posa in opera', incl: 'Incluso nel prezzo', excl: 'Non incluso nel prezzo', vat: 'IVA del paese dell’acquirente', spec: 'Sistemi di profili & dettagli prodotto', depth: 'Profondità', ch: 'Camere', seal: 'Sistema guarnizioni', gr: 'Spessori vetro', cls: 'Classe profilo', hw: 'Ferramenta', glass: 'Vetri utilizzati', thick: 'Spessore', g: 'Fattore g', lt: 'Trasmissione luminosa', rw: 'Isolamento acustico', pos: 'Pos.', brand: 'Marca' },
+    RU: { inst: 'Монтаж', incl: 'Включено в цену', excl: 'Не включено в цену', vat: 'НДС страны покупателя', spec: 'Профильные системы и детали изделий', depth: 'Монтажная глубина', ch: 'Камеры', seal: 'Система уплотнения', gr: 'Толщина остекления', cls: 'Класс профиля', hw: 'Фурнитура', glass: 'Используемое остекление', thick: 'Толщина', g: 'Коэфф. g', lt: 'Светопропускание', rw: 'Звукоизоляция', pos: 'Поз.', brand: 'Бренд' },
+    AR: { inst: 'التركيب', incl: 'مشمول في السعر', excl: 'غير مشمول في السعر', vat: 'ضريبة القيمة المضافة في بلد المشتري', spec: 'أنظمة البروفيل وتفاصيل المنتج', depth: 'عمق البروفيل', ch: 'الحجرات', seal: 'نظام الجوانات', gr: 'سماكات الزجاج', cls: 'فئة البروفيل', hw: 'الإكسسوارات', glass: 'الزجاج المستخدم', thick: 'السماكة', g: 'معامل g', lt: 'نفاذية الضوء', rw: 'العزل الصوتي', pos: 'بند', brand: 'العلامة' },
+  }
+  function qt(lang) {
+    return QT[String(lang || 'TR').toUpperCase()] || QT.EN
+  }
+  var AKEY_ANTET = 'ozk.ui.antet'
+  function antetOn() {
+    return getPref(AKEY_ANTET, '1') === '1' && !!ASSETS.antet
+  }
+  function quoteVisible() {
+    var q = document.querySelector('.print-sheet:not(.print-only)')
+    return !!(q && q.offsetParent !== null)
+  }
+  function applyAntet(forPrint) {
+    try {
+      var on = antetOn()
+      document.documentElement.setAttribute('data-ozk-antet', on ? '1' : '0')
+      if (ASSETS.antet_ust) {
+        document.documentElement.style.setProperty('--ozk-antet-top', 'url(' + ASSETS.antet_ust + ')')
+        document.documentElement.style.setProperty('--ozk-antet-bottom', 'url(' + ASSETS.antet_alt + ')')
+      }
+      var st = document.getElementById('ozk-antet-print')
+      if (!st && ASSETS.antet) {
+        st = document.createElement('style')
+        st.id = 'ozk-antet-print'
+        // @page arka planı her basılı sayfada tekrar eder; konum içerik alanına göre (kenar boşluğu kadar geri)
+        st.textContent =
+          '@page{size:A4 portrait;margin:31mm 12mm 53mm 12mm !important;background:url(' + ASSETS.antet + ') -12mm -31mm/210mm 297mm no-repeat}' +
+          'html,body,#root,#root *:has(.print-sheet),.print-sheet{background:transparent!important}.print-sheet:not(.print-only){zoom:.9}'
+      }
+      // en sona taşı: uygulamanın kendi @page kuralından sonra gelmeli
+      if (st && document.body && st.parentNode !== document.body) document.body.appendChild(st)
+      else if (st && !st.parentNode) document.head.appendChild(st)
+      // Antet sadece müşteri teklifi basılırken (kesim listesi vb. baskılarda değil)
+      if (st) st.media = on && (forPrint ? quoteVisible() : true) ? 'print' : 'not all'
+    } catch (e) {}
+  }
+  window.addEventListener('beforeprint', function () {
+    applyAntet(true)
+  })
+  window.addEventListener('afterprint', function () {
+    applyAntet()
+  })
+  function setAntet(on) {
+    setPref(AKEY_ANTET, on ? '1' : '0')
+    applyAntet()
+  }
+
+  // Ticari şartlar paneli: Montaj + Antet (Nakliye/Palet kutularıyla aynı görünüm)
+  function montajUI(n, c, b, g, e) {
+    try {
+      var on = !!c.includeInstallation
+      return n.jsxs('div', {
+        className: 'rounded-lg border border-ink-800 bg-ink-900/80 p-2 space-y-1.5',
+        children: [
+          n.jsxs('label', {
+            className: 'flex cursor-pointer items-center justify-between',
+            children: [
+              n.jsxs('span', {
+                className: 'flex items-center gap-1.5 font-semibold text-white',
+                children: [
+                  n.jsx('input', {
+                    type: 'checkbox',
+                    checked: on,
+                    onChange: function (ev) {
+                      b({ includeInstallation: ev.target.checked })
+                    },
+                    className: 'h-4 w-4 rounded accent-brand-500',
+                  }),
+                  n.jsx('span', { children: '🔧' }),
+                  n.jsx('span', { children: 'Montaj Bedeli' }),
+                ],
+              }),
+              n.jsx('span', { className: 'font-mono text-[11px] font-bold text-gold-400', children: g(e.installation || 0) }),
+            ],
+          }),
+          on &&
+            n.jsx('input', {
+              type: 'number',
+              min: 0,
+              placeholder: 'Montaj tutarı (teklif para birimi)',
+              value: c.installationPrice == null ? '' : c.installationPrice,
+              onChange: function (ev) {
+                var v = ev.target.value
+                b({ installationPrice: v === '' ? null : Math.max(0, parseFloat(v) || 0) })
+              },
+              className: 'h-7 w-full rounded border border-ink-700 bg-ink-950 px-2 font-mono text-[11px] text-white',
+            }),
+          n.jsx('div', {
+            className: 'text-[10px] leading-snug text-ink-400',
+            children: 'Tikli kalemler teklifte “dahildir”, tiksizler “dahil değildir” olarak yazılır. Alıcı ülke KDV’si hiçbir zaman dahil değildir.',
+          }),
+          n.jsxs('label', {
+            className: 'flex cursor-pointer items-center gap-1.5 border-t border-ink-800 pt-1.5 font-semibold text-white',
+            children: [
+              n.jsx('input', {
+                type: 'checkbox',
+                defaultChecked: antetOn(),
+                onChange: function (ev) {
+                  setAntet(ev.target.checked)
+                },
+                className: 'h-4 w-4 rounded accent-brand-500',
+              }),
+              n.jsx('span', { children: '📄 Antetli kâğıt (PDF / baskı arka planı)' }),
+            ],
+          }),
+        ],
+      })
+    } catch (err) {
+      return null
+    }
+  }
+
+  // Özet kutusu: montaj satırı
+  function montajLine(n, c, e, g, lang) {
+    if (!c.includeInstallation || !(e.installation > 0)) return null
+    return n.jsxs('div', {
+      className: 'flex justify-between text-slate-600',
+      children: [n.jsxs('span', { children: [qt(lang).inst, ':'] }), n.jsx('strong', { children: g(e.installation) })],
+    })
+  }
+
+  // Ticari şartlar listesinin sonuna: dahil / dahil değil
+  function terms(list, c, h) {
+    try {
+      var T = qt(c.language)
+      var inc = [],
+        exc = []
+      ;[
+        [c.includePackaging, h.packaging],
+        [c.includePallet, h.pallet],
+        [c.includeFreight, h.freight],
+        [c.includeInstallation && c.installationPrice > 0, T.inst],
+      ].forEach(function (x) {
+        if (!x[1]) return
+        ;(x[0] ? inc : exc).push(x[1])
+      })
+      // İhracat kuralı: alıcı ülke KDV'si asla dahil değil (yurt içi KDV'li tekliflerde yazılmaz)
+      if (!(c.vatPercent > 0)) exc.push(T.vat)
+      var instIn = c.includeInstallation && c.installationPrice > 0
+      // Montaj dahilse Furkan'ın "montaj hariçtir" maddesi çelişmesin diye çıkarılır
+      var out = list.filter(function (t) {
+        return !(instIn && /montaj|installation|montage|التركيب/i.test(String(t)))
+      })
+      if (inc.length) out.push(T.incl + ': ' + inc.join(', ') + '.')
+      if (exc.length) out.push(T.excl + ': ' + exc.join(', ') + '.')
+      return out
+    } catch (e) {
+      return list
+    }
+  }
+
+  // Teklif altı: kullanılan profil sistemleri (kesit görseli + teknik) ve cam özeti — fiyat yok
+  function specSection(n, project, cat, c, totals) {
+    try {
+      var lang = c.language,
+        T = qt(lang),
+        isTR = String(lang || 'TR').toUpperCase() === 'TR'
+      var sKeys = [],
+        gKeys = []
+      function add(arr, k) {
+        if (k && arr.indexOf(k) < 0) arr.push(k)
+      }
+      ;(project.positions || []).forEach(function (p) {
+        add(sKeys, p.series)
+        add(gKeys, p.glass)
+        ;(p.coupledUnits || []).forEach(function (u) {
+          add(sKeys, u.series || (u.unitPos && u.unitPos.series))
+          add(gKeys, u.glass || (u.unitPos && u.unitPos.glass))
+        })
+      })
+      ;((totals && totals.lines) || []).forEach(function (l) {
+        ;(l.glass || []).forEach(function (x) {
+          add(gKeys, x && (x.code || x.glassKey))
+        })
+      })
+      var series = sKeys
+        .map(function (k) {
+          return cat.series && cat.series[k]
+        })
+        .filter(Boolean)
+      var glasses = gKeys
+        .map(function (k) {
+          return cat.glasses && cat.glasses[k]
+        })
+        .filter(Boolean)
+      if (!series.length && !glasses.length) return null
+      function row(k, v) {
+        return v === undefined || v === null || v === ''
+          ? null
+          : n.jsxs('div', { className: 'ozk-spec-row', children: [n.jsx('span', { children: k }), n.jsx('b', { children: v })] }, k)
+      }
+      var cards = series.map(function (s) {
+        var img = ASSETS['prof_' + s.key]
+        return n.jsxs(
+          'div',
+          {
+            className: 'ozk-spec-card',
+            children: [
+              img ? n.jsx('img', { src: img, alt: s.name, className: 'ozk-spec-img' }) : null,
+              n.jsxs('div', {
+                className: 'ozk-spec-body',
+                children: [
+                  n.jsx('div', { className: 'ozk-spec-brand', children: s.brand || '' }),
+                  n.jsx('div', { className: 'ozk-spec-name', children: s.name }),
+                  row(T.depth, s.thickness ? s.thickness + ' mm' : ''),
+                  row(T.ch, s.chambers),
+                  row('Uf', s.uf ? s.uf + ' W/m²K' : ''),
+                  row(T.gr, s.glassRange),
+                  row(T.cls, s.profileClass),
+                  isTR ? row(T.seal, s.sealSystem) : null,
+                  row(T.hw, s.hardwareBrand),
+                ],
+              }),
+            ],
+          },
+          s.key,
+        )
+      })
+      var gRows = glasses.map(function (g) {
+        return n.jsxs(
+          'tr',
+          {
+            children: [
+              n.jsx('td', { children: gName(g, lang) }),
+              n.jsx('td', { children: g.ug != null ? g.ug : '–' }),
+              n.jsx('td', { children: g.thicknessMm ? g.thicknessMm + ' mm' : '–' }),
+              n.jsx('td', { children: g.solarFactor ? '%' + g.solarFactor : '–' }),
+              n.jsx('td', { children: g.lightTransmittance ? '%' + g.lightTransmittance : '–' }),
+              n.jsx('td', { children: g.rwDb ? g.rwDb + ' dB' : '–' }),
+            ],
+          },
+          g.key,
+        )
+      })
+      return n.jsxs('div', {
+        className: 'ozk-spec print-avoid-break',
+        children: [
+          n.jsx('h4', { className: 'ozk-spec-title', children: T.spec }),
+          cards.length ? n.jsx('div', { className: 'ozk-spec-grid', children: cards }) : null,
+          gRows.length
+            ? n.jsxs('table', {
+                className: 'ozk-spec-glass',
+                children: [
+                  n.jsx('thead', {
+                    children: n.jsxs('tr', {
+                      children: [T.glass, 'Ug (W/m²K)', T.thick, T.g, T.lt, T.rw].map(function (x) {
+                        return n.jsx('th', { children: x }, x)
+                      }),
+                    }),
+                  }),
+                  n.jsx('tbody', { children: gRows }),
+                ],
+              })
+            : null,
+        ],
+      })
+    } catch (err) {
+      return null
+    }
+  }
+
   /* ------------------------------------------------ alt araç çubuğu (dock) */
   function esc(t) {
     return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
@@ -1104,13 +1376,18 @@
   }
 
   applyTheme()
+  applyAntet()
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', function () {
+      applyAntet()
+    })
   genTextures()
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildUI)
   else buildUI()
   setInterval(applyTheme, 5 * 60 * 1000)
 
   window.OZKV = {
-    version: '6.1',
+    version: '6.2',
     rehauColors: rehauColors,
     extraColors: extraColors,
     users: users,
@@ -1136,5 +1413,10 @@
     glass3D: glass3D,
     fix3D: fix3D,
     applyTheme: applyTheme,
+    montajUI: montajUI,
+    montajLine: montajLine,
+    terms: terms,
+    specSection: specSection,
+    applyAntet: applyAntet,
   }
 })()
