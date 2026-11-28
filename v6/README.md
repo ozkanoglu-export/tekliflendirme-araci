@@ -29,6 +29,9 @@ python3 v6/build.py
 | Aksesuar kapakları | Menteşe kapakları (pencere 2, kapı 3) ve alt kasadaki tahliye delik kapakları aksesuar/kol rengindedir. 2D'de menteşe kapakları açılış yönüne göre içeriden ya da dışarıdan görünür; tahliye kapakları dış görünümde (teklifte "Dışarıdan bakış") görünür. 3D'de ikisi de vardır. Alüminyum eşikli kasada tahliye kapağı konmaz. |
 | Alt çubuk | Sade tutuldu: tema (tıkla: gündüz / gece / oto), göz koruma, kullanıcı, ✨ AI, 🧱 Profil ve ⚙ Araçlar (tüm camlar, renk ekle, varyantları yönet). |
 | OIE ERP | ERP içinde (yalnız ihracat) açılınca çizen giriş yapan kişidir, 👤 gizlenir. Proje birkaç saniyede bir ERP'ye otomatik taslak olarak kaydedilir; Projeler'de "☁ ERP Projeleri" (çizen, son düzenleyen, durum) listelenir. Teklifte "🏭 Satış oldu — depoya bildir": kesim listesinden stok kodu + renk bazında boy sayısı (6 m, %5 fire) depoya gider, stok karşılaştırılır, eksikler için Satın Alma talebi açılır. Tek başına açıldığında hiçbiri görünmez. |
+| Ortak projeler | ERP'de çizim yetkisi olan herkes (ihracat) birbirinin projesini görür ve düzenler. Aynı projeyi başkası araya kaydettiyse üzerine sessizce yazılmaz: kaydedilmemiş değişiklik yoksa en son hâl kendiliğinden yüklenir, varsa "onun hâlini aç / benimkini kaydet" diye sorulur. Projeler'de her projenin "Hareketler"i: kim, ne zaman düzenledi (sürümler), oluşturma, durum, satış, satın alma, eski sürüme dönüş; eski bir hâl açılabilir. |
+| Lambri | 24 mm PVC Lambri Dolgu (Cam & Panel listesinde ve kapıda "Cam / PVC Panel / Lambri"). Çizimde yatay çıtalarla görünür. Fiyatı geçici 150 €/m². |
+| 6 mm cam önerisi | Bir poz camı 3 m²'yi geçip camlardan biri 6 mm'den inceyse alt çubukta "⚠ 6 mm cam" çıkar: çift camda iç-dış 6 mm, üçlüde üçü 6 mm, aynı kaplama ve aynı toplam kalınlıkta katalog camı önerilir (4+16+4 Sinerji → 6+12+6 Sinerji). Katalogda uygun cam yoksa söyler. |
 | Sandviç panel | 24 mm Düz'e ek 42 mm PVC, 24 mm ve 42 mm Alüminyum sandviç panel. Fiyatlar geçici 150 €/m² — Katalog & Fiyat'tan girilmeli. |
 | Tüm camlar | ⚙ Araçlar → "Tüm camları değiştir" projedeki bütün camları tek seferde değiştirir. Yalnızca belirli bir camı kullanan pozlar da seçilebilir. Bölmeye özel camlar ve birleşik pozların birimleri de değişir; panel dolguları değişmez. |
 
@@ -38,6 +41,8 @@ AI okuma üç yolla çalışır. **Google Gemini (ücretsiz, varsayılan):** ais
 
 - Kaydederken dosya adı hazır gelir: `TEKLİF-MÜŞTERİ-ÜLKE-SERİ` (ör. `TEKLİF-AHMET-MAHMUT-ALMANYA-ADOPEN888`), Maliyet sekmesinden `BİRİM-FİYAT-…`. İlk kelime teklif diline göre: QUOTE, ANGEBOT, OFFERTE, DEVIS, OFFERTA, ПРЕДЛОЖЕНИЕ, عرض-سعر.
 - Tarayıcının tarih / sayfa başlığı / adres satırları basılmaz (Chrome 131+, sayfa kenar kutuları).
+- Poz kartları ekrandaki gibi art arda akar (kart sayfaya sığmazsa bütün hâlde sonraki sayfaya atlamaz; çizim ve tablo satırları bölünmez).
+- Dosya adının hazır gelmesi için yazdırma ekranında hedef **"PDF olarak kaydet"** seçilmeli. "Microsoft Print to PDF" Windows'un kendi penceresini açar, adı programdan almaz.
 
 ## Güvenlik kuralları (build.py)
 

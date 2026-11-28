@@ -300,6 +300,14 @@ sub(rf'(const ({ID})=new {ID}\(new {ID}\(({ID}),\.036,\.016\),{ID}\);\2\.positio
 sub(rf'(fsFace:{ID}\}};)({ID})\(({ID}),({ID})\.current\),({ID})\.current\.push\(\3\)',
     rf'\1\2(\3,\4.current),\5.current.push(\3),{OZ}&&OZKV.tagFs&&OZKV.tagFs(\3)', '3D: sineklik işareti', 3)
 
+# ------------------------------------------------------------ bölme dolgusu: Cam / PVC Panel yanına Lambri
+_mlb = find1(rf'({ID})\.jsx\("button",\{{type:"button",onClick:\(\)=>({ID})\(\{{panelModel:void 0\}}\),className:`rounded px-2 py-0\.5 text-\[10px\] font-bold \$\{{({ID})\?"bg-ink-900 text-ink-400 hover:text-white":"bg-brand-600 text-white"\}}`,children:"Cam"\}}\),\1\.jsx\("button",\{{type:"button",onClick:\(\)=>\2\(\{{panelModel:({ID})\.panelModel\|\|"T-1355"\}}\),className:`([^`]*)`,children:"PVC Panel \(450€/m²\)"\}}\)', 'dolgu seçimi')
+_n, _we, _P, _T, _cls = _mlb.group(1), _mlb.group(2), _mlb.group(3), _mlb.group(4), _mlb.group(5)
+sub(E(_mlb.group(0)),
+    (f'{_n}.jsx("button",{{type:"button",onClick:()=>{_we}({OZ}?OZKV.camPatch({_T}):{{panelModel:void 0}}),className:`rounded px-2 py-0.5 text-[10px] font-bold ${{{_P}||{OZ}&&OZKV.isLambri({_T})?"bg-ink-900 text-ink-400 hover:text-white":"bg-brand-600 text-white"}}`,children:"Cam"}}),'
+     f'{_n}.jsx("button",{{type:"button",onClick:()=>{_we}({{panelModel:{_T}.panelModel||"T-1355"}}),className:`{_cls}`,children:"PVC Panel (450€/m²)"}}),'
+     f'{OZ}?OZKV.lambriBtn({_n},{_T},{_we},{_P}):null').replace('\\', '\\\\'), 'dolgu: Lambri seçeneği')
+
 # ------------------------------------------------------------ varyant fiyatları: toplam hesap ve para biçimi katmana açılır
 mn1 = find1(rf'function ({ID})\(({ID}),({ID}),({ID}),({ID}),({ID})\)\{{const ({ID})=\2\.map\(\(?({ID})\)?=>({ID})\(\8,\3,\4,\5,\6\)\);', 'toplam hesap fonksiyonu')
 sub(E(mn1.group(0)), (f'window.OZKV&&(OZKV.calcTotals=function(a,b,c,d,f){{return {mn1.group(1)}(a,b,c,d,f)}});' + mn1.group(0)).replace('\\', '\\\\'), 'toplam hesap katmana açıldı')

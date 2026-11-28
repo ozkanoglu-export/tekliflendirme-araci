@@ -1205,3 +1205,36 @@ html[data-ozk-erp] #ozk-theme-ui [data-user] {
     @bottom-right { content: ''; }
   }
 }
+
+/* Yazdırma: poz kartları ekrandaki gibi art arda akar. Kart sayfaya sığmıyorsa bütünüyle sonraki sayfaya atlamaz
+   (eskiden her poz ayrı sayfada, altı boş kalıyordu); çizim sütunu ve tablo satırları bölünmez. */
+@media print {
+  .print-sheet .print-avoid-break.border-indigo-200 {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    overflow: visible !important;
+  }
+  .print-sheet .print-avoid-break.border-indigo-200 > .grid:first-child {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+  /* sol sütun (çizimler + fiyat kutusu) kart boyunca uzadığı için bölünebilir; içindeki çizim ve fiyat kutusu bölünmez */
+  .print-sheet .print-avoid-break.border-indigo-200 > .grid:last-child > div:first-child {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+  .print-sheet .print-avoid-break.border-indigo-200 > .grid:last-child > div:first-child > *,
+  .print-sheet .print-avoid-break.border-indigo-200 tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+#ozk-theme-ui button.ozk-g6 { color: #b45309; border-color: rgba(245, 158, 11, 0.55); background: rgba(254, 243, 199, 0.55); }
+html[data-ozk-theme='night'] #ozk-theme-ui button.ozk-g6 { color: #fbbf24; background: rgba(120, 53, 15, 0.45); }
+/* Ortak çalışma: başkası aynı projeyi değiştirdiğinde */
+#ozk-conflict { position: fixed; top: 40px; left: 50%; transform: translateX(-50%); z-index: 9992; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; max-width: min(860px, calc(100vw - 24px)); padding: 10px 14px; border-radius: 14px; background: #fff7ed; color: #7c2d12; border: 1px solid #fb923c; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25); font: 600 12.5px/1.4 Inter, system-ui, sans-serif; }
+#ozk-conflict span { font-weight: 500; }
+#ozk-conflict button { border: 1px solid #ea580c; background: #fff; color: #9a3412; border-radius: 10px; padding: 5px 10px; font-weight: 800; cursor: pointer; }
+#ozk-conflict button[data-mine] { background: #ea580c; color: #fff; }
+#ozk-conflict small { flex-basis: 100%; color: #9a3412; font-weight: 500; }
+#ozk-erp[data-s='çakışma'] { color: #fed7aa; border-color: rgba(251, 146, 60, 0.6); }

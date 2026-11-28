@@ -79,7 +79,32 @@
       PNL42PVC: pnl('PNL42PVC', '42 mm PVC Sandviç Panel', 42, 0.9, 9, 30),
       PNL24ALU: pnl('PNL24ALU', '24 mm Alüminyum Sandviç Panel', 24, 1.1, 9, 29),
       PNL42ALU: pnl('PNL42ALU', '42 mm Alüminyum Sandviç Panel', 42, 0.8, 11, 31),
+      PNL24LAMBRI: Object.assign(pnl('PNL24LAMBRI', '24 mm PVC Lambri Dolgu', 24, 1.6, 8, 26), { lambri: true }),
     }
+  }
+  // Bölme dolgusu düğmeleri (Cam / PVC Panel / Lambri)
+  var LAMBRI = 'PNL24LAMBRI'
+  function isLambri(leaf) {
+    return !!(leaf && leaf.glass === LAMBRI && !leaf.panelModel)
+  }
+  function camPatch(leaf) {
+    return isLambri(leaf) ? { panelModel: void 0, glass: void 0 } : { panelModel: void 0 }
+  }
+  function lambriBtn(n, leaf, upd, panelOn) {
+    var on = !panelOn && isLambri(leaf)
+    return n.jsx(
+      'button',
+      {
+        type: 'button',
+        onClick: function () {
+          upd({ panelModel: void 0, glass: LAMBRI })
+        },
+        title: '24 mm PVC lambri dolgu (fiyatı Katalog & Fiyat → Cam & Panel)',
+        className: 'rounded px-2 py-0.5 text-[10px] font-bold ' + (on ? 'bg-amber-500 text-ink-950' : 'bg-ink-900 text-ink-300 hover:text-white'),
+        children: 'Lambri',
+      },
+      'ozk-lambri',
+    )
   }
   function extraColors() {
     var o = {}
@@ -458,8 +483,17 @@
     }
   }
 
+  function lambriFx(n, r, P) {
+    var kids = [],
+      step = 100 // mm: lambri çıta genişliği
+    for (var y = r.y + step; y < r.y + r.h - 10; y += step)
+      kids.push(n.jsx('line', { x1: r.x + 2, x2: r.x + r.w - 2, y1: y, y2: y, stroke: P ? '#94a3b8' : 'rgba(148,163,184,.75)', strokeWidth: 3 }, 'l' + y))
+    kids.push(n.jsx('rect', { x: r.x, y: r.y, width: r.w, height: r.h, fill: P ? 'rgba(241,245,249,.55)' : 'rgba(226,232,240,.12)' }, 'lb'))
+    return n.jsx('g', { 'data-ozk': 'lambri', pointerEvents: 'none', children: kids })
+  }
   function paneFx(n, r, g, P, O, R) {
     try {
+      if (r && g && g.lambri && r.w >= 30 && r.h >= 30) return lambriFx(n, r, P)
       if (!r || !g || g.panel || r.w < 30 || r.h < 30) return null
       var c = classify(g)
       var kids = []
@@ -684,6 +718,11 @@
       var T = GT[String(lang || 'TR').toUpperCase()]
       if (!T) return name // TR ve bilinmeyen dil: Furkan'ın orijinal adı
       var low = name.toLocaleLowerCase('tr')
+      if (g.panel && g.lambri) {
+        var LB = { EN: 'PVC tongue-and-groove infill panel', DE: 'PVC-Paneelfüllung (Nut und Feder)', NL: 'PVC rabatdeel-vulling', FR: 'Remplissage lambris PVC', IT: 'Pannello perlinato in PVC', RU: 'Заполнение ПВХ-вагонкой', AR: 'حشوة ألواح PVC' }
+        var mm0 = (name.match(/^\s*(\d+)\s*mm/i) || [])[1]
+        return (mm0 ? mm0 + ' mm ' : '') + (LB[String(lang || '').toUpperCase()] || LB.EN)
+      }
       if (g.panel) {
         var mm = (name.match(/^\s*(\d+)\s*mm/i) || [])[1]
         return /dekor/i.test(low) ? T.deco + (name.match(/\b0\d{4}s\b/i) ? ' ' + name.match(/\b0\d{4}s\b/i)[0] : '') : (mm ? mm + ' mm ' : '') + T.sandwich
@@ -3561,8 +3600,12 @@
       now ? 300 : 4000,
     )
   }
-  function saveNow(status) {
+  function curSig(pr, status) {
+    return (status || '') + '|' + JSON.stringify(pr)
+  }
+  function saveNow(status, force) {
     if (!ERP.on || !APP) return Promise.resolve()
+    if (ERP.conflict && !force) return Promise.resolve() // başkasının değişikliği bekliyor: kullanıcı karar verene kadar yazma
     var pr
     try {
       pr = APP.getProject()
@@ -3572,12 +3615,27 @@
     if (!pr || !pr.id) return Promise.resolve()
     var json = JSON.stringify(pr)
     var sig = (status || '') + '|' + json // tam karşılaştırma: tek rakam değişse de kaydedilir
-    if (sig === ERP.lastSig) return Promise.resolve()
+    if (ERP.adoptAt && Date.now() - ERP.adoptAt < 1500) {
+      // ERP'den yeni yüklenen hâl (1,5 sn içinde): aynısını geri yazma (son düzenleyen yanlış görünmesin).
+      // Süre sınırlı: yüklemeden sonra yapılan gerçek değişiklik her zaman kaydedilir.
+      ERP.lastSig = sig
+      return Promise.resolve()
+    }
+    if (sig === ERP.lastSig && !force) return Promise.resolve()
     ERP.lastSig = sig
     ERP.status = 'kaydediliyor'
     erpBadge()
-    return erpCall('pcd:save', { localId: pr.id, project: JSON.parse(json), summary: projectSummary(pr), status: status || null })
-      .then(function () {
+    return erpCall('pcd:save', { localId: pr.id, project: JSON.parse(json), summary: projectSummary(pr), status: status || null, force: !!force })
+      .then(function (res) {
+        if (res && res.conflict) {
+          ERP.lastSig = ''
+          ERP.status = 'çakışma'
+          showConflict(res)
+          erpBadge()
+          return
+        }
+        ERP.conflict = null
+        hideConflict()
         ERP.status = 'ok'
         ERP.savedAt = Date.now()
         erpBadge()
@@ -3588,6 +3646,68 @@
         erpBadge(e.message)
       })
   }
+  // ERP'deki en son hâli aç (başkasının değişikliği)
+  function loadLatest(msg) {
+    var pr = APP && APP.getProject()
+    if (!pr) return Promise.resolve()
+    return erpCall('pcd:load', { localId: pr.id }).then(function (pj) {
+      if (!pj) return
+      ERP.conflict = null
+      ERP.adoptAt = Date.now()
+      hideConflict()
+      ensurePJ().then(function () {
+        PJ.load(pj)
+        setTimeout(function () {
+          try {
+            ERP.lastSig = curSig(APP.getProject())
+          } catch (e) {}
+        }, 300)
+        if (msg) toast(msg)
+      })
+    })
+  }
+  function showConflict(c) {
+    ERP.conflict = c
+    var b = document.getElementById('ozk-conflict')
+    if (!b) {
+      b = document.createElement('div')
+      b.id = 'ozk-conflict'
+      b.className = 'ozk-no-print'
+      document.body.appendChild(b)
+    }
+    b.innerHTML =
+      '<b>⚠ ' + esc(c.by) + ' bu projeyi ' + esc(c.at) + '\'de değiştirdi.</b><span>Senin son değişikliklerin henüz kaydedilmedi. Hangisi kalsın?</span>' +
+      '<button data-theirs>' + esc(c.by) + '\'nin hâlini aç</button><button data-mine>Benimkini kaydet</button><small>İkisi de Hareketler\'de saklanır.</small>'
+    b.querySelector('[data-theirs]').onclick = function () {
+      loadLatest(c.by + '\'nin son hâli açıldı')
+    }
+    b.querySelector('[data-mine]').onclick = function () {
+      saveNow(null, true)
+    }
+  }
+  function hideConflict() {
+    var b = document.getElementById('ozk-conflict')
+    if (b) b.remove()
+  }
+  // 20 sn'de bir: açık projeyi başkası güncellediyse — benim kaydedilmemiş değişikliğim yoksa kendiliğinden yükle, varsa sor
+  setInterval(function () {
+    if (!ERP.on || !APP || ERP.conflict || document.hidden) return
+    var pr
+    try {
+      pr = APP.getProject()
+    } catch (e) {
+      return
+    }
+    if (!pr || !pr.id) return
+    erpCall('pcd:check', { localId: pr.id })
+      .then(function (r) {
+        if (!r || !r.changed) return
+        var clean = curSig(APP.getProject()) === ERP.lastSig
+        if (clean) loadLatest(r.by + ' projeyi güncelledi (' + r.at + ') — en son hâl yüklendi')
+        else showConflict(r)
+      })
+      .catch(function () {})
+  }, 20000)
   // her 5 sn: değişiklik varsa kaydet (uygulama her değişiklikte bize haber vermediği için)
   setInterval(function () {
     if (ERP.on && APP && !document.hidden) saveNow()
@@ -3611,7 +3731,9 @@
     var t =
       ERP.status === 'kaydediliyor'
         ? '☁ Kaydediliyor…'
-        : ERP.status === 'hata'
+        : ERP.status === 'çakışma'
+          ? '⚠ Başkası değiştirdi — seçim bekleniyor'
+          : ERP.status === 'hata'
           ? '⚠ ERP\'ye kaydedilemedi' + (err ? ': ' + err : '')
           : ERP.savedAt
             ? '☁ Taslak kaydedildi ' + new Date(ERP.savedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
@@ -3718,7 +3840,14 @@
         })
     }
     R.useEffect(function () {
-      if (ERP.on) load()
+      if (!ERP.on) return
+      load()
+      var t = setInterval(function () {
+        if (!document.hidden) load()
+      }, 30000)
+      return function () {
+        clearInterval(t)
+      }
     }, [])
     if (!ERP.on) return null
     var SL = { draft: 'Taslak', quoted: 'Teklif verildi', sold: 'Satış', cancelled: 'İptal', archived: 'Arşiv' }
@@ -3786,11 +3915,20 @@
                       n.jsx('button', {
                         type: 'button',
                         onClick: function () {
+                          historyOpen(x)
+                        },
+                        className: 'rounded-lg border border-ink-700 bg-ink-900 px-2.5 py-1 font-semibold text-ink-200 hover:bg-ink-800',
+                        children: 'Hareketler',
+                      }),
+                      n.jsx('button', {
+                        type: 'button',
+                        onClick: function () {
                           erpCall('pcd:load', { id: x.id })
                             .then(function (pj) {
                               if (!pj) return toast('Proje bulunamadı')
                               saveNow()
                               ensurePJ().then(function () {
+                                ERP.adoptAt = Date.now()
                                 PJ.load(pj)
                                 toast('#' + (x.quote_no || '') + ' açıldı — çizen: ' + (x.owner_name || '?'))
                               })
@@ -3812,6 +3950,71 @@
         }),
       ],
     })
+  }
+  // Hareketler: projenin sürümleri ve olayları (ERP hareket kaydı gibi); eski sürüm açılabilir
+  function historyOpen(x) {
+    var m = aiModal('<div class="ozk-ai-h"><b>Hareketler — ' + esc((x.quote_no ? '#' + x.quote_no + ' ' : '') + (x.title || '')) + '</b><button data-x>✕</button></div><p class="ozk-ai-p">Yükleniyor…</p>')
+    m.querySelector('[data-x]').onclick = aiClose
+    erpCall('pcd:history', { id: x.id })
+      .then(function (h) {
+        var KIND = { created: '🆕', status: '🔁', stock_check: '📦', purchase_request: '🛒', note: '📝', restored: '↩' }
+        var items = []
+        ;(h.revs || []).forEach(function (r, i) {
+          items.push({
+            t: r.updated_at,
+            html:
+              '<td>✎</td><td><b>' + esc(r.editor_name || '?') + '</b> düzenledi' + (r.saves > 1 ? ' <small>(' + r.saves + ' kayıt)</small>' : '') + (i === 0 ? ' <span class="ozk-erp-st st-quoted">güncel</span>' : '') +
+              '<br><small>' + esc(r.positions || 0) + ' poz' + (r.total ? ' · ' + esc(Math.round(r.total).toLocaleString('tr-TR')) + ' ' + esc(r.currency || '') : '') + '</small></td><td>' + fmtT(r.updated_at) + '</td><td>' +
+              (i === 0 ? '' : '<button class="ozk-ai-go" data-rev="' + r.id + '">Bu hâli aç</button>') + '</td>',
+          })
+        })
+        ;(h.events || []).forEach(function (e) {
+          items.push({ t: e.created_at, html: '<td>' + (KIND[e.kind] || '•') + '</td><td>' + esc(e.detail || e.kind) + (e.actor_name ? '<br><small>' + esc(e.actor_name) + '</small>' : '') + '</td><td>' + fmtT(e.created_at) + '</td><td></td>' })
+        })
+        items.sort(function (a, b) {
+          return a.t < b.t ? 1 : -1
+        })
+        var html =
+          '<div class="ozk-ai-h"><b>Hareketler — ' + esc((x.quote_no ? '#' + x.quote_no + ' ' : '') + (x.title || '')) + '</b><button data-x>✕</button></div>' +
+          '<p class="ozk-ai-p">Her kayıt sürüm olarak saklanır (aynı kişinin 10 dk içindeki kayıtları tek satırda). Eski bir hâli açıp kaydedersen o hâl güncel olur; aradaki sürümler silinmez.</p>' +
+          '<div class="ozk-ai-tw"><table class="ozk-ai-t"><thead><tr><th></th><th>Ne oldu</th><th>Ne zaman</th><th></th></tr></thead><tbody>' +
+          (items.map(function (i) { return '<tr>' + i.html + '</tr>' }).join('') || '<tr><td colspan=4>Kayıt yok</td></tr>') +
+          '</tbody></table></div>'
+        var m2 = aiModal(html)
+        m2.querySelector('.ozk-ai-box').classList.add('wide')
+        m2.querySelector('[data-x]').onclick = aiClose
+        m2.querySelectorAll('[data-rev]').forEach(function (b) {
+          b.onclick = function () {
+            if (!confirm('Bu eski hâl açılacak. Kaydedildiğinde güncel hâl olur; şimdiki hâl Hareketler\'de kalır. Devam?')) return
+            b.disabled = true
+            erpCall('pcd:revision', { id: x.id, revId: +b.getAttribute('data-rev') })
+              .then(function (pj) {
+                aiClose()
+                saveNow()
+                ensurePJ().then(function () {
+                  ERP.conflict = null
+                  hideConflict()
+                  PJ.load(pj) // bilerek kaydedilecek (adopt yok): eski hâl yeni sürüm olur
+                  toast('Eski hâl açıldı — kaydedilince güncel olur')
+                })
+              })
+              .catch(function (e) {
+                b.disabled = false
+                toast('Açılamadı: ' + e.message)
+              })
+          }
+        })
+      })
+      .catch(function (e) {
+        m.querySelector('.ozk-ai-p').textContent = 'Hata: ' + e.message
+      })
+  }
+  function fmtT(t) {
+    try {
+      return new Date(t).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+    } catch (e) {
+      return ''
+    }
   }
   function erpState() {
     var pr = null
@@ -4506,6 +4709,153 @@
     return '#' + ((1 << 24) + (c(r) << 16) + (c(g) << 8) + c(b)).toString(16).slice(1)
   }
 
+  /* ============================================ 3 m² ÜSTÜ CAM → 6 mm ÖNERİSİ
+     Bir pozdaki cam levhası 3 m²'yi geçip camlardan biri 6 mm'den inceyse: çift camda iç-dış 6 mm, üçlüde üçü de 6 mm.
+     Öneri aynı kaplamalı (sinerji / konfor / satina…) ve aynı toplam kalınlıkta (aynı çıtaya oturur) katalog camıdır.
+     Fiyat ve hesap koduna dokunmaz; kullanıcı "Uygula" derse yalnız o pozun camı değişir. */
+  var G6 = { sig: '', list: [] }
+  function glassComp(g) {
+    var m = String((g && g.name) || '').match(/^\s*(\d+(?:[.,]\d+)?)(?:\s*lamine)?((?:\s*\+\s*\d+(?:[.,]\d+)?)+)/i)
+    if (!m) return null
+    var nums = [m[1]].concat(m[2].split('+').slice(1)).map(function (x) {
+      return parseFloat(String(x).replace(',', '.'))
+    })
+    // panes: tek sayılar (0,2,4); 44 / 55 / 66 = lamine (4+4 vb.) → kalın sayılır
+    var panes = nums.filter(function (x, i) {
+        return i % 2 === 0
+      }),
+      thick = nums.reduce(function (a, x, i) {
+        return a + (i % 2 === 0 && x >= 22 ? (Math.floor(x / 10) + (x % 10)) : x)
+      }, 0)
+    return { panes: panes, n: panes.length, thick: thick }
+  }
+  function glassTags(g) {
+    var low = String((g && g.name) || '').toLocaleLowerCase('tr')
+    return ['sinerji', 'konfor', 'satina', 'buzlu', 'reflekte', 'renkli', 'lamine', 'jaluzi', 'akustik', 'temper', 'çift']
+      .filter(function (w) {
+        return low.indexOf(w) >= 0
+      })
+      .join(',')
+  }
+  function thin(c) {
+    return c.panes.some(function (x) {
+      return x < 6
+    })
+  }
+  function g6Suggest(cat, key) {
+    var G = cat.glasses || {},
+      g = G[key]
+    if (!g || g.panel) return { none: true }
+    var c = glassComp(g)
+    if (!c || (c.n !== 2 && c.n !== 3) || !thin(c) || /jaluzi/.test(glassTags(g))) return { none: true }
+    var tg = glassTags(g),
+      best = null
+    Object.keys(G).forEach(function (k) {
+      var h = G[k]
+      if (!h || h.panel || k === key || !(+h.price > 0)) return
+      var d = glassComp(h)
+      if (!d || d.n !== c.n || thin(d) || glassTags(h) !== tg) return
+      var score = Math.abs(d.thick - c.thick)
+      if (!best || score < best.score || (score === best.score && +h.price < +G[best.key].price)) best = { key: k, score: score }
+    })
+    return best
+      ? { key: best.key, name: G[best.key].name, sameThick: best.score === 0 }
+      : { missing: (c.n === 3 ? 'üçlü' : 'çift') + ' cam, bütün levhaları 6 mm' + (tg ? ' (' + tg.replace(/,/g, ', ') + ')' : '') }
+  }
+  function g6Scan() {
+    if (!APP || !OZKV.calcTotals) return
+    try {
+      var pr = APP.getProject(),
+        cat = APP.getCatalog(),
+        st = APP.getSettings()
+      var sig = JSON.stringify([pr.positions, Object.keys(cat.glasses || {}).length])
+      if (sig === G6.sig) return
+      G6.sig = sig
+      var t = OZKV.calcTotals(pr.positions, cat, pr.commercial || {}, st, pr.priceOverrides || {})
+      var list = []
+      ;(t.lines || []).forEach(function (l, i) {
+        var big = {}
+        ;(l.glass || []).forEach(function (gl) {
+          if (gl && !gl.panel && gl.area > 3) big[gl.key] = Math.max(big[gl.key] || 0, gl.area)
+        })
+        Object.keys(big).forEach(function (k) {
+          var sg = g6Suggest(cat, k)
+          if (sg.none) return
+          list.push({ i: i, label: posLabel(l.pos, i), title: l.pos.title || '', from: k, fromName: (cat.glasses[k] || {}).name || k, area: big[k], to: sg.key, toName: sg.name, same: sg.sameThick, missing: sg.missing })
+        })
+      })
+      G6.list = list
+      var b = document.querySelector('#ozk-theme-ui [data-g6]')
+      if (b) {
+        b.style.display = list.length ? '' : 'none'
+        var sp = b.querySelector('span')
+        if (sp) sp.textContent = '6 mm cam (' + list.length + ')'
+      }
+    } catch (e) {}
+  }
+  setInterval(g6Scan, 2000)
+  function g6Apply(items) {
+    ensurePJ().then(function () {
+      var cur = PJ.project
+      var positions = cur.positions.map(function (p, i) {
+        var ch = items.filter(function (x) {
+          return x.i === i && x.to
+        })
+        if (!ch.length) return p
+        var map = {}
+        ch.forEach(function (x) {
+          map[x.from] = x.to
+        })
+        function walk(r) {
+          if (!r || typeof r !== 'object') return r
+          var o = Array.isArray(r) ? r.map(walk) : Object.assign({}, r)
+          if (!Array.isArray(o)) {
+            if (o.glass && map[o.glass]) o.glass = map[o.glass]
+            for (var k in o) if (o[k] && typeof o[k] === 'object' && k !== 'glass') o[k] = walk(o[k])
+          }
+          return o
+        }
+        var np = walk(p)
+        if (map[p.glass]) np.glass = map[p.glass]
+        return np
+      })
+      PJ.load(Object.assign({}, cur, { positions: positions }))
+      G6.sig = ''
+      toast(items.length + ' camda 6 mm\'lik cama geçildi')
+    })
+  }
+  function g6Open() {
+    g6Scan()
+    var L = G6.list
+    var rows = L.map(function (x, k) {
+      return (
+        '<tr><td><b>' + esc(x.label) + '</b><br><small>' + esc(x.title) + '</small></td><td>' + x.area.toFixed(2).replace('.', ',') + ' m²</td><td>' + esc(x.fromName) + '</td><td>' +
+        (x.to ? '<b>' + esc(x.toName) + '</b>' + (x.same ? '<br><small>aynı kalınlık — aynı çıtaya oturur</small>' : '<br><small style="color:#b45309">kalınlık farklı — çıtayı kontrol edin</small>') : '<span style="color:#b45309">Katalogda uygun cam yok: ' + esc(x.missing) + '. Katalog & Fiyat → Cam & Panel\'den ekleyin.</span>') +
+        '</td><td>' + (x.to ? '<button class="ozk-ai-go" data-one="' + k + '">Uygula</button>' : '') + '</td></tr>'
+      )
+    })
+    var m = aiModal(
+      '<div class="ozk-ai-h"><b>⚠ 3 m² üstü camlar — 6 mm önerisi</b><button data-x>✕</button></div>' +
+        '<p class="ozk-ai-p">3 m²\'yi geçen camda çift camda iç ve dış, üçlü camda üç levhanın da 6 mm olması önerilir. Uygula dersen yalnız o pozun camı değişir; fiyat katalogdaki yeni cam fiyatıyla hesaplanır.</p>' +
+        '<div class="ozk-ai-tw"><table class="ozk-ai-t"><thead><tr><th>Poz</th><th>En büyük cam</th><th>Şu an</th><th>Öneri</th><th></th></tr></thead><tbody>' + (rows.join('') || '<tr><td colspan=5>3 m² üstü ince cam yok.</td></tr>') + '</tbody></table></div>' +
+        '<div class="ozk-ai-f"><span></span>' + (L.some(function (x) { return x.to }) ? '<button class="ozk-ai-go" data-all>Hepsine uygula</button>' : '') + '</div>',
+    )
+    m.querySelector('.ozk-ai-box').classList.add('wide')
+    m.querySelector('[data-x]').onclick = aiClose
+    m.querySelectorAll('[data-one]').forEach(function (b) {
+      b.onclick = function () {
+        aiClose()
+        g6Apply([L[+b.getAttribute('data-one')]])
+      }
+    })
+    var a = m.querySelector('[data-all]')
+    if (a)
+      a.onclick = function () {
+        aiClose()
+        g6Apply(L)
+      }
+  }
+
   function refreshDock() {
     var b = document.querySelector('#ozk-theme-ui [data-user] span')
     if (b) b.textContent = userName()
@@ -4523,12 +4873,14 @@
       '<button data-ai title="AI ölçü okuma — belge / fotoğraftan poz çıkar">✨<span class="ozk-keep">AI Ölçü</span></button>' +
       '<button data-series title="Profil sistemini değiştir — tüm pozlar tek seferde / varyant ekle">🧱<span class="ozk-keep">Profil</span></button>' +
       '<button data-tools title="Toplu işlemler: tüm camlar, renk ekle, varyantlar">⚙<span>Araçlar</span></button>' +
+      '<button data-g6 style="display:none" class="ozk-g6" title="3 m² üstü camlar: 6 mm cam önerisi">⚠<span class="ozk-keep">6 mm cam</span></button>' +
       '<span id="ozk-var" style="display:none"></span>'
     d.addEventListener('click', function (ev) {
       var b = ev.target.closest('button')
       if (!b) return
       if (b.hasAttribute('data-var')) return switchVariant(+b.getAttribute('data-var'))
       if (b.hasAttribute('data-tools')) return toolsPop()
+      if (b.hasAttribute('data-g6')) return g6Open()
       if (b.hasAttribute('data-series')) return seriesBulkOpen()
       if (b.hasAttribute('data-varm')) return variantManage()
       if (b.hasAttribute('data-cycle')) {
@@ -4608,6 +4960,17 @@
     lever3D: lever3D,
     anim3D: anim3D,
     tagFs: tagFs,
+    // projeyi programdan değiştir (araçlar ve testler için): fn(proje) → yeni proje
+    editProject: function (fn) {
+      return ensurePJ().then(function () {
+        PJ.load(fn(JSON.parse(JSON.stringify(PJ.project))))
+      })
+    },
+    g6Suggest: g6Suggest,
+    g6Open: g6Open,
+    isLambri: isLambri,
+    camPatch: camPatch,
+    lambriBtn: lambriBtn,
     pdfName: pdfName,
     _reg: REG,
     exportCustomer3D: exportCustomer3D,
