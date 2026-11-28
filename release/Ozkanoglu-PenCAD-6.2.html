@@ -983,6 +983,90 @@ button:hover > .ozk-star-mini {
   margin: 6px 0;
   color: #cbd5e1;
 }
+.ozk-ai-doc summary {
+  cursor: pointer;
+  color: #f5c542;
+  margin: 4px 0 6px;
+}
+.ozk-ai-docs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 10px;
+}
+.ozk-ai-docs iframe,
+.ozk-ai-docs img,
+.ozk-ai-docs pre {
+  flex: 1 0 420px;
+  height: 380px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #fff;
+  object-fit: contain;
+}
+.ozk-ai-docs pre {
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: #0f172a;
+  font-size: 12px;
+}
+.ozk-ai-t td.op {
+  min-width: 230px;
+}
+.ozk-op {
+  display: flex;
+  gap: 4px;
+}
+.ozk-op select[data-c='hinge'] {
+  width: 70px;
+  flex: none;
+}
+.ozk-secs {
+  margin-top: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.07);
+}
+.ozk-sec {
+  display: grid;
+  grid-template-columns: 1fr 76px 62px;
+  gap: 3px;
+  margin-bottom: 3px;
+}
+.ozk-secb {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.ozk-secb button {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.ozk-secb small {
+  color: #94a3b8;
+}
+.ozk-top {
+  margin-top: 4px;
+}
+#ozk-ai .ozk-op select[data-c='type'] {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 150px;
+}
+#ozk-ai .ozk-op select[data-c='hinge'] {
+  flex: none;
+  width: 74px;
+}
+#ozk-ai .ozk-ai-t td.op {
+  min-width: 280px;
+}
 
 </style>
 <script type="text/plain" id="ozk3-src">/* three.js r187 (MIT) © 2010-2026 Three.js Authors — https://threejs.org — müşteri 3D teklif görüntüleyicisi için küçültülmüş paket */
@@ -7919,7 +8003,7 @@ new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
         id: uid('sp'),
         dir: 'v',
         children: secs.map(function (x, i) {
-          return { size: i < secs.length - 1 && x.width_mm > 0 ? Math.round(x.width_mm) : null, field: leafFor(x.type, r.hinge) }
+          return { size: i < secs.length - 1 && x.width_mm > 0 ? Math.round(x.width_mm) : null, field: leafFor(x.type, x.hinge || r.hinge) }
         }),
       }
     } else main = leafFor(r.type === 'mixed' || r.type === 'unknown' ? 'tilt_turn' : r.type, r.hinge)
@@ -7934,6 +8018,7 @@ new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
     return A.map(function (p, i) {
       var q = B[i]
       var issues = []
+      if (!b) issues.push('Tek okuma: ölçüyü belgeden kontrol edin')
       if (b && !q) issues.push('İkinci okumada bu poz yok')
       else if (q) {
         if (p.width_mm !== q.width_mm) issues.push('Genişlik iki okumada farklı: ' + p.width_mm + ' / ' + q.width_mm)
@@ -8111,6 +8196,7 @@ new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
         '<label>Model <input data-gmodel value="' + esc(getPref(GMODEL, 'gemini-flash-latest')) + '"></label>' +
         '<small>Anahtar: aistudio.google.com → “Get API key” (ücretsiz). Not: ücretsiz kullanımda Google gönderilen içeriği ürünlerini geliştirmek için kullanabilir. Anahtar yalnızca bu bilgisayarda saklanır.</small></div>' +
         '<div class="ozk-ai-key" data-pk="claude"><label>Anthropic API anahtarı <input type="password" data-key placeholder="sk-ant-…" value="' + esc(getPref(AI.key, '')) + '"></label><small>console.anthropic.com · Yalnızca bu bilgisayarda saklanır.</small></div>' +
+        '<label class="ozk-ai-chk"><input type="checkbox" data-double' + (getPref('ozk.ai.double.' + prov, prov === 'claude' ? '1' : '0') === '1' ? ' checked' : '') + '> Çift okuma: iki ayrı okuma karşılaştırılır (daha güvenli, daha yavaş)</label>' +
         '<div class="ozk-ai-f"><span data-msg></span><button class="ozk-ai-go" data-go>Oku →</button></div>' +
         '<details class="ozk-ai-api"><summary>Anahtarsız yöntem: claude.ai aboneliğiyle (kopyala-yapıştır)</summary>' +
         '<div class="ozk-ai-free"><ol><li><button class="ozk-ai-go" data-copy>📋 Komutu kopyala</button></li>' +
@@ -8129,7 +8215,9 @@ new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
     }
     m.querySelectorAll('input[name=ozkprov]').forEach(function (r) {
       r.addEventListener('change', function () {
-        setPref(PROV, showProv())
+        var v = showProv()
+        setPref(PROV, v)
+        m.querySelector('[data-double]').checked = getPref('ozk.ai.double.' + v, v === 'claude' ? '1' : '0') === '1'
       })
     })
     showProv()
@@ -8199,24 +8287,33 @@ new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
       if (prov2 === 'gemini' && !gk) return (msg.textContent = 'Gemini API anahtarı gerekli (aistudio.google.com, ücretsiz)')
       if (prov2 === 'claude' && !ck) return (msg.textContent = 'Anthropic API anahtarı gerekli')
       var btn = this
+      var dbl = m.querySelector('[data-double]').checked
+      setPref('ozk.ai.double.' + prov2, dbl ? '1' : '0')
       btn.disabled = true
       var t0 = Date.now()
       var tick = setInterval(function () {
-        msg.textContent = (prov2 === 'gemini' ? 'Gemini' : 'Claude') + ' okuyor… (2 bağımsız okuma) ' + Math.round((Date.now() - t0) / 1000) + ' sn'
+        msg.textContent = (prov2 === 'gemini' ? 'Gemini' : 'Claude') + ' okuyor… ' + (dbl ? '(2 bağımsız okuma) ' : '') + Math.round((Date.now() - t0) / 1000) + ' sn'
       }, 500)
       try {
         var blocks = []
         for (var i = 0; i < files.length; i++) blocks.push(await fileToBlock(files[i]))
         if (txt) blocks.push({ type: 'text', text: 'Yapıştırılan metin:\n\n' + txt })
-        var runs
-        if (prov2 === 'gemini') runs = await Promise.all([geminiRead(gk, gm, blocks), geminiRead(gk, gm, blocks)])
-        else {
-          var client = aiClient()
-          runs = await Promise.all([aiRead(client, blocks), aiRead(client, blocks)])
+        var runs, client
+        var one = function () {
+          return prov2 === 'gemini' ? geminiRead(gk, gm, blocks) : aiRead(client || (client = aiClient()), blocks)
         }
+        runs = dbl ? await Promise.all([one(), one()]) : [await one(), null]
         clearInterval(tick)
+        var prev = files
+          .filter(function (f) {
+            return /^image\//.test(f.type) || f.type === 'application/pdf' || /\.pdf$/i.test(f.name)
+          })
+          .map(function (f) {
+            return { name: f.name, url: URL.createObjectURL(f), pdf: !/^image\//.test(f.type) }
+          })
+        if (txt) prev.push({ name: 'Yapıştırılan metin', text: txt })
         await ensurePJ()
-        aiConfirm(runs[0], compareRuns(runs[0], runs[1]))
+        aiConfirm(runs[0], compareRuns(runs[0], runs[1]), prev)
       } catch (e) {
         clearInterval(tick)
         msg.textContent = 'Hata: ' + (e && e.message ? e.message : e)
@@ -8325,7 +8422,27 @@ new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
       })
       .join('')
   }
-  function aiConfirm(res, rows) {
+  var HINGE_OPTS = function (v) {
+    return ['right', 'left']
+      .map(function (h) {
+        return '<option value="' + h + '"' + (h === v ? ' selected' : '') + '>' + (h === 'right' ? 'Sağ' : 'Sol') + '</option>'
+      })
+      .join('')
+  }
+  function secRow(x) {
+    return (
+      '<div class="ozk-sec"><select data-st>' +
+      SEC_TYPES.filter(function (t) {
+        return t !== 'unknown'
+      })
+        .map(function (t) {
+          return '<option value="' + t + '"' + (t === x.type ? ' selected' : '') + '>' + AI_TYPE_TR[t] + '</option>'
+        })
+        .join('') +
+      '</select><input data-sw type="number" placeholder="gen. (oto)" value="' + esc(x.width_mm > 0 ? Math.round(x.width_mm) : '') + '"><select data-sh title="Menteşe">' + HINGE_OPTS(x.hinge || 'right') + '</select></div>'
+    )
+  }
+  function aiConfirm(res, rows, prev) {
     var cat = PJ.catalog || {}
     var pj = res.project || {}
     var ser = matchSeries(cat, pj.profile_system) || (PJ.project && PJ.project.positions && PJ.project.positions[0] && PJ.project.positions[0].series) || 'PASIFIK_888'
@@ -8346,7 +8463,20 @@ new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
       '<label>Dış renk <small>' + esc(pj.color_outside) + '</small><select data-f="cout">' + opts(cat.colors, cout) + '</select></label>' +
       '</div>' +
       (pj.notes ? '<div class="ozk-ai-note">📝 ' + esc(pj.notes) + '</div>' : '') +
-      '<div class="ozk-ai-tw"><table class="ozk-ai-t"><thead><tr><th></th><th>Poz</th><th>Açıklama</th><th>Adet</th><th>Genişlik</th><th>Yükseklik</th><th>Tip</th><th>Panjur</th><th>Sineklik</th><th>Kaynak / Uyarı</th><th>Onay</th></tr></thead><tbody>' +
+      ((prev || []).length
+        ? '<details class="ozk-ai-doc" open><summary>📄 Müşteri belgesi (ölçüleri buradan karşılaştırın)</summary><div class="ozk-ai-docs">' +
+          prev
+            .map(function (d) {
+              return d.text
+                ? '<pre>' + esc(d.text) + '</pre>'
+                : d.pdf
+                  ? '<iframe src="' + d.url + '" title="' + esc(d.name) + '"></iframe>'
+                  : '<a href="' + d.url + '" target="_blank"><img src="' + d.url + '" alt="' + esc(d.name) + '"></a>'
+            })
+            .join('') +
+          '</div></details>'
+        : '') +
+      '<div class="ozk-ai-tw"><table class="ozk-ai-t"><thead><tr><th></th><th>Poz</th><th>Açıklama</th><th>Adet</th><th>Genişlik</th><th>Yükseklik</th><th>Açılım / bölmeler</th><th>Panjur</th><th>Sineklik</th><th>Kaynak / Uyarı</th><th>Onay</th></tr></thead><tbody>' +
       rows
         .map(function (r, i) {
           var p = r.p
@@ -8358,9 +8488,12 @@ new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
             '<td><input data-c="qty" type="number" min="1" value="' + esc(p.qty || 1) + '" style="width:54px"></td>' +
             '<td><input data-c="w" type="number" value="' + esc(p.width_mm == null ? '' : Math.round(p.width_mm)) + '" style="width:74px"></td>' +
             '<td><input data-c="h" type="number" value="' + esc(p.height_mm == null ? '' : Math.round(p.height_mm)) + '" style="width:74px"></td>' +
-            '<td><select data-c="type">' + AI_TYPES.map(function (t) { return '<option value="' + t + '"' + (t === p.type ? ' selected' : '') + '>' + AI_TYPE_TR[t] + '</option>' }).join('') + '</select>' +
-            ((p.sections || []).length > 1 ? '<small>' + p.sections.map(function (x) { return AI_TYPE_TR[x.type] + (x.width_mm ? ' ' + x.width_mm : '') }).map(esc).join(' | ') + '</small>' : '') +
-            (p.top_light_height_mm ? '<small>Üst bölme: ' + esc(p.top_light_height_mm) + '</small>' : '') + '</td>' +
+            '<td class="op"><div class="ozk-op"><select data-c="type">' + AI_TYPES.filter(function (t) { return t !== 'unknown' }).map(function (t) { return '<option value="' + t + '"' + (t === (p.type === 'unknown' ? 'tilt_turn' : p.type) ? ' selected' : '') + '>' + AI_TYPE_TR[t] + '</option>' }).join('') + '</select>' +
+            '<select data-c="hinge" title="Menteşe tarafı (içeriden bakış) / HOK\'ta aktif kanat">' + HINGE_OPTS(p.hinge === 'left' ? 'left' : 'right') + '</select></div>' +
+            '<div class="ozk-secs" data-secs style="display:' + (p.type === 'mixed' ? 'block' : 'none') + '">' +
+            ((p.sections || []).length >= 2 ? p.sections : [{ type: 'fixed', width_mm: null }, { type: 'tilt_turn', width_mm: null }]).map(secRow).join('') +
+            '<div class="ozk-secb"><button type="button" data-secadd>+ bölme</button><button type="button" data-secdel>− bölme</button><small>soldan sağa, son bölme oto</small></div></div>' +
+            '<input data-c="top" type="number" class="ozk-top" placeholder="üst bölme yük. (yok)" value="' + esc(p.top_light_height_mm > 0 ? Math.round(p.top_light_height_mm) : '') + '"></td>' +
             '<td><select data-c="sh">' + ['none', 'monoblock', 'external', 'hidden_lento'].map(function (t) { return '<option' + (t === p.shutter ? ' selected' : '') + ' value="' + t + '">' + { none: 'Yok', monoblock: 'Monoblok', external: 'Dıştan takma', hidden_lento: 'Gizli lento' }[t] + '</option>' }).join('') + '</select></td>' +
             '<td><select data-c="fs">' + ['none', 'fixed', 'hinged', 'pleated'].map(function (t) { return '<option' + (t === p.flyscreen ? ' selected' : '') + ' value="' + t + '">' + { none: 'Yok', fixed: 'Sabit', hinged: 'Menteşeli', pleated: 'Pileli' }[t] + '</option>' }).join('') + '</select></td>' +
             '<td class="src"><code>' + esc(p.original_text) + '</code>' + (p.notes ? '<br>' + esc(p.notes) : '') + (bad ? '<br><b>' + esc(r.issues.join(' · ')) + '</b>' : '') + '</td>' +
@@ -8370,10 +8503,34 @@ new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
         .join('') +
       '</tbody></table></div>' +
       '<div class="ozk-ai-f"><span data-msg>Kırmızı satırlarda ölçüyü belgeden kontrol edip onaylayın.</span>' +
+      '<label class="ozk-ai-chk"><input type="checkbox" data-okall> Tüm ölçüleri kontrol ettim</label>' +
       '<button data-add class="ozk-ai-go ghost">Mevcut projeye ekle</button><button data-new class="ozk-ai-go">Yeni proje olarak aç</button></div>'
     var m = aiModal(html)
     m.querySelector('.ozk-ai-box').classList.add('wide')
     m.querySelector('[data-x]').onclick = aiClose
+    var okAll = m.querySelector('[data-okall]')
+    if (okAll)
+      okAll.onchange = function () {
+        m.querySelectorAll('[data-ok]').forEach(function (x) {
+          x.checked = okAll.checked
+        })
+      }
+    m.querySelectorAll('tr[data-i]').forEach(function (tr) {
+      var ty = tr.querySelector('[data-c="type"]'),
+        box = tr.querySelector('[data-secs]')
+      ty.onchange = function () {
+        box.style.display = ty.value === 'mixed' ? 'block' : 'none'
+      }
+      tr.querySelector('[data-secadd]').onclick = function () {
+        var d = document.createElement('div')
+        d.innerHTML = secRow({ type: 'fixed', width_mm: null })
+        box.insertBefore(d.firstChild, box.querySelector('.ozk-secb'))
+      }
+      tr.querySelector('[data-secdel]').onclick = function () {
+        var all = box.querySelectorAll('.ozk-sec')
+        if (all.length > 2) all[all.length - 1].remove()
+      }
+    })
     function collect() {
       var f = function (k) {
         return m.querySelector('[data-f="' + k + '"]').value
@@ -8391,6 +8548,17 @@ new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
           h = parseFloat(c('h'))
         if ((ok && !ok.checked) || !(w >= 250) || !(h >= 250)) blocked.push(r.p.ref || r.p.title)
         var type = c('type')
+        var secs =
+          type === 'mixed'
+            ? Array.prototype.slice.call(tr.querySelectorAll('.ozk-sec')).map(function (d) {
+                return { type: d.querySelector('[data-st]').value, width_mm: parseFloat(d.querySelector('[data-sw]').value) || null, hinge: d.querySelector('[data-sh]').value }
+              })
+            : []
+        var sumW = secs.slice(0, -1).reduce(function (a2, x) {
+          return a2 + (x.width_mm || 0)
+        }, 0)
+        if (type === 'mixed' && sumW >= w - 200) blocked.push((r.p.ref || r.p.title) + ' (bölme genişlikleri toplamı fazla)')
+        var top = parseFloat(c('top')) || null
         var ser = type === 'sliding' ? matchSeries(cat, '', 'sliding') || f('series') : type === 'lift_slide' ? matchSeries(cat, '', 'lift_slide') || f('series') : f('series')
         var cinP = matchColor(cat, r.p.color_inside) || f('cin'),
           coutP = matchColor(cat, r.p.color_outside) || f('cout')
@@ -8407,7 +8575,7 @@ new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
           color: cinP,
           colorOutside: coutP,
           glass: f('glass'),
-          root: rootFor(Object.assign({}, r.p, { type: type, height_mm: h })),
+          root: rootFor(Object.assign({}, r.p, { type: type, height_mm: h, hinge: c('hinge'), sections: secs, top_light_height_mm: top })),
           shutter: sh !== 'none' ? { enabled: true, type: SH_MAP[sh] || 'monoblock' } : { enabled: false },
           flyscreen: { type: FS_MAP[fs] || 'NONE' },
           note: ['AI: ' + (r.p.original_text || ''), r.p.ref ? 'Ref: ' + r.p.ref : '', r.p.notes || ''].filter(Boolean).join(' · '),
