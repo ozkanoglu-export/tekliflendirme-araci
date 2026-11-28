@@ -1,0 +1,3 @@
+import { Scene, PerspectiveCamera, WebGLRenderer, ObjectLoader, Color, HemisphereLight, DirectionalLight, AmbientLight, CanvasTexture, EquirectangularReflectionMapping, SRGBColorSpace, ACESFilmicToneMapping, PCFSoftShadowMap, GridHelper, Box3, Vector3 } from 'three'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+window.OZK3 = { Scene, PerspectiveCamera, WebGLRenderer, ObjectLoader, Color, HemisphereLight, DirectionalLight, AmbientLight, CanvasTexture, EquirectangularReflectionMapping, SRGBColorSpace, ACESFilmicToneMapping, PCFSoftShadowMap, GridHelper, Box3, Vector3, OrbitControls }

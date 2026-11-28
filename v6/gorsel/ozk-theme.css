@@ -652,3 +652,17 @@ button:hover > .ozk-star-mini {
   font-family: ui-monospace, monospace;
   color: #f5c542;
 }
+
+#ozk-busy {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: rgba(6, 10, 16, 0.55);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font: 700 15px/1.4 Inter, system-ui, sans-serif;
+  text-align: center;
+  padding: 24px;
+}

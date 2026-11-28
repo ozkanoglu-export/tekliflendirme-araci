@@ -985,7 +985,29 @@
     piv.add(ax)
     z.inner.add(piv)
     z.levye = piv
+    tagPivot(j, z)
     return piv
+  }
+  // Müşteri 3D dosyası için: kanat hareket bilgisi sahne verisine yazılır (fiyat yok)
+  function tagPivot(j, z) {
+    try {
+      var s = z.sash
+      j.pivot.userData.ozk = {
+        opening: j.opening,
+        hinge: j.hinge,
+        openDirection: j.openDirection,
+        baseX: j.baseX,
+        baseY: j.baseY,
+        baseZ: j.baseZ,
+        slideDir: j.slideDir,
+        slideTravelM: j.slideTravelM,
+        role: z.role,
+        door: !!s.door,
+        right: s.handleSide ? s.handleSide === 'right' : s.hinge === 'left',
+        lever: j.leverPivot ? j.leverPivot.uuid : null,
+        levye: z.levye ? z.levye.uuid : null,
+      }
+    } catch (e) {}
   }
   function anim3D(j, O, orig) {
     try {
@@ -994,6 +1016,7 @@
       var z = sashInfo(j)
       if (!z) return orig(j, O)
       REG.add(j)
+      tagPivot(j, z)
       var op = j.opening
       if (op !== 'turn' && op !== 'tiltturn') return orig(j, O)
       var s = z.sash
@@ -1113,8 +1136,14 @@
   function sceneBg() {
     return document.documentElement.getAttribute('data-ozk-theme') === 'day' ? 0xe7ebef : 0x0d121a
   }
-  function fix3D(group, CT, scene) {
+  var LIVE3D = { group: null, pos: null, t: 0 }
+  function fix3D(group, CT, scene, pos) {
     try {
+      if (group && pos) {
+        LIVE3D.group = group
+        LIVE3D.pos = pos
+        LIVE3D.t = Date.now()
+      }
       if (scene) {
         if (!scene.environment && CT) scene.environment = envTexture(CT)
         if (scene.background && scene.background.setHex) scene.background.setHex(sceneBg())
@@ -1382,6 +1411,7 @@
             ],
           }),
           ctx ? issueButton(n, Object.assign({ totals: e, fmt: g }, ctx)) : null,
+          ctx ? customer3DButton(n, Object.assign({ totals: e }, ctx)) : null,
         ],
       })
     } catch (err) {
@@ -2035,6 +2065,264 @@
     }
   }
 
+
+  /* ============================================= MÜŞTERİ 3D TEKLİF DOSYASI (6.2) */
+  // Fiyat, maliyet, katalog YOK: yalnızca ölçü, sistem, cam/renk adları, çizim ve 3D sahne
+  function sleep(ms) {
+    return new Promise(function (r) {
+      setTimeout(r, ms)
+    })
+  }
+  function clickNav(re) {
+    var b = Array.prototype.slice.call(document.querySelectorAll('header button')).filter(function (x) {
+      return re.test((x.innerText || '').replace(/\s+/g, ' ').trim())
+    })[0]
+    if (b) b.click()
+    return !!b
+  }
+  function busy(msg) {
+    var d = document.getElementById('ozk-busy')
+    if (!msg) {
+      if (d) d.remove()
+      return
+    }
+    if (!d) {
+      d = document.createElement('div')
+      d.id = 'ozk-busy'
+      document.body.appendChild(d)
+    }
+    d.textContent = msg
+  }
+  function posLabel(p, i) {
+    return p.pozCode || 'POZ ' + (i + 1)
+  }
+  async function exportCustomer3D(ctx) {
+    var pr = ctx.project,
+      cat = ctx.catalog,
+      st = ctx.settings || {},
+      c = pr.commercial || {}
+    var lang = String(c.language || 'TR').toUpperCase()
+    var positions = pr.positions || []
+    if (!positions.length) return toast('Teklifte poz yok')
+    // 1) teklif sayfasından çizimler ve profil bölümü (fiyatsız parçalar)
+    var sheet = document.querySelector('.print-sheet:not(.print-only)')
+    var svgs = [],
+      specHTML = '',
+      logo = ''
+    if (sheet) {
+      var list = Array.prototype.slice.call(sheet.children).filter(function (d) {
+        return d.classList.contains('space-y-4')
+      })[0]
+      if (list)
+        Array.prototype.slice.call(list.children).forEach(function (card) {
+          var sv = card.querySelector('svg')
+          svgs.push(sv ? sv.outerHTML : '')
+        })
+      var sp = sheet.querySelector('.ozk-spec')
+      if (sp) specHTML = sp.outerHTML
+      var lg = sheet.querySelector('img[alt^="Özkanoğlu"]')
+      if (lg) logo = lg.src
+    }
+    // 2) her pozun 3D sahnesini topla (Çizim Stüdyosu → 3D)
+    var scenes = {}
+    try {
+      busy('Müşteri 3D teklifi hazırlanıyor… 3D sahneler toplanıyor')
+      clickNav(/^Çizim/)
+      await sleep(700)
+      var b3 = Array.prototype.slice.call(document.querySelectorAll('button')).filter(function (x) {
+        return /3D 360/.test(x.innerText || '')
+      })[0]
+      if (b3) b3.click()
+      await sleep(1200)
+      for (var i = 0; i < positions.length; i++) {
+        var p = positions[i]
+        busy('Müşteri 3D teklifi hazırlanıyor… ' + posLabel(p, i) + ' (' + (i + 1) + '/' + positions.length + ')')
+        var cards = document.querySelectorAll('aside div.group.cursor-pointer.rounded-xl')
+        var t0 = Date.now()
+        if (cards[i]) cards[i].click()
+        var ok = false
+        for (var k = 0; k < 40; k++) {
+          await sleep(100)
+          if (LIVE3D.pos && LIVE3D.pos.id === p.id && LIVE3D.group && (LIVE3D.t >= t0 || k > 8)) {
+            ok = true
+            break
+          }
+        }
+        if (ok) {
+          await sleep(350)
+          try {
+            scenes[p.id] = LIVE3D.group.toJSON()
+          } catch (e) {}
+        }
+      }
+    } finally {
+      clickNav(/^Müşteri/)
+      busy(null)
+    }
+    // 3) veri (fiyatsız)
+    function geoOf(i) {
+      var l = ctx.totals && ctx.totals.lines && ctx.totals.lines[i]
+      return (l && l.geo) || {}
+    }
+    function nm(o) {
+      return (o && (o.name || o.shortName)) || ''
+    }
+    var D = {
+      v: 1,
+      lang: lang,
+      quoteNo: pr.quoteNo || '',
+      date: new Date().toISOString().slice(0, 10),
+      project: pr.projectName || '',
+      customer: { name: (pr.customer && pr.customer.name) || '', company: (pr.customer && pr.customer.company) || '', country: (pr.customer && pr.customer.country) || '' },
+      company: st.company
+        ? { name: st.company.name || 'ÖZKANOĞLU', phone: st.company.phone || '', email: st.company.email || '', web: st.company.web || '', address: st.company.address || '' }
+        : {},
+      contact: drawnByLabel(pr.drawnBy),
+      vinesso: !!c.includeVinesso,
+      logo: logo,
+      vinLogo: (document.querySelector('.ozk-vin-logo') || {}).src || '',
+      incoterm: [c.incoterm, c.incotermPlace].filter(Boolean).join(' — '),
+      spec: specHTML,
+      positions: positions.map(function (p, i) {
+        var g = cat.glasses && cat.glasses[p.glass]
+        var hasTilt = false
+        try {
+          JSON.stringify(scenes[p.id] || {}).replace(/"opening":"tiltturn"/, function () {
+            hasTilt = true
+          })
+        } catch (e) {}
+        return {
+          id: p.id,
+          label: posLabel(p, i),
+          title: p.title || '',
+          qty: Math.max(1, Math.round(p.qty) || 1),
+          w: geoOf(i).W_total || p.width || '',
+          h: geoOf(i).H_total || p.height || '',
+          series: nm(cat.series && cat.series[p.series]),
+          glass: g ? gName(g, lang) : '',
+          colorIn: nm(cat.colors && cat.colors[p.color]),
+          colorOut: nm(cat.colors && cat.colors[p.colorOutside || p.color]),
+          shutter: !!(p.shutter && (p.shutter.enabled || (p.shutter.type && p.shutter.type !== 'NONE'))),
+          flyscreen: !!(p.flyscreen && (p.flyscreen.enabled || (p.flyscreen.type && p.flyscreen.type !== 'NONE'))),
+          svg: svgs[i] || '',
+          scene: scenes[p.id] || null,
+          tilt: hasTilt,
+        }
+      }),
+    }
+    var missing = D.positions.filter(function (x) {
+      return !x.scene
+    })
+    var html = customerHTML(D)
+    var a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }))
+    a.download = 'Teklif-' + (D.quoteNo || 'PenCAD') + '-3D.html'
+    document.body.appendChild(a)
+    a.click()
+    setTimeout(function () {
+      URL.revokeObjectURL(a.href)
+      a.remove()
+    }, 1500)
+    toast(
+      'Müşteri 3D teklifi indirildi (fiyatsız) · ' +
+        (html.length / 1048576).toFixed(1) +
+        ' MB' +
+        (missing.length
+          ? ' · 3D alınamayan: ' +
+            missing
+              .map(function (x) {
+                return x.label
+              })
+              .join(', ')
+          : ''),
+    )
+  }
+  function customer3DButton(n, ctx) {
+    return n.jsx('button', {
+      type: 'button',
+      onClick: function () {
+        exportCustomer3D(ctx)
+      },
+      className: 'mt-1 w-full rounded-lg bg-sky-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-sky-500',
+      children: '📱 Müşteri 3D Teklifi İndir (fiyatsız)',
+    })
+  }
+
+  function customerHTML(D) {
+    var three = (document.getElementById('ozk3-src') || {}).textContent || ''
+    var data = JSON.stringify(D).replace(/<\//g, '<\\/').replace(new RegExp('<' + '!--', 'g'), '<\\u0021--')
+    var TR = D.lang === 'TR'
+    var L = TR
+      ? { title: 'Teklif', quote: 'Teklif No', date: 'Tarih', customer: 'Müşteri', open: 'Kanatları aç', tilt: 'Vasistas', inside: 'İçeriden', outside: 'Dışarıdan', spin: '360°', size: 'Ölçü', qty: 'Adet', series: 'Profil sistemi', glass: 'Cam', cin: 'İç renk', cout: 'Dış renk', shutter: 'Panjur', fly: 'Sineklik', yes: 'Var', contact: 'Teklifi hazırlayan', hint: 'Döndürmek için sürükleyin · Yakınlaştırmak için iki parmak / tekerlek', drawing: 'Teknik çizim (içeriden bakış)', noscene: '3D görünüm bu poz için hazır değil' }
+      : { title: 'Offer', quote: 'Offer No', date: 'Date', customer: 'Customer', open: 'Open sashes', tilt: 'Tilt', inside: 'Inside', outside: 'Outside', spin: '360°', size: 'Size', qty: 'Qty', series: 'Profile system', glass: 'Glazing', cin: 'Inside colour', cout: 'Outside colour', shutter: 'Roller shutter', fly: 'Insect screen', yes: 'Yes', contact: 'Prepared by', hint: 'Drag to rotate · Pinch / wheel to zoom', drawing: 'Technical drawing (inside view)', noscene: '3D view not available for this item' }
+    var css =
+      ':root{--ink:#0f172a;--mut:#64748b;--line:#e2e8f0;--navy:#002b5c;--gold:#b08d3c;--bg:#f4f1ec;--card:#ffffff}' +
+      '*{box-sizing:border-box}body{margin:0;background:radial-gradient(60vmax 40vmax at 0% 0%,#fbe9d2,transparent 70%),radial-gradient(50vmax 40vmax at 100% 100%,#dfe9f6,transparent 70%),var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}' +
+      '.wrap{max-width:1180px;margin:0 auto;padding:16px}' +
+      'header{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:18px;background:rgba(255,255,255,.72);backdrop-filter:blur(18px);box-shadow:0 8px 30px rgba(15,23,42,.08);border:1px solid rgba(255,255,255,.8)}' +
+      '.brand{display:flex;align-items:center;gap:12px}.brand img{height:54px;width:auto}.vin{display:flex;align-items:baseline;gap:6px}.vin img{height:26px}.vin i{font-size:12px;color:var(--mut)}.vin b{letter-spacing:.14em;color:#2e3192;font-size:12px}' +
+      '.meta{text-align:end;font-size:12.5px;color:var(--mut)}.meta b{color:var(--ink)}.meta h1{margin:0 0 4px;font-size:16px;letter-spacing:.04em;color:var(--navy);text-transform:uppercase}' +
+      '.chips{display:flex;gap:8px;overflow-x:auto;padding:14px 2px 6px;scrollbar-width:thin}.chip{flex:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-weight:700;font-size:12.5px;color:var(--ink);cursor:pointer;white-space:nowrap}.chip span{color:var(--mut);font-weight:600;margin-inline-start:6px}.chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}.chip.on span{color:#cfe0ff}' +
+      '.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;margin-top:8px}@media(max-width:860px){.grid{grid-template-columns:1fr}}' +
+      '.card{background:var(--card);border-radius:18px;box-shadow:0 8px 30px rgba(15,23,42,.07);border:1px solid #edf0f4;overflow:hidden}' +
+      '#view{position:relative;height:min(68vh,620px);min-height:340px;background:linear-gradient(180deg,#eef2f7,#f8f6f2)}#view canvas{display:block;width:100%!important;height:100%!important;touch-action:none}' +
+      '.ctrl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 14px;border-top:1px solid var(--line)}.ctrl label{display:flex;align-items:center;gap:8px;font-weight:600;font-size:12.5px;color:var(--mut)}.ctrl input[type=range]{width:150px;accent-color:var(--gold)}.btns{display:flex;gap:6px;margin-inline-start:auto}.btns button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:6px 10px;font-weight:700;font-size:12px;cursor:pointer}.btns button.on{background:var(--navy);color:#fff}' +
+      '.hint{position:absolute;left:12px;bottom:10px;font-size:11px;color:var(--mut);background:rgba(255,255,255,.7);padding:4px 8px;border-radius:8px}.nos{position:absolute;inset:0;display:grid;place-items:center;color:var(--mut)}' +
+      '.det{padding:16px}.det h2{margin:0 0 2px;font-size:17px;color:var(--navy)}.det .sub{color:var(--mut);font-size:12.5px;margin-bottom:10px}.row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dotted #dbe2ea}.row span{color:var(--mut)}.row b{text-align:end}' +
+      '.drw{padding:12px 16px 16px}.drw h3{margin:6px 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--navy)}.drw svg{width:100%;height:auto;max-height:360px;background:#fff;border-radius:12px;border:1px solid var(--line)}' +
+      '.spec{margin-top:14px;padding:16px}' +
+      '.ozk-spec{color:#0f172a}.ozk-spec-title{margin:0 0 10px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#002b5c}.ozk-spec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}.ozk-spec-card{display:flex;gap:10px;border:1px solid #dbe3ef;border-radius:12px;background:linear-gradient(160deg,#fff,#f5f8fc);padding:8px 10px}.ozk-spec-img{width:74px;height:128px;object-fit:contain;mix-blend-mode:multiply}.ozk-spec-body{flex:1;min-width:0;font-size:12px}.ozk-spec-brand{font-size:10px;font-weight:800;letter-spacing:.14em;color:#b08d3c}.ozk-spec-name{font-size:13px;font-weight:800;color:#002b5c;margin-bottom:4px}.ozk-spec-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dotted #d5dde8;padding:2px 0}.ozk-spec-row span{color:#64748b}.ozk-spec-glass{width:100%;margin-top:10px;border-collapse:collapse;font-size:12px}.ozk-spec-glass th{background:#002b5c;color:#fff;text-align:start;padding:5px 7px}.ozk-spec-glass td{border-bottom:1px solid #e2e8f0;padding:5px 7px}' +
+      '.tbl-wrap{overflow-x:auto}footer{margin:16px 0 8px;padding:14px 18px;border-radius:18px;background:rgba(255,255,255,.72);backdrop-filter:blur(18px);display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between;font-size:12.5px;color:var(--mut)}footer b{color:var(--ink)}'
+    var app =
+      '(function(){var D=JSON.parse(document.getElementById("ozk-data").textContent);var L=' +
+      JSON.stringify(L) +
+      ';var T=window.OZK3;function $(s){return document.querySelector(s)}function esc(t){return String(t==null?"":t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}[c]})}' +
+      // başlık
+      'var br=D.vinesso&&D.vinLogo?\'<div class="vin"><img src="\'+D.vinLogo+\'" alt="VINESSO"><i>by</i><b>ÖZKANOĞLU</b></div>\':(D.logo?\'<img src="\'+D.logo+\'" alt="Özkanoğlu">\':\'<b style="font-size:20px;letter-spacing:.1em;color:#2e3192">ÖZKANOĞLU</b>\');' +
+      '$("#brand").innerHTML=br;$("#meta").innerHTML="<h1>"+esc(L.title)+" #"+esc(D.quoteNo)+"</h1>"+esc(L.date)+": <b>"+esc(D.date)+"</b><br>"+esc(L.customer)+": <b>"+esc(D.customer.company||D.customer.name)+"</b>"+(D.customer.country?" · "+esc(D.customer.country):"");' +
+      '$("#foot").innerHTML="<div><b>"+esc(L.contact)+":</b> "+esc(D.contact)+"</div><div><b>"+esc(D.company.name||"ÖZKANOĞLU")+"</b> · "+esc(D.company.phone)+" · "+esc(D.company.email)+" · "+esc(D.company.web)+"</div><div>"+esc(D.company.address)+"</div>";' +
+      'if(D.spec){$("#spec").innerHTML=D.spec}else{$("#spec").style.display="none"}' +
+      // 3D
+      'var view=$("#view"),R=new T.WebGLRenderer({antialias:true,alpha:true});R.setPixelRatio(Math.min(devicePixelRatio||1,2));R.toneMapping=T.ACESFilmicToneMapping;R.toneMappingExposure=1.1;R.shadowMap.enabled=true;view.appendChild(R.domElement);' +
+      'var S=new T.Scene();var cv=document.createElement("canvas");cv.width=512;cv.height=256;var x=cv.getContext("2d");var g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,"#9cc7ec");g.addColorStop(.45,"#eef4f9");g.addColorStop(.5,"#ffffff");g.addColorStop(.58,"#cfc8ba");g.addColorStop(1,"#6f6a62");x.fillStyle=g;x.fillRect(0,0,512,256);var env=new T.CanvasTexture(cv);env.mapping=T.EquirectangularReflectionMapping;env.colorSpace=T.SRGBColorSpace;S.environment=env;' +
+      'S.add(new T.HemisphereLight(0xffffff,0xb8b0a2,1.0));var dl=new T.DirectionalLight(0xffffff,1.6);dl.position.set(3,5,4);dl.castShadow=true;S.add(dl);var dl2=new T.DirectionalLight(0xdfe8ff,.7);dl2.position.set(-3,2,-4);S.add(dl2);var grid=new T.GridHelper(10,20,0xc9c2b6,0xe2ddd4);S.add(grid);' +
+      'var C=new T.PerspectiveCamera(36,1,.02,60);var O=new T.OrbitControls(C,R.domElement);O.enableDamping=true;O.dampingFactor=.08;O.minDistance=.3;O.maxDistance=14;' +
+      'var vm="in";function size(){var w=view.clientWidth,h=view.clientHeight;R.setSize(w,h,false);C.aspect=w/h;C.updateProjectionMatrix();if(cur&&vm!=="spin")view3(vm)}addEventListener("resize",size);size();' +
+      'var cur=null,piv=[],ctr=new T.Vector3(),rad=1,openV=0,openT=0,tiltV=0,tiltT=0;var loader=new T.ObjectLoader();' +
+      'function cl(v){return v<0?0:v>1?1:v}function ez(v){v=cl(v);return v*v*(3-2*v)}' +
+      'function apply(){piv.forEach(function(p){var u=p.userData.ozk,o=p;var lev=u.lever?cur.getObjectByProperty("uuid",u.lever):null;var lv=u.levye?cur.getObjectByProperty("uuid",u.levye):null;var Ov=openV;' +
+      'if(u.opening==="slide"||u.opening==="liftslide"){if(u.slideDir){o.position.x=u.baseX+u.slideDir*u.slideTravelM*(u.opening==="liftslide"?cl((Ov-.12)/.88):Ov)}if(lev&&u.opening==="liftslide")lev.rotation.z=cl(Ov/.15)*Math.PI;return}' +
+      'if(u.opening==="tilt"){o.rotation.x=(u.openDirection==="outward"?-1:1)*Ov*Math.PI/9;return}' +
+      'var U=u.openDirection==="outward"?1:-1;function turn(q){var a=q*Math.PI*.44;o.rotation.y=u.hinge==="left"?U*a:-U*a}' +
+      'if(u.role==="hokPassive"){if(lv)lv.rotation.x=-ez((Ov-.6)/.12)*Math.PI*.55;o.rotation.x=0;turn(ez((Ov-.72)/.28));return}' +
+      'var q=u.role==="hokActive"?ez((Ov-.08)/.5):ez((Ov-.08)/.92);' +
+      'if(u.opening==="tiltturn"&&tiltV>.001&&Ov<.001){o.rotation.y=0;o.rotation.x=(u.openDirection==="outward"?-1:1)*ez((tiltV-.08)/.92)*Math.PI/9;if(lev&&!u.door)lev.rotation.z=Math.PI*ez(tiltV/.12);return}' +
+      'o.rotation.x=0;turn(q);if(lev){if(u.door){lev.rotation.z=-(u.right?-1:1)*.6*Math.sin(Math.PI*cl(Ov/.2))}else lev.rotation.z=(u.right?-1:1)*Math.PI/2*ez(Ov/.1)}})}' +
+      'function show(i){var P=D.positions[i];[].forEach.call(document.querySelectorAll(".chip"),function(c,k){c.classList.toggle("on",k===i)});' +
+      '$("#det").innerHTML="<h2>"+esc(P.label)+" · "+esc(P.title)+"</h2><div class=sub>"+esc(P.w)+" × "+esc(P.h)+" mm · "+esc(L.qty)+": "+esc(P.qty)+"</div>"+[[L.series,P.series],[L.glass,P.glass],[L.cin,P.colorIn],[L.cout,P.colorOut],[L.shutter,P.shutter?L.yes:""],[L.fly,P.flyscreen?L.yes:""]].filter(function(r){return r[1]}).map(function(r){return"<div class=row><span>"+esc(r[0])+"</span><b>"+esc(r[1])+"</b></div>"}).join("");' +
+      '$("#drw").innerHTML=P.svg?"<h3>"+esc(L.drawing)+"</h3>"+P.svg:"";' +
+      'if(cur){S.remove(cur);cur.traverse(function(o){o.geometry&&o.geometry.dispose()})}cur=null;piv=[];$("#nos").style.display=P.scene?"none":"grid";$("#tiltbox").style.display=P.tilt?"":"none";openV=openT=0;tiltV=tiltT=0;$("#open").value=0;$("#tilt").value=0;if(!P.scene)return;' +
+      'cur=loader.parse(P.scene);cur.traverse(function(o){if(o.userData&&o.userData.ozk)piv.push(o);if(o.isMesh){o.castShadow=true}});S.add(cur);apply();var b=new T.Box3().setFromObject(cur);b.getCenter(ctr);rad=b.getSize(new T.Vector3()).length()/2||1;grid.position.y=b.min.y;view3("in")}' +
+      'function view3(m){vm=m;[].forEach.call(document.querySelectorAll(".btns button"),function(b){b.classList.toggle("on",b.dataset.v===m)});O.autoRotate=m==="spin";O.autoRotateSpeed=2;if(m==="spin")return;var d=rad*2.5/Math.min(1,C.aspect*0.95),s=m==="out"?-1:1;C.position.set(ctr.x+d*.42,ctr.y+d*.16,ctr.z+s*d);O.target.copy(ctr);O.update()}' +
+      'D.positions.forEach(function(P,i){var b=document.createElement("button");b.className="chip";b.innerHTML=esc(P.label)+"<span>"+esc(P.w)+"×"+esc(P.h)+"</span>";b.onclick=function(){show(i)};$("#chips").appendChild(b)});' +
+      '$("#open").oninput=function(){openT=this.value/100};$("#tilt").oninput=function(){tiltT=this.value/100};[].forEach.call(document.querySelectorAll(".btns button"),function(b){b.onclick=function(){view3(b.dataset.v)}});' +
+      '(function loop(){requestAnimationFrame(loop);var ch=false;if(Math.abs(openT-openV)>8e-4){openV+=(openT-openV)*.12;ch=true}if(Math.abs(tiltT-tiltV)>8e-4){tiltV+=(tiltT-tiltV)*.12;ch=true}if(ch&&cur)apply();O.update();R.render(S,C)})();show(0)})();'
+    var body =
+      '<div class="wrap"><header><div class="brand" id="brand"></div><div class="meta" id="meta"></div></header>' +
+      '<div class="chips" id="chips"></div>' +
+      '<div class="grid"><div class="card"><div id="view"><div class="nos" id="nos">' + L.noscene + '</div><div class="hint">' + L.hint + '</div></div>' +
+      '<div class="ctrl"><label>' + L.open + ' <input id="open" type="range" min="0" max="100" value="0"></label><label id="tiltbox">' + L.tilt + ' <input id="tilt" type="range" min="0" max="100" value="0"></label>' +
+      '<div class="btns"><button data-v="in" class="on">' + L.inside + '</button><button data-v="out">' + L.outside + '</button><button data-v="spin">' + L.spin + '</button></div></div></div>' +
+      '<div class="card"><div class="det" id="det"></div><div class="drw" id="drw"></div></div></div>' +
+      '<div class="card spec tbl-wrap" id="spec"></div><footer id="foot"></footer></div>'
+    return (
+      '<!doctype html><html lang="' + (TR ? 'tr' : 'en') + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
+      esc((TR ? 'Teklif ' : 'Offer ') + '#' + D.quoteNo + ' — ' + (D.vinesso ? 'VINESSO by Özkanoğlu' : 'Özkanoğlu')) +
+      '</title><style>' + css + '</style></head><body>' + body +
+      '<script type="application/json" id="ozk-data">' + data + '<\/script><script>' + three + '<\/script><script>' + app + '<\/script></body></html>'
+    )
+  }
+
   /* ------------------------------------------------ alt araç çubuğu (dock) */
   function esc(t) {
     return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
@@ -2260,6 +2548,7 @@
     lever3D: lever3D,
     anim3D: anim3D,
     _reg: REG,
+    exportCustomer3D: exportCustomer3D,
     _tilt: TILT,
     useFav: useFav,
     favColors: favColors,

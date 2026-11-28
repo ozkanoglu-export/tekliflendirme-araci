@@ -218,9 +218,10 @@ sub(rf'({ID})=new ({ID})\(\{{color:({ID})\(({ID})\.fill\),roughness:\4\.matte\?\
     '3D: iç / dış profil gerçek folyo dokusu', expected=2)
 
 ms = find1(rf'const ({ID})=new {ID};\1\.background=new {ID}\(856602\),({ID})\.current=\1', '3D sahne')
+POS3D = find1(rf'=\(\{{pos:({ID}),catalog:{ID},sashOpenPercent:', '3D bileşeni').group(1)
 SCENE_REF = ms.group(2)
 sub(rf'({ID})\.add\(({ID})\)\}}\),({ID})\.current&&\(\3\.current\.target\.set\(0,({ID})/2,0\),\3\.current\.update\(\)\)\}}',
-    rf'\1.add(\2)}}),\3.current&&(\3.current.target.set(0,\4/2,0),\3.current.update()),{OZ}&&OZKV.fix3D(\1,{CT},{SCENE_REF}.current)}}',
+    rf'\1.add(\2)}}),\3.current&&(\3.current.target.set(0,\4/2,0),\3.current.update()),{OZ}&&OZKV.fix3D(\1,{CT},{SCENE_REF}.current,{POS3D})}}',
     '3D: ortam ışığı + doku yönü + tema arka planı')
 
 # ------------------------------------------------------------ tema CSS
@@ -264,7 +265,12 @@ ozkv = ozkv.replace('__OZK_TEX__', json.dumps(tex)).replace('__OZK_REHAU__', jso
 # ------------------------------------------------------------ birleştir
 out = html[:i0] + js + html[j0:]
 out = re.sub(r'<title>[^<]*</title>', '<title>Özkanoğlu PenCAD 6.2 Stüdyo</title>', out, count=1)
-inject = f'<style id="ozk-theme">\n{theme_css}\n</style>\n<script>\n{ozkv}\n</script>\n'
+viewer_js = (GOR / 'vendor' / 'ozk3.min.js').read_text(encoding='utf-8')
+if '</script' in viewer_js.lower() or '<!--' in viewer_js:
+    sys.exit('görüntüleyici paketinde </script var')
+if '<!--' in ozkv or '</script' in ozkv.lower():
+    sys.exit('ozk-visual.js içinde <!-- veya </script var')
+inject = f'<style id="ozk-theme">\n{theme_css}\n</style>\n<script type="text/plain" id="ozk3-src">{viewer_js}</script>\n<script>\n{ozkv}\n</script>\n'
 k = out.index(MOD_OPEN)
 out = out[:k] + inject + out[k:]
 OUT.parent.mkdir(parents=True, exist_ok=True)
