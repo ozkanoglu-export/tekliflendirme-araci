@@ -180,6 +180,33 @@ for pat, kind, name, cnt in FAV_TARGETS:
         f'favori: {name}', expected=cnt)
 
 # ------------------------------------------------------------ 3D
+
+# ------------------------------------------------------------ 3D: gerçekçi kol, katmanlı cam, HOK levye, vasistas
+mj = find1(rf'function ({ID})\(({ID})\)\{{const\{{kind:({ID}),sideSign:({ID}),hx:({ID}),hy:({ID}),sw:{ID},sh:{ID},sf:{ID},sashDepth:({ID}),handleOnRight:({ID}),isDoor:({ID}),isActive:{ID},isHS:({ID}),barLenM:{ID},hwMat:({ID})\}}=\2,({ID})=new ({ID});if\(\3==="none"\)return\{{group:\12\}};const ({ID})=\4\*\(\7\*\.48\);', '3D kol fonksiyonu')
+J_T, J_r, J_o, J_k, J_t, J_y, J_x, J_f, J_b, J_G = mj.group(12), mj.group(5), mj.group(6), mj.group(14), mj.group(4), mj.group(9), mj.group(10), mj.group(8), mj.group(11), mj.group(13)
+mcy = re.search(rf'new ({ID})\(new ({ID})\(\.014,\.014,{ID},16\),{ID}\)', js)
+msp = re.search(rf'new {ID}\(new ({ID})\(\.028,18,14\),{ID}\)', js)
+mbx = re.search(rf'new {ID}\(new ({ID})\(\.018,\.02,\.034\),{ID}\)', js)
+if not (mcy and msp and mbx):
+    sys.exit('3D yapıcılar bulunamadı')
+C3 = f'{{G:{J_G},M:{mcy.group(1)},B:{mbx.group(1)},C:{mcy.group(2)},S:{msp.group(1)}}}'
+print('  3D yapıcılar:', C3)
+sub(rf'const ({ID})={E(J_y)}&&!{E(J_x)},({ID})=\1\?\.165:{E(J_x)}\?\.145:\.075,',
+    lambda m: f'if({OZ}&&OZKV.lever3D){{const __h=OZKV.lever3D({C3},{J_T},{{r:{J_r},y:{J_o},k:{J_k},t:{J_t},door:{J_y}&&!{J_x},hs:{J_x},right:{J_f},mat:{J_b}}});if(__h)return __h}}' + m.group(0), '3D: gerçekçi kollar')
+
+mk = find1(rf'({ID})\.position\.set\(({ID}),({ID}),({ID})\),({ID})\.add\(({ID})\(({ID}),({ID}),({ID}),({ID}),({ID}),({ID}),!1\)\);const ({ID})=({ID})\.panes\.find', '3D kanat grubu')
+KE, IE, ST, GT, AT = mk.group(5), mk.group(7), mk.group(8), mk.group(9), mk.group(10)
+mhw = re.search(rf'barLenM:{ID},hwMat:({ID})\}}\)', js[mk.end():])
+UT = mhw.group(1)
+sub(rf'const ({ID})=\{{pivot:({ID}),opening:({ID})\.opening,',
+    lambda m: f'const {m.group(1)}={{__ozk:{{sash:{m.group(3)},inner:{KE},w:{IE},h:{ST},face:{GT},depth:{AT},hw:{UT},C:{C3}}},pivot:{m.group(2)},opening:{m.group(3)}.opening,', '3D: kanat bilgisi (levye için)')
+sub(rf'const ({ID})=\(({ID}),({ID})\)=>\{{if\(\2\.opening==="slide"\|\|\2\.opening==="liftslide"\)',
+    lambda m: f'const {m.group(1)}=({m.group(2)},{m.group(3)})=>{OZ}&&OZKV.anim3D?OZKV.anim3D({m.group(2)},{m.group(3)},__ozL0):__ozL0({m.group(2)},{m.group(3)}),__ozL0=({m.group(2)},{m.group(3)})=>{{if({m.group(2)}.opening==="slide"||{m.group(2)}.opening==="liftslide")', '3D: kol / HOK levye / vasistas animasyonu')
+mgl = find1(rf'({ID})=({ID})\?\.panelModel\?({ID})\(\2\.panelModel\):({ID})\?\.panel\?({ID}):({ID}),({ID})=new ({ID})\(new ({ID})\(({ID}),({ID}),({ID})\),\1\);if\(\7\.position\.set', '3D kanat camı')
+sub(rf'({E(mgl.group(7))})\.receiveShadow=!!({E(mgl.group(2))})\?\.panelModel,({ID})\.add\(\1\),',
+    rf'\1.receiveShadow=!!\2?.panelModel,\3.add(\1),{OZ}&&OZKV.glassLayers(\1,{mgl.group(4)},\2),', '3D: kanat camı katmanları')
+sub(rf'const ({ID})=new ({ID})\(new ({ID})\(({ID}),({ID}),({ID})\),({ID})\);if\(\1\.position\.set\(([^;]*?)\),({ID})\.add\(\1\),({ID})\.muntin\?\.enabled&&!({ID})\?\.panel&&!({ID})\.panelModel',
+    lambda m: m.group(0).replace(f'{m.group(9)}.add({m.group(1)}),', f'{m.group(9)}.add({m.group(1)}),{OZ}&&OZKV.glassLayers({m.group(1)},{m.group(11)},{m.group(12)}),', 1), '3D: sabit cam katmanları')
 mg = find1(rf'({ID})=({ID})\.colors\[({ID})\.color\]\?\?\2\.colors\.WHITE,({ID})=\2\.colors\[\3\.colorOutside\|\|\3\.color\]\?\?\1,({ID})=new ({ID})\((\{{color:8246268,transparent:!0,opacity:\.34,roughness:\.08,metalness:\.1,reflectivity:\.9,side:{ID}\}})\)', '3D cam malzemesi')
 cat3, pos3, glassObj = mg.group(2), mg.group(3), mg.group(7)
 sub(E(f'{mg.group(5)}=new {mg.group(6)}({glassObj})'),

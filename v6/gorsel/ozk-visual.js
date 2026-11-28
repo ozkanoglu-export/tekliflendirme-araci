@@ -749,6 +749,343 @@
     }
   }
 
+
+  /* ============================================= 3D GERÇEKÇİLİK (6.2) */
+  function clamp01(x) {
+    return x < 0 ? 0 : x > 1 ? 1 : x
+  }
+  function ease(x) {
+    x = clamp01(x)
+    return x * x * (3 - 2 * x)
+  }
+  // Cam dizilimi: "4+16+4+16+4" → [4,16,4,16,4]; "44+12+4" → lamine 8.76 + 12 + 4
+  function glassStack(g) {
+    var name = String((g && g.name) || '')
+    var total = (g && g.thicknessMm) || 24
+    var m = name.match(/^\s*(\d+(?:[.,]\d+)?(?:\s*lamine)?(?:\s*\+\s*\d+(?:[.,]\d+)?)+)/i)
+    var parts = []
+    if (m) {
+      m[1].split('+').forEach(function (t, i) {
+        var v = parseFloat(t.replace(',', '.'))
+        if (!(v > 0)) return
+        if (i % 2 === 0) {
+          // 44 / 33 / 55 / 44.2 → iki cam + PVB
+          var lam = /^\s*(\d)\1(?:[.,]\d)?\s*$/.test(t.replace(/lamine/i, '')) || /lamine/i.test(t)
+          if (lam && v >= 11) {
+            var a = Math.floor(v / 10)
+            parts.push({ glass: true, t: a * 2 + 0.76, lam: true })
+          } else parts.push({ glass: true, t: v })
+        } else parts.push({ glass: false, t: v })
+      })
+    }
+    if (!parts.length || !parts[0].glass) {
+      if (total <= 12) parts = [{ glass: true, t: total }]
+      else parts = [{ glass: true, t: 4 }, { glass: false, t: total - 8 }, { glass: true, t: 4 }]
+    }
+    var sum = parts.reduce(function (a, b) {
+      return a + b.t
+    }, 0)
+    var k = Math.abs(sum - total) > 2 && total > 0 ? total / sum : 1
+    parts.forEach(function (x) {
+      x.t *= k
+    })
+    return parts
+  }
+  // Tek kutu cam → gerçek katmanlar: cam levhaları, aradaki boşluk, ara çıta (warm-edge), lamine PVB
+  function glassLayers(mesh, g, pane) {
+    try {
+      if (!mesh || !mesh.geometry || !mesh.material || !g || g.panel || (pane && pane.panelModel)) return
+      var mat = mesh.material
+      if (!mat.transparent) return
+      var P = mesh.geometry.parameters
+      if (!P || !P.width || !P.height) return
+      var W = P.width,
+        H = P.height,
+        U = 0.001
+      var parts = glassStack(g)
+      var nGlass = parts.filter(function (x) {
+        return x.glass
+      }).length
+      var Box = mesh.geometry.constructor,
+        Mesh = mesh.constructor,
+        Mat = mat.constructor
+      var op = mat.opacity == null ? 0.34 : mat.opacity
+      var a = 1 - Math.pow(1 - Math.min(0.92, op), 1 / Math.max(1, nGlass * 2))
+      var face = mat.clone()
+      face.opacity = Math.max(0.05, a)
+      face.depthWrite = false
+      var edge = new Mat({ color: 0x8fcfb8, roughness: 0.15, metalness: 0, transparent: true, opacity: 0.78 })
+      var spacerM = new Mat({ color: 0x2b2f34, roughness: 0.62, metalness: 0.15 })
+      var pvb = new Mat({ color: 0xf4f6f2, roughness: 0.4, transparent: true, opacity: 0.12, depthWrite: false })
+      var total = parts.reduce(function (s, x) {
+        return s + x.t
+      }, 0)
+      var z = -total / 2
+      var mats = [edge, edge, edge, edge, face, face]
+      var sp = 0.0095 // ara çıta görünen yüksekliği
+      parts.forEach(function (x) {
+        var t = x.t * U,
+          zc = (z + x.t / 2) * U
+        if (x.glass) {
+          var gm = new Mesh(new Box(W, H, t), mats)
+          gm.position.set(0, 0, zc)
+          gm.renderOrder = 2
+          mesh.add(gm)
+          if (x.lam) {
+            var pv = new Mesh(new Box(W * 0.999, H * 0.999, 0.00076), pvb)
+            pv.position.set(0, 0, zc)
+            mesh.add(pv)
+          }
+        } else {
+          // ara çıta çerçevesi (kenardan 1 mm içeride, butil dahil)
+          var d = t * 0.98,
+            ins = 0.001
+          ;[
+            [W - 2 * ins, sp, 0, H / 2 - ins - sp / 2],
+            [W - 2 * ins, sp, 0, -H / 2 + ins + sp / 2],
+            [sp, H - 2 * ins - 2 * sp, -W / 2 + ins + sp / 2, 0],
+            [sp, H - 2 * ins - 2 * sp, W / 2 - ins - sp / 2, 0],
+          ].forEach(function (b) {
+            var sm = new Mesh(new Box(b[0], b[1], d), spacerM)
+            sm.position.set(b[2], b[3], zc)
+            mesh.add(sm)
+          })
+        }
+        z += x.t
+      })
+      var hidden = mat.clone()
+      hidden.visible = false
+      mesh.material = hidden
+      mesh.userData.ozkLayered = true
+    } catch (e) {}
+  }
+
+  // Gerçekçi pencere / kapı kolu (rozet + boyun + kavrama); kapalıyken aşağı bakar
+  function lever3D(C, T, o) {
+    try {
+      var M = C.M,
+        B = C.B,
+        Cy = C.C,
+        Sp = C.S,
+        G = C.G
+      var t = o.t,
+        door = o.door,
+        hs = o.hs
+      var mat = o.mat.clone ? o.mat.clone() : o.mat
+      if (mat.roughness != null) mat.roughness = Math.min(mat.roughness, 0.3)
+      function cyl(r1, r2, h, seg) {
+        return new M(new Cy(r1, r2, h, seg || 24), mat)
+      }
+      // rozet (yuvarlatılmış dikdörtgen)
+      var rw = door ? 0.034 : hs ? 0.036 : 0.029,
+        rh = door ? 0.2 : hs ? 0.15 : 0.052,
+        rd = 0.011
+      var ro = new G()
+      ro.position.set(o.r, o.y - (door ? 0.03 : 0), o.k + t * (rd / 2))
+      var core = new M(new B(rw, rh, rd), mat)
+      ro.add(core)
+      ;[rh / 2, -rh / 2].forEach(function (yy) {
+        var c = cyl(rw / 2, rw / 2, rd, 28)
+        c.rotation.x = Math.PI / 2
+        c.position.y = yy
+        ro.add(c)
+      })
+      if (door) {
+        var key = new M(new Cy(0.0085, 0.0085, 0.004, 20), new mat.constructor({ color: 0x1d1f22, roughness: 0.5, metalness: 0.6 }))
+        key.rotation.x = Math.PI / 2
+        key.position.set(0, -0.06, t * (rd / 2 + 0.001))
+        ro.add(key)
+      }
+      T.add(ro)
+      // döner kısım
+      var w = new G()
+      w.position.set(o.r, o.y, o.k + t * rd)
+      var collar = cyl(0.0135, 0.0135, 0.004, 28)
+      collar.rotation.x = Math.PI / 2
+      collar.position.z = t * 0.002
+      w.add(collar)
+      var neckL = 0.03
+      var neck = cyl(0.0092, 0.0102, neckL, 24)
+      neck.rotation.x = Math.PI / 2
+      neck.position.z = t * (0.004 + neckL / 2)
+      w.add(neck)
+      var zg = t * (0.004 + neckL)
+      var elbow = new M(new Sp(0.0102, 20, 16), mat)
+      elbow.position.z = zg
+      elbow.castShadow = true
+      w.add(elbow)
+      var L = door ? 0.135 : hs ? 0.19 : 0.118
+      var grip = cyl(0.0098, 0.0082, L, 24)
+      var tip = new M(new Sp(0.0082, 20, 16), mat)
+      grip.castShadow = true
+      if (door) {
+        var dir = o.right ? -1 : 1
+        grip.rotation.z = Math.PI / 2
+        grip.position.set((dir * L) / 2, 0, zg)
+        tip.position.set(dir * L, 0, zg)
+      } else {
+        // aşağı doğru, uca doğru hafif dışa kıvrık
+        grip.position.set(0, -L / 2, zg + t * 0.003)
+        grip.rotation.x = t * 0.05
+        tip.position.set(0, -L, zg + t * 0.0085)
+      }
+      w.add(grip)
+      w.add(tip)
+      T.add(w)
+      return { group: T, leverPivot: w }
+    } catch (e) {
+      return null
+    }
+  }
+
+  // Kanat animasyonu: kol dönüşü, HOK sırası (aktif → levye → pasif), çift açılım vasistas
+  var REG = new Set()
+  var TILT = { target: 0, cur: 0 }
+  function sashInfo(j) {
+    var z = j.__ozk
+    if (!z) return null
+    if (z.role === undefined) {
+      z.role = 'single'
+      var par = j.pivot.parent
+      var list = (par && par.userData.ozkSashes) || []
+      if (par) par.userData.ozkSashes = list
+      if (list.indexOf(j) < 0) list.push(j)
+      list.forEach(function (x) {
+        var a = x.__ozk,
+          b = list.filter(function (y) {
+            return y !== x && y.__ozk.sash.leafId === a.sash.leafId && (y.opening === 'turn' || y.opening === 'tiltturn')
+          })[0]
+        if (!b || (x.opening !== 'turn' && x.opening !== 'tiltturn')) return
+        a.role = a.sash.active ? 'hokActive' : 'hokPassive'
+      })
+    }
+    return z
+  }
+  function levye(j) {
+    var z = j.__ozk
+    if (z.levye) return z.levye
+    var C = z.C,
+      mat = z.hw && z.hw.clone ? z.hw.clone() : z.hw
+    var meetX = z.sash.hinge === 'right' ? z.face * 0.5 : z.w - z.face * 0.5
+    var zz = z.depth * 0.48
+    var base = new C.M(new C.B(0.02, 0.17, 0.004), mat)
+    base.position.set(meetX, z.h / 2, zz + 0.002)
+    z.inner.add(base)
+    var piv = new C.G()
+    piv.position.set(meetX, z.h / 2 + 0.07, zz + 0.006)
+    var bar = new C.M(new C.B(0.015, 0.13, 0.007), mat)
+    bar.position.set(0, -0.065, 0)
+    bar.castShadow = true
+    piv.add(bar)
+    var grip = new C.M(new C.B(0.019, 0.022, 0.011), mat)
+    grip.position.set(0, -0.124, 0.002)
+    piv.add(grip)
+    var ax = new C.M(new C.C(0.005, 0.005, 0.02, 16), mat)
+    ax.rotation.z = Math.PI / 2
+    piv.add(ax)
+    z.inner.add(piv)
+    z.levye = piv
+    return piv
+  }
+  function anim3D(j, O, orig) {
+    try {
+      j.__lastO = O
+      j.__orig = orig
+      var z = sashInfo(j)
+      if (!z) return orig(j, O)
+      REG.add(j)
+      var op = j.opening
+      if (op !== 'turn' && op !== 'tiltturn') return orig(j, O)
+      var s = z.sash
+      var right = s.handleSide ? s.handleSide === 'right' : s.hinge === 'left'
+      if (z.role === 'hokPassive') {
+        var lv = ease((O - 0.6) / 0.12)
+        levye(j).rotation.x = -lv * Math.PI * 0.55
+        j.pivot.rotation.x = 0
+        return orig(j, ease((O - 0.72) / 0.28))
+      }
+      var p = z.role === 'hokActive' ? ease((O - 0.08) / 0.5) : ease((O - 0.08) / 0.92)
+      var tilt = op === 'tiltturn' ? TILT.cur : 0
+      var hp = j.leverPivot
+      if (tilt > 0.001 && O < 0.001) {
+        j.pivot.rotation.y = 0
+        var I = j.openDirection === 'outward' ? -1 : 1
+        j.pivot.rotation.x = I * ease((tilt - 0.08) / 0.92) * (Math.PI / 9)
+        if (hp && !s.door) hp.rotation.z = Math.PI * ease(tilt / 0.12)
+        return
+      }
+      j.pivot.rotation.x = 0
+      orig(j, p)
+      if (hp) {
+        if (s.door) {
+          var dir = right ? -1 : 1
+          hp.rotation.z = -dir * 0.6 * Math.sin(Math.PI * clamp01(O / 0.2))
+        } else hp.rotation.z = (right ? -1 : 1) * (Math.PI / 2) * ease(O / 0.1)
+      }
+    } catch (e) {
+      return orig(j, O)
+    }
+  }
+  function tiltLoop() {
+    var d = TILT.target - TILT.cur
+    if (Math.abs(d) > 0.0008) {
+      TILT.cur += d * 0.14
+      if (Math.abs(TILT.target - TILT.cur) <= 0.0008) TILT.cur = TILT.target
+      REG.forEach(function (j) {
+        if (!j.pivot || !j.pivot.parent) return REG.delete(j)
+        if (j.opening === 'tiltturn' && j.__orig) anim3D(j, j.__lastO || 0, j.__orig)
+      })
+    }
+    requestAnimationFrame(tiltLoop)
+  }
+  requestAnimationFrame(tiltLoop)
+  // 3D görünüme "Vasistas" kaydırma çubuğu (çift açılımlı kanatlar)
+  function tiltUI() {
+    try {
+      var has = false
+      REG.forEach(function (j) {
+        if (j.opening === 'tiltturn' && j.pivot && j.pivot.parent) has = true
+      })
+      document.querySelectorAll('canvas[data-engine^="three"]').forEach(function (cv) {
+        var box = cv.parentElement
+        if (!box) return
+        var ui = box.querySelector(':scope > .ozk-tilt')
+        if (!has) {
+          if (ui) ui.style.display = 'none'
+          return
+        }
+        if (!ui) {
+          if (getComputedStyle(box).position === 'static') box.style.position = 'relative'
+          ui = document.createElement('label')
+          ui.className = 'ozk-tilt'
+          ui.title = 'Çift açılımlı kanatları vasistas (devirme) konumuna getirir. Kanat açıkken önce kanadı kapatın.'
+          ui.innerHTML = '<span>⤓ Vasistas</span><input type="range" min="0" max="100" step="1"><b>0%</b>'
+          var inp = ui.querySelector('input'),
+            lab = ui.querySelector('b')
+          inp.addEventListener('input', function () {
+            TILT.target = inp.value / 100
+            lab.textContent = inp.value + '%'
+            document.querySelectorAll('.ozk-tilt input').forEach(function (x) {
+              if (x !== inp) {
+                x.value = inp.value
+                x.parentNode.querySelector('b').textContent = inp.value + '%'
+              }
+            })
+          })
+          ;['pointerdown', 'wheel', 'mousedown', 'touchstart'].forEach(function (ev) {
+            ui.addEventListener(ev, function (e) {
+              e.stopPropagation()
+            })
+          })
+          box.appendChild(ui)
+        }
+        ui.style.display = ''
+        ui.querySelector('input').value = Math.round(TILT.target * 100)
+        ui.querySelector('b').textContent = Math.round(TILT.target * 100) + '%'
+      })
+    } catch (e) {}
+  }
+
   var SCENES = []
   function envTexture(CT) {
     var c = document.createElement('canvas')
@@ -801,6 +1138,7 @@
         mm.userData = { ozkTexClone: true }
         o.material = mm
       })
+      setTimeout(tiltUI, 60)
     } catch (e) {}
   }
 
@@ -1918,6 +2256,11 @@
     applyAntet: applyAntet,
     issuedPanel: issuedPanel,
     ws: ws,
+    glassLayers: glassLayers,
+    lever3D: lever3D,
+    anim3D: anim3D,
+    _reg: REG,
+    _tilt: TILT,
     useFav: useFav,
     favColors: favColors,
     starMini: starMini,
