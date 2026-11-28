@@ -155,10 +155,10 @@ sub(rf'({E(QJ)}\.jsxs\("div",\{{className:"print-avoid-break grid grid-cols-1 ga
 
 
 # ------------------------------------------------------------ projeler: verilen teklifler
-mp2 = find1(rf'\(\{{project:({ID}),savedProjects:({ID}),catalog:({ID}),settings:({ID}),grandTotal:({ID}),onLoadProject:({ID}),onImportBundle:{ID},onSaveProject:{ID},onDeleteSaved:{ID},onStartNewProject:{ID},onEditProjectSetup:{ID},notify:({ID})\}}\)=>\{{const\[{ID},{ID}\]=({ID})\.useState\(""\)', 'projeler bileşeni')
-PJ_LOAD, PJ_NOTIFY, PJ_REACT = mp2.group(6), mp2.group(7), mp2.group(8)
+mp2 = find1(rf'\(\{{project:({ID}),savedProjects:({ID}),catalog:({ID}),settings:({ID}),grandTotal:({ID}),onLoadProject:({ID}),onImportBundle:{ID},onSaveProject:({ID}),onDeleteSaved:{ID},onStartNewProject:{ID},onEditProjectSetup:{ID},notify:({ID})\}}\)=>\{{const\[{ID},{ID}\]=({ID})\.useState\(""\)', 'projeler bileşeni')
+PJ_LOAD, PJ_SAVE, PJ_NOTIFY, PJ_REACT, PJ_PROJ, PJ_CAT = mp2.group(6), mp2.group(7), mp2.group(8), mp2.group(9), mp2.group(1), mp2.group(3)
 sub(rf'({ID})\.jsxs\("div",\{{className:"rounded-2xl border border-ink-800 bg-ink-900/60 p-4 space-y-3",children:\[\1\.jsxs\("div",\{{className:"flex items-center justify-between border-b border-ink-800 pb-2",children:\[\1\.jsxs\("span",\{{className:"flex items-center gap-2 font-bold text-brand-300",children:\[\1\.jsx\({ID},\{{size:15\}}\)," Tarayıcı Arşivi \("',
-    lambda m: f'{OZ}?OZKV.issuedPanel({m.group(1)},{PJ_REACT},{{load:{PJ_LOAD},notify:{PJ_NOTIFY}}}):null,' + m.group(0), 'projeler: verilen teklifler paneli')
+    lambda m: f'{OZ}?OZKV.issuedPanel({m.group(1)},{PJ_REACT},{{load:{PJ_LOAD},notify:{PJ_NOTIFY},save:{PJ_SAVE},project:{PJ_PROJ},catalog:{PJ_CAT}}}):null,' + m.group(0), 'projeler: verilen teklifler paneli')
 
 
 # ------------------------------------------------------------ favoriler
@@ -270,7 +270,10 @@ if '</script' in viewer_js.lower() or '<!--' in viewer_js:
     sys.exit('görüntüleyici paketinde </script var')
 if '<!--' in ozkv or '</script' in ozkv.lower():
     sys.exit('ozk-visual.js içinde <!-- veya </script var')
-inject = f'<style id="ozk-theme">\n{theme_css}\n</style>\n<script type="text/plain" id="ozk3-src">{viewer_js}</script>\n<script>\n{ozkv}\n</script>\n'
+ai_js = (GOR / 'vendor' / 'ozkai.min.js').read_text(encoding='utf-8')
+if '</script' in ai_js.lower() or '<!--' in ai_js:
+    sys.exit('AI paketinde </script veya <!-- var')
+inject = f'<style id="ozk-theme">\n{theme_css}\n</style>\n<script type="text/plain" id="ozk3-src">{viewer_js}</script>\n<script type="text/plain" id="ozkai-src">{ai_js}</script>\n<script>\n{ozkv}\n</script>\n'
 k = out.index(MOD_OPEN)
 out = out[:k] + inject + out[k:]
 OUT.parent.mkdir(parents=True, exist_ok=True)

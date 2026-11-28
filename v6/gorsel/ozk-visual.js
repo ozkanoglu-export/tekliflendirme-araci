@@ -1893,6 +1893,11 @@
   }
   function issuedPanel(n, R, props) {
     try {
+      PJ.load = props.load
+      PJ.save = props.save
+      PJ.project = props.project
+      PJ.catalog = props.catalog
+      PJ.t = Date.now()
       return n.jsx(IssuedPanel, Object.assign({ n: n, R: R }, props))
     } catch (e) {
       return null
@@ -2323,6 +2328,580 @@
     )
   }
 
+
+  /* ============================================= AI ÖLÇÜ OKUMA (Claude) — 6.2 */
+  // Müşteri talebi (PDF / görsel / e-posta metni) → pozlar. Ölçüler iki bağımsız okumayla karşılaştırılır;
+  // uyuşmayan / emin olunmayan her ölçü kullanıcı onayı olmadan projeye girmez.
+  var AI = { key: 'ozk.ai.key', model: 'claude-opus-5-5' }
+  var PJ = { load: null, save: null, project: null, catalog: null, t: 0 }
+  function aiClient() {
+    if (!window.OZKAnthropic) {
+      var src = (document.getElementById('ozkai-src') || {}).textContent || ''
+      if (!src) throw new Error('AI modülü bu dosyada yok')
+      var sc = document.createElement('script')
+      sc.textContent = src
+      document.head.appendChild(sc)
+    }
+    var key = getPref(AI.key, '')
+    if (!key) throw new Error('API anahtarı girilmemiş')
+    // Anahtar yalnızca bu bilgisayarda saklanır; ERP'ye geçince istekler sunucu üzerinden yapılacak.
+    return new window.OZKAnthropic({ apiKey: key, dangerouslyAllowBrowser: true })
+  }
+  var AI_TYPES = ['fixed', 'tilt_turn', 'turn', 'tilt_only', 'french_double', 'door', 'door_tilt_turn', 'double_door', 'sliding', 'lift_slide', 'mixed', 'unknown']
+  var AI_TYPE_TR = {
+    fixed: 'Sabit',
+    tilt_turn: 'Çift açılım kanat',
+    turn: 'Tek açılım kanat',
+    tilt_only: 'Vasistas',
+    french_double: 'Çift kanat HOK',
+    door: 'Kapı',
+    door_tilt_turn: 'Balkon kapısı (çift açılım)',
+    double_door: 'Çift kanat kapı',
+    sliding: 'Sürme',
+    lift_slide: 'Hebeschiebe',
+    mixed: 'Bölmeli (karma)',
+    unknown: 'Belirsiz',
+  }
+  function nullable(t) {
+    return { anyOf: [{ type: t }, { type: 'null' }] }
+  }
+  var SEC_TYPES = AI_TYPES.filter(function (t) {
+    return t !== 'mixed'
+  })
+  var AI_SCHEMA = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['customer', 'project', 'positions', 'warnings'],
+    properties: {
+      customer: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['company', 'name', 'country'],
+        properties: { company: { type: 'string' }, name: { type: 'string' }, country: { type: 'string' } },
+      },
+      project: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['name', 'profile_system', 'color_inside', 'color_outside', 'glass', 'shutter', 'flyscreen', 'notes'],
+        properties: {
+          name: { type: 'string' },
+          profile_system: { type: 'string' },
+          color_inside: { type: 'string' },
+          color_outside: { type: 'string' },
+          glass: { type: 'string' },
+          shutter: { type: 'string' },
+          flyscreen: { type: 'string' },
+          notes: { type: 'string' },
+        },
+      },
+      positions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['ref', 'title', 'qty', 'width_mm', 'height_mm', 'original_text', 'unit', 'confidence', 'type', 'sections', 'top_light_height_mm', 'hinge', 'shutter', 'flyscreen', 'color_inside', 'color_outside', 'notes'],
+          properties: {
+            ref: { type: 'string' },
+            title: { type: 'string' },
+            qty: { type: 'integer' },
+            width_mm: nullable('number'),
+            height_mm: nullable('number'),
+            original_text: { type: 'string' },
+            unit: { type: 'string', enum: ['mm', 'cm', 'm', 'inch', 'unknown'] },
+            confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+            type: { type: 'string', enum: AI_TYPES },
+            sections: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['type', 'width_mm'],
+                properties: { type: { type: 'string', enum: SEC_TYPES }, width_mm: nullable('number') },
+              },
+            },
+            top_light_height_mm: nullable('number'),
+            hinge: { type: 'string', enum: ['left', 'right', 'unknown'] },
+            shutter: { type: 'string', enum: ['none', 'monoblock', 'external', 'hidden_lento', 'unknown'] },
+            flyscreen: { type: 'string', enum: ['none', 'fixed', 'hinged', 'pleated', 'unknown'] },
+            color_inside: { type: 'string' },
+            color_outside: { type: 'string' },
+            notes: { type: 'string' },
+          },
+        },
+      },
+      warnings: { type: 'array', items: { type: 'string' } },
+    },
+  }
+  var AI_SYSTEM =
+    'You read customer requests for PVC/aluminium windows and doors (architect drawings, window schedules, hand sketches, photos of notes, e-mails, PDFs) for ÖZKANOĞLU, a window manufacturer, and list every position to be quoted.\n\n' +
+    'Dimensions are the critical output: a wrong dimension means a wrongly manufactured window. So:\n' +
+    '- Transcribe each width and height exactly as written. Never estimate, round, scale from a drawing or infer a number that is not written. If a dimension is missing or unreadable, set it to null and say so in warnings.\n' +
+    '- Convert to millimetres (cm ×10, m ×1000, inch ×25.4) and record the original unit and the exact source text (e.g. "W1 120x140 cm") in original_text.\n' +
+    '- European schedules write width × height (B × H, L × H, W × H). If the order is ambiguous, use the drawing proportions or headings to decide, and set confidence to low with a note explaining the doubt.\n' +
+    '- If the same item appears with two different sizes, report both in notes and set confidence low.\n' +
+    '- confidence: high only when the number is printed clearly and its meaning (width vs height, which item) is unambiguous.\n\n' +
+    'Other fields: qty is the number of identical units (default 1). type describes the opening: tilt_turn (Dreh-Kipp / çift açılım), turn (tek açılım), tilt_only (vasistas / Kipp), french_double (two sashes meeting without a mullion, Stulp / HOK), door, door_tilt_turn (balcony door that also tilts), double_door, sliding, lift_slide (Hebeschiebe / HST), fixed, mixed (several sections side by side — list them left to right in sections with their widths when written, null otherwise). top_light_height_mm is the height of a separate fanlight / transom above the main unit when written. hinge is the hinge side seen from inside when stated. Record requested profile system, colours (with RAL / foil names exactly as written), glass, roller shutter and insect screen per position and, when stated for the whole job, in project. Write titles and notes in Turkish. Do not invent customer details.'
+  function fileToBlock(f) {
+    return new Promise(function (res, rej) {
+      var isImg = /^image\//.test(f.type)
+      var isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name)
+      var isText = /^text\//.test(f.type) || /\.(txt|eml|csv|md)$/i.test(f.name)
+      var rd = new FileReader()
+      rd.onerror = function () {
+        rej(new Error(f.name + ' okunamadı'))
+      }
+      if (isText) {
+        rd.onload = function () {
+          res({ type: 'text', text: 'Dosya: ' + f.name + '\n\n' + rd.result })
+        }
+        rd.readAsText(f)
+        return
+      }
+      if (!isImg && !isPdf) return rej(new Error(f.name + ': desteklenmeyen dosya (PDF, görsel veya metin seçin)'))
+      rd.onload = function () {
+        var b64 = String(rd.result).split(',')[1]
+        if (isPdf) return res({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } })
+        // büyük görselleri yazı okunur kalacak şekilde küçült (en uzun kenar 2400 px)
+        var im = new Image()
+        im.onload = function () {
+          var k = Math.min(1, 2400 / Math.max(im.width, im.height))
+          if (k >= 1 && f.size < 3.5e6 && /jpeg|png|webp|gif/.test(f.type)) return res({ type: 'image', source: { type: 'base64', media_type: f.type, data: b64 } })
+          var c = document.createElement('canvas')
+          c.width = Math.round(im.width * k)
+          c.height = Math.round(im.height * k)
+          var x = c.getContext('2d')
+          x.fillStyle = '#fff'
+          x.fillRect(0, 0, c.width, c.height)
+          x.drawImage(im, 0, 0, c.width, c.height)
+          res({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.92).split(',')[1] } })
+        }
+        im.onerror = function () {
+          rej(new Error(f.name + ' görsel açılamadı'))
+        }
+        im.src = rd.result
+      }
+      rd.readAsDataURL(f)
+    })
+  }
+  async function aiRead(client, blocks) {
+    var stream = client.beta.messages.stream({
+      model: AI.model,
+      max_tokens: 32000,
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+      output_config: { effort: 'high', format: { type: 'json_schema', schema: AI_SCHEMA } },
+      system: AI_SYSTEM,
+      messages: [
+        {
+          role: 'user',
+          content: blocks.concat([{ type: 'text', text: 'List every window/door position in the material above, following the rules.' }]),
+        },
+      ],
+    })
+    var msg = await stream.finalMessage()
+    if (msg.stop_reason === 'refusal') throw new Error('Model isteği reddetti' + (msg.stop_details && msg.stop_details.category ? ' (' + msg.stop_details.category + ')' : ''))
+    if (msg.stop_reason === 'max_tokens') throw new Error('Yanıt çok uzun kesildi; belgeyi bölerek deneyin')
+    var txt = msg.content
+      .filter(function (b) {
+        return b.type === 'text'
+      })
+      .map(function (b) {
+        return b.text
+      })
+      .join('')
+    return JSON.parse(txt)
+  }
+  // ---- katalog eşleme
+  function norm(t) {
+    return String(t || '')
+      .toLocaleLowerCase('tr')
+      .replace(/[ıi̇]/g, 'i')
+      .replace(/ş/g, 's')
+      .replace(/ğ/g, 'g')
+      .replace(/ü/g, 'u')
+      .replace(/ö/g, 'o')
+      .replace(/ç/g, 'c')
+  }
+  function matchSeries(cat, txt, type) {
+    var S = cat.series || {}
+    var t = norm(txt)
+    function has(k) {
+      return S[k] ? k : null
+    }
+    if (type === 'lift_slide') return has('AKDENIZ_HEBESCHIEBE') || null
+    if (type === 'sliding') return has('PERGE_SURME') || null
+    var best = null
+    Object.keys(S).forEach(function (k) {
+      var s = S[k]
+      if (s.kind && s.kind !== 'casement') return
+      var keys = [s.key, s.shortName, s.name].map(norm)
+      var nums = (norm(s.shortName || s.name).match(/\d{2,3}/g) || []).filter(function (n) {
+        return n.length === 3
+      })
+      if (t && (keys.some(function (x) {
+        return x && t.indexOf(x) >= 0
+      }) || nums.some(function (n) {
+        return t.indexOf(n) >= 0
+      }) || (norm(s.shortName).split(' ')[0].length > 3 && t.indexOf(norm(s.shortName).split(' ')[0]) >= 0)))
+        best = best || k
+    })
+    return best
+  }
+  var COLOR_WORDS = [
+    [/white|beyaz|weiss|weiß|blanc|bianco|9016/, 'WHITE'],
+    [/anthra|antras|7016/, 'ANTHRACITE'],
+    [/golden ?oak|altin ?mese|golden/, 'GOLDEN_OAK'],
+    [/black|siyah|schwarz|noir|nero|9005/, 'BLACK'],
+    [/walnut|ceviz|nussbaum/, 'WALNUT'],
+    [/winchester/, 'WINCHESTER'],
+    [/irish|irlanda/, 'IRISH_OAK'],
+    [/dark ?oak|koyu mese/, 'DARK_OAK'],
+    [/hazel|findik/, 'HAZELNUT'],
+    [/7035|light grey|acik gri/, 'LIGHT_GREY'],
+    [/quartz|kuvars/, 'QUARTZ_GREY'],
+  ]
+  function matchColor(cat, txt) {
+    var C = cat.colors || {}
+    var t = norm(txt)
+    if (!t) return null
+    var ral = t.match(/\b(\d{4})\b/)
+    var hit = null
+    Object.keys(C).forEach(function (k) {
+      if (hit) return
+      var c = C[k],
+        nm2 = norm([c.name, c.nameEN, c.code, k].join(' '))
+      if (ral && nm2.indexOf(ral[1]) >= 0) hit = k
+    })
+    if (hit) return hit
+    for (var i = 0; i < COLOR_WORDS.length; i++) if (COLOR_WORDS[i][0].test(t)) {
+      var k2 = COLOR_WORDS[i][1]
+      if (C[k2]) return k2
+      var alt = Object.keys(C).filter(function (k) {
+        return k.indexOf(k2) === 0
+      })[0]
+      if (alt) return alt
+    }
+    Object.keys(C).forEach(function (k) {
+      if (hit) return
+      var c = C[k]
+      ;[c.name, c.nameEN].forEach(function (n) {
+        var w = norm(n).split(' (')[0]
+        if (w.length > 3 && t.indexOf(w) >= 0) hit = k
+      })
+    })
+    return hit
+  }
+  function matchGlass(cat, txt, seriesKey) {
+    var G = cat.glasses || {}
+    var t = norm(txt)
+    var s = (cat.series || {})[seriesKey] || {}
+    function first(re) {
+      return Object.keys(G).filter(function (k) {
+        return !G[k].panel && re.test(norm(G[k].name))
+      })[0]
+    }
+    if (/triple|uclu|3-?fach|dreifach|3 ?cam/.test(t)) return first(/cift sinerji uclu|uclu/) || null
+    if (/lamin|vsg|p4a|44\.2|33\.1/.test(t)) return first(/lamine/) || null
+    if (/satin|buzlu|frost|milchglas|ornament/.test(t)) return first(/satina|buzlu/) || null
+    if ((s.thickness || 70) >= 80 && G.SN4164TP146SN) return 'SN4164TP146SN'
+    return G.DC4164SN ? 'DC4164SN' : Object.keys(G)[0]
+  }
+  var SH_MAP = { monoblock: 'monoblock', external: 'external', hidden_lento: 'hidden_lento' }
+  var FS_MAP = { fixed: 'SABIT', hinged: 'MENTESELI', pleated: 'PILELI_DIKEY' }
+  function uid(p) {
+    return p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+  }
+  function leafFor(type, hinge) {
+    var h = hinge === 'left' ? 'left' : 'right'
+    var M = {
+      fixed: ['fixed', 'tiltturn'],
+      tilt_turn: ['sash', 'tiltturn'],
+      turn: ['sash', 'turn'],
+      tilt_only: ['sash', 'tilt'],
+      french_double: ['pair', 'tiltturn'],
+      door: ['door', 'turn'],
+      door_tilt_turn: ['door', 'tiltturn'],
+      double_door: ['doorPair', 'turn'],
+      sliding: ['sash', 'slide'],
+      lift_slide: ['sash', 'liftslide'],
+    }
+    var m = M[type] || M.tilt_turn
+    return { kind: 'leaf', id: uid('lf'), fill: m[0], opening: m[1], hinge: m[0] === 'pair' || m[0] === 'doorPair' ? 'right' : h, handleMode: 'center', handleHeightMm: 1050 }
+  }
+  function rootFor(r) {
+    var main
+    var secs = (r.sections || []).filter(function (x) {
+      return x && x.type
+    })
+    if (secs.length >= 2 && r.type !== 'sliding' && r.type !== 'lift_slide') {
+      main = {
+        kind: 'split',
+        id: uid('sp'),
+        dir: 'v',
+        children: secs.map(function (x, i) {
+          return { size: i < secs.length - 1 && x.width_mm > 0 ? Math.round(x.width_mm) : null, field: leafFor(x.type, r.hinge) }
+        }),
+      }
+    } else main = leafFor(r.type === 'mixed' || r.type === 'unknown' ? 'tilt_turn' : r.type, r.hinge)
+    if (r.top_light_height_mm > 0 && r.top_light_height_mm < (r.height_mm || 0) - 300)
+      return { kind: 'split', id: uid('sp'), dir: 'h', children: [{ size: Math.round(r.top_light_height_mm), field: leafFor('fixed') }, { size: null, field: main }] }
+    return main
+  }
+  // ---- iki okumayı karşılaştır
+  function compareRuns(a, b) {
+    var A = (a && a.positions) || [],
+      B = (b && b.positions) || []
+    return A.map(function (p, i) {
+      var q = B[i]
+      var issues = []
+      if (!q) issues.push('İkinci okumada bu poz yok')
+      else {
+        if (p.width_mm !== q.width_mm) issues.push('Genişlik iki okumada farklı: ' + p.width_mm + ' / ' + q.width_mm)
+        if (p.height_mm !== q.height_mm) issues.push('Yükseklik iki okumada farklı: ' + p.height_mm + ' / ' + q.height_mm)
+        if ((p.qty || 1) !== (q.qty || 1)) issues.push('Adet farklı: ' + p.qty + ' / ' + q.qty)
+      }
+      if (!(p.width_mm > 0) || !(p.height_mm > 0)) issues.push('Ölçü okunamadı')
+      if (p.width_mm && (p.width_mm < 250 || p.width_mm > 7000)) issues.push('Genişlik olağan dışı')
+      if (p.height_mm && (p.height_mm < 250 || p.height_mm > 4000)) issues.push('Yükseklik olağan dışı')
+      if (p.confidence !== 'high') issues.push('Model emin değil (' + p.confidence + ')')
+      return { p: p, issues: issues }
+    }).concat(
+      B.length > A.length
+        ? [{ p: null, issues: ['İkinci okuma ' + (B.length - A.length) + ' poz daha buldu — belgeyi kontrol edin'] }]
+        : [],
+    )
+  }
+  // ---- arayüz
+  function aiModal(html) {
+    var m = document.getElementById('ozk-ai')
+    if (!m) {
+      m = document.createElement('div')
+      m.id = 'ozk-ai'
+      document.body.appendChild(m)
+      m.addEventListener('click', function (e) {
+        if (e.target === m) aiClose()
+      })
+    }
+    m.innerHTML = '<div class="ozk-ai-box">' + html + '</div>'
+    return m
+  }
+  function aiClose() {
+    var m = document.getElementById('ozk-ai')
+    if (m) m.remove()
+  }
+  async function ensurePJ() {
+    if (PJ.catalog && Date.now() - PJ.t < 5000) return
+    clickNav(/^Projeler/)
+    for (var k = 0; k < 30 && !(PJ.catalog && Date.now() - PJ.t < 3000); k++) await sleep(100)
+  }
+  function aiOpen() {
+    var key = getPref(AI.key, '')
+    var m = aiModal(
+      '<div class="ozk-ai-h"><b>✨ AI ile Ölçü Okuma</b><button data-x>✕</button></div>' +
+        '<p class="ozk-ai-p">Müşteri talebini yükleyin (PDF, çizim / fotoğraf, e-posta metni). Claude pozları ve ölçüleri çıkarır; iki ayrı okuma karşılaştırılır. Projeye eklemeden önce her şeyi onaylarsınız.</p>' +
+        '<label class="ozk-ai-drop" data-drop><input type="file" multiple accept=".pdf,image/*,.txt,.eml,.csv" hidden><span>📎 Dosya seç veya buraya sürükle</span><em data-files></em></label>' +
+        '<textarea data-txt placeholder="veya e-posta / mesaj metnini buraya yapıştırın…"></textarea>' +
+        '<div class="ozk-ai-key"><label>Anthropic API anahtarı <input type="password" data-key placeholder="sk-ant-…" value="' + esc(key) + '"></label><small>Yalnızca bu bilgisayarda saklanır. ERP\'ye taşınınca sunucudan yönetilecek.</small></div>' +
+        '<div class="ozk-ai-f"><span data-msg></span><button class="ozk-ai-go" data-go>Oku →</button></div>',
+    )
+    var files = []
+    var inp = m.querySelector('input[type=file]'),
+      drop = m.querySelector('[data-drop]')
+    function showFiles() {
+      m.querySelector('[data-files]').textContent = files
+        .map(function (f) {
+          return f.name
+        })
+        .join(' · ')
+    }
+    inp.addEventListener('change', function () {
+      files = files.concat(Array.prototype.slice.call(inp.files))
+      showFiles()
+    })
+    drop.addEventListener('dragover', function (e) {
+      e.preventDefault()
+      drop.classList.add('on')
+    })
+    drop.addEventListener('dragleave', function () {
+      drop.classList.remove('on')
+    })
+    drop.addEventListener('drop', function (e) {
+      e.preventDefault()
+      drop.classList.remove('on')
+      files = files.concat(Array.prototype.slice.call(e.dataTransfer.files))
+      showFiles()
+    })
+    m.querySelector('[data-x]').onclick = aiClose
+    m.querySelector('[data-go]').onclick = async function () {
+      var msg = m.querySelector('[data-msg]')
+      var k = m.querySelector('[data-key]').value.trim()
+      if (k) setPref(AI.key, k)
+      var txt = m.querySelector('[data-txt]').value.trim()
+      if (!files.length && !txt) return (msg.textContent = 'Dosya veya metin ekleyin')
+      if (!k) return (msg.textContent = 'API anahtarı gerekli')
+      this.disabled = true
+      var t0 = Date.now()
+      var tick = setInterval(function () {
+        msg.textContent = 'Claude okuyor… (2 bağımsız okuma) ' + Math.round((Date.now() - t0) / 1000) + ' sn'
+      }, 500)
+      try {
+        var blocks = []
+        for (var i = 0; i < files.length; i++) blocks.push(await fileToBlock(files[i]))
+        if (txt) blocks.push({ type: 'text', text: 'Yapıştırılan metin:\n\n' + txt })
+        var client = aiClient()
+        var runs = await Promise.all([aiRead(client, blocks), aiRead(client, blocks)])
+        clearInterval(tick)
+        await ensurePJ()
+        aiConfirm(runs[0], compareRuns(runs[0], runs[1]))
+      } catch (e) {
+        clearInterval(tick)
+        msg.textContent = 'Hata: ' + (e && e.message ? e.message : e)
+        this.disabled = false
+      }
+    }
+  }
+  function opts(obj, sel, filter) {
+    return Object.keys(obj || {})
+      .filter(function (k) {
+        return !filter || filter(obj[k])
+      })
+      .map(function (k) {
+        return '<option value="' + esc(k) + '"' + (k === sel ? ' selected' : '') + '>' + esc(obj[k].name || k) + '</option>'
+      })
+      .join('')
+  }
+  function aiConfirm(res, rows) {
+    var cat = PJ.catalog || {}
+    var pj = res.project || {}
+    var ser = matchSeries(cat, pj.profile_system) || (PJ.project && PJ.project.positions && PJ.project.positions[0] && PJ.project.positions[0].series) || 'PASIFIK_888'
+    var cin = matchColor(cat, pj.color_inside) || 'WHITE'
+    var cout = matchColor(cat, pj.color_outside) || cin
+    var gl = matchGlass(cat, pj.glass, ser)
+    var html =
+      '<div class="ozk-ai-h"><b>✨ AI okuması — onay</b><button data-x>✕</button></div>' +
+      ((res.warnings || []).length ? '<div class="ozk-ai-warn">' + res.warnings.map(esc).join('<br>') + '</div>' : '') +
+      '<div class="ozk-ai-grid">' +
+      '<label>Firma<input data-f="company" value="' + esc(res.customer && res.customer.company) + '"></label>' +
+      '<label>Yetkili<input data-f="name" value="' + esc(res.customer && res.customer.name) + '"></label>' +
+      '<label>Ülke<input data-f="country" value="' + esc(res.customer && res.customer.country) + '"></label>' +
+      '<label>Proje adı<input data-f="pname" value="' + esc(pj.name) + '"></label>' +
+      '<label>Profil sistemi <small>' + esc(pj.profile_system) + '</small><select data-f="series">' + opts(cat.series, ser, function (s) { return !s.kind || s.kind === 'casement' }) + '</select></label>' +
+      '<label>Cam <small>' + esc(pj.glass) + '</small><select data-f="glass">' + opts(cat.glasses, gl, function (g) { return !g.panel }) + '</select></label>' +
+      '<label>İç renk <small>' + esc(pj.color_inside) + '</small><select data-f="cin">' + opts(cat.colors, cin) + '</select></label>' +
+      '<label>Dış renk <small>' + esc(pj.color_outside) + '</small><select data-f="cout">' + opts(cat.colors, cout) + '</select></label>' +
+      '</div>' +
+      (pj.notes ? '<div class="ozk-ai-note">📝 ' + esc(pj.notes) + '</div>' : '') +
+      '<div class="ozk-ai-tw"><table class="ozk-ai-t"><thead><tr><th></th><th>Poz</th><th>Açıklama</th><th>Adet</th><th>Genişlik</th><th>Yükseklik</th><th>Tip</th><th>Panjur</th><th>Sineklik</th><th>Kaynak / Uyarı</th><th>Onay</th></tr></thead><tbody>' +
+      rows
+        .map(function (r, i) {
+          var p = r.p
+          if (!p) return '<tr class="bad"><td colspan="11">⚠ ' + esc(r.issues.join(' · ')) + '</td></tr>'
+          var bad = r.issues.length > 0
+          return (
+            '<tr data-i="' + i + '" class="' + (bad ? 'bad' : '') + '"><td><input type="checkbox" data-use checked></td>' +
+            '<td>' + esc(p.ref) + '</td><td><input data-c="title" value="' + esc(p.title) + '"></td>' +
+            '<td><input data-c="qty" type="number" min="1" value="' + esc(p.qty || 1) + '" style="width:54px"></td>' +
+            '<td><input data-c="w" type="number" value="' + esc(p.width_mm == null ? '' : Math.round(p.width_mm)) + '" style="width:74px"></td>' +
+            '<td><input data-c="h" type="number" value="' + esc(p.height_mm == null ? '' : Math.round(p.height_mm)) + '" style="width:74px"></td>' +
+            '<td><select data-c="type">' + AI_TYPES.map(function (t) { return '<option value="' + t + '"' + (t === p.type ? ' selected' : '') + '>' + AI_TYPE_TR[t] + '</option>' }).join('') + '</select>' +
+            ((p.sections || []).length > 1 ? '<small>' + p.sections.map(function (x) { return AI_TYPE_TR[x.type] + (x.width_mm ? ' ' + x.width_mm : '') }).map(esc).join(' | ') + '</small>' : '') +
+            (p.top_light_height_mm ? '<small>Üst bölme: ' + esc(p.top_light_height_mm) + '</small>' : '') + '</td>' +
+            '<td><select data-c="sh">' + ['none', 'monoblock', 'external', 'hidden_lento'].map(function (t) { return '<option' + (t === p.shutter ? ' selected' : '') + ' value="' + t + '">' + { none: 'Yok', monoblock: 'Monoblok', external: 'Dıştan takma', hidden_lento: 'Gizli lento' }[t] + '</option>' }).join('') + '</select></td>' +
+            '<td><select data-c="fs">' + ['none', 'fixed', 'hinged', 'pleated'].map(function (t) { return '<option' + (t === p.flyscreen ? ' selected' : '') + ' value="' + t + '">' + { none: 'Yok', fixed: 'Sabit', hinged: 'Menteşeli', pleated: 'Pileli' }[t] + '</option>' }).join('') + '</select></td>' +
+            '<td class="src"><code>' + esc(p.original_text) + '</code>' + (p.notes ? '<br>' + esc(p.notes) : '') + (bad ? '<br><b>' + esc(r.issues.join(' · ')) + '</b>' : '') + '</td>' +
+            '<td>' + (bad ? '<label class="chk"><input type="checkbox" data-ok> ölçüyü kontrol ettim</label>' : '✔') + '</td></tr>'
+          )
+        })
+        .join('') +
+      '</tbody></table></div>' +
+      '<div class="ozk-ai-f"><span data-msg>Kırmızı satırlarda ölçüyü belgeden kontrol edip onaylayın.</span>' +
+      '<button data-add class="ozk-ai-go ghost">Mevcut projeye ekle</button><button data-new class="ozk-ai-go">Yeni proje olarak aç</button></div>'
+    var m = aiModal(html)
+    m.querySelector('.ozk-ai-box').classList.add('wide')
+    m.querySelector('[data-x]').onclick = aiClose
+    function collect() {
+      var f = function (k) {
+        return m.querySelector('[data-f="' + k + '"]').value
+      }
+      var out = [],
+        blocked = []
+      m.querySelectorAll('tr[data-i]').forEach(function (tr) {
+        if (!tr.querySelector('[data-use]').checked) return
+        var r = rows[+tr.getAttribute('data-i')]
+        var c = function (k) {
+          return tr.querySelector('[data-c="' + k + '"]').value
+        }
+        var ok = tr.querySelector('[data-ok]')
+        var w = parseFloat(c('w')),
+          h = parseFloat(c('h'))
+        if ((ok && !ok.checked) || !(w >= 250) || !(h >= 250)) blocked.push(r.p.ref || r.p.title)
+        var type = c('type')
+        var ser = type === 'sliding' ? matchSeries(cat, '', 'sliding') || f('series') : type === 'lift_slide' ? matchSeries(cat, '', 'lift_slide') || f('series') : f('series')
+        var cinP = matchColor(cat, r.p.color_inside) || f('cin'),
+          coutP = matchColor(cat, r.p.color_outside) || f('cout')
+        var sh = c('sh'),
+          fs = c('fs')
+        out.push({
+          id: uid('pos'),
+          pozCode: '',
+          title: c('title') || r.p.ref || 'Poz',
+          qty: Math.max(1, parseInt(c('qty'), 10) || 1),
+          width: Math.round(w),
+          height: Math.round(h),
+          series: ser,
+          color: cinP,
+          colorOutside: coutP,
+          glass: f('glass'),
+          root: rootFor(Object.assign({}, r.p, { type: type, height_mm: h })),
+          shutter: sh !== 'none' ? { enabled: true, type: SH_MAP[sh] || 'monoblock' } : { enabled: false },
+          flyscreen: { type: FS_MAP[fs] || 'NONE' },
+          note: ['AI: ' + (r.p.original_text || ''), r.p.ref ? 'Ref: ' + r.p.ref : '', r.p.notes || ''].filter(Boolean).join(' · '),
+        })
+      })
+      return { positions: out, blocked: blocked, customer: { company: f('company'), name: f('name'), country: f('country') }, pname: f('pname') }
+    }
+    async function go(mode) {
+      var msg = m.querySelector('[data-msg]')
+      var d = collect()
+      if (d.blocked.length) return (msg.innerHTML = '<b style="color:#ef4444">Onaylanmamış / geçersiz ölçü: ' + esc(d.blocked.join(', ')) + '</b>')
+      if (!d.positions.length) return (msg.textContent = 'Eklenecek poz seçilmedi')
+      msg.textContent = 'Projeye işleniyor…'
+      clickNav(/^Projeler/)
+      for (var k = 0; k < 30 && !(PJ.load && Date.now() - PJ.t < 3000); k++) await sleep(100)
+      if (!PJ.load || !PJ.project) return (msg.textContent = 'Projeler ekranına ulaşılamadı; tekrar deneyin')
+      var cur = PJ.project
+      if (mode === 'new') {
+        if (cur.positions && cur.positions.length && PJ.save) PJ.save(cur) // mevcut proje önce arşive
+        var blankCust = {}
+        Object.keys(cur.customer || {}).forEach(function (k2) {
+          blankCust[k2] = ''
+        })
+        var qn = /^\d+$/.test(String(cur.quoteNo || '')) ? String(Number(cur.quoteNo) + 1) : ''
+        PJ.load({
+          quoteNo: qn,
+          revision: 1,
+          date: new Date().toISOString().slice(0, 10),
+          projectName: d.pname || 'AI ile okunan talep',
+          drawnBy: userName(),
+          customer: Object.assign(blankCust, d.customer),
+          commercial: cur.commercial,
+          positions: d.positions,
+          priceOverrides: {},
+        })
+      } else {
+        PJ.load(Object.assign({}, cur, { positions: (cur.positions || []).concat(d.positions) }))
+      }
+      aiClose()
+      toast(d.positions.length + ' poz projeye eklendi' + (mode === 'new' ? ' (önceki proje tarayıcı arşivine kaydedildi)' : ''))
+    }
+    m.querySelector('[data-new]').onclick = function () {
+      go('new')
+    }
+    m.querySelector('[data-add]').onclick = function () {
+      go('add')
+    }
+  }
+
   /* ------------------------------------------------ alt araç çubuğu (dock) */
   function esc(t) {
     return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
@@ -2549,6 +3128,7 @@
     anim3D: anim3D,
     _reg: REG,
     exportCustomer3D: exportCustomer3D,
+    aiOpen: aiOpen,
     _tilt: TILT,
     useFav: useFav,
     favColors: favColors,

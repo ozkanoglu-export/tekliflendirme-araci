@@ -666,3 +666,199 @@ button:hover > .ozk-star-mini {
   text-align: center;
   padding: 24px;
 }
+
+/* =====================================================================
+   AI ÖLÇÜ OKUMA (6.2)
+   ===================================================================== */
+#ozk-ai {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(4, 8, 14, 0.6);
+  backdrop-filter: blur(8px);
+  font: 13px/1.45 Inter, system-ui, sans-serif;
+  color: #e2e8f0;
+}
+#ozk-ai .ozk-ai-box {
+  width: min(640px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(160deg, rgba(22, 30, 46, 0.92), rgba(12, 17, 27, 0.94));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 18px 20px;
+}
+#ozk-ai .ozk-ai-box.wide {
+  width: min(1320px, 100%);
+}
+.ozk-ai-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+.ozk-ai-h button {
+  background: none;
+  border: 0;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+}
+.ozk-ai-p {
+  margin: 0 0 12px;
+  color: #94a3b8;
+}
+.ozk-ai-drop {
+  display: block;
+  border: 1.5px dashed rgba(148, 163, 184, 0.45);
+  border-radius: 14px;
+  padding: 22px;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ozk-ai-drop.on,
+.ozk-ai-drop:hover {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: #38bdf8;
+}
+.ozk-ai-drop em {
+  display: block;
+  margin-top: 6px;
+  color: #f5c542;
+  font-style: normal;
+  font-size: 12px;
+}
+#ozk-ai textarea,
+#ozk-ai input,
+#ozk-ai select {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(2, 6, 12, 0.55);
+  color: #f1f5f9;
+  padding: 6px 8px;
+  font: inherit;
+}
+#ozk-ai textarea {
+  min-height: 90px;
+  margin-bottom: 10px;
+}
+.ozk-ai-key small {
+  color: #64748b;
+}
+.ozk-ai-f {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.ozk-ai-f span {
+  margin-inline-end: auto;
+  color: #94a3b8;
+}
+.ozk-ai-go {
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-weight: 700;
+  color: #0b1220;
+  background: linear-gradient(135deg, #f5c542, #d4af37);
+  cursor: pointer;
+}
+.ozk-ai-go.ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+.ozk-ai-go:disabled {
+  opacity: 0.5;
+}
+.ozk-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+@media (max-width: 900px) {
+  .ozk-ai-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ozk-ai-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #94a3b8;
+  font-size: 11.5px;
+}
+.ozk-ai-grid small {
+  color: #f5c542;
+}
+.ozk-ai-warn {
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fcd34d;
+}
+.ozk-ai-note {
+  color: #cbd5e1;
+  margin-bottom: 8px;
+}
+.ozk-ai-tw {
+  overflow-x: auto;
+}
+.ozk-ai-t {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.ozk-ai-t th {
+  text-align: start;
+  color: #94a3b8;
+  font-weight: 600;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+.ozk-ai-t td {
+  padding: 5px 4px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  vertical-align: top;
+}
+.ozk-ai-t td small {
+  display: block;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+.ozk-ai-t tr.bad td {
+  background: rgba(239, 68, 68, 0.1);
+}
+.ozk-ai-t tr.bad td.src b {
+  color: #fca5a5;
+}
+.ozk-ai-t td.src {
+  max-width: 280px;
+  color: #cbd5e1;
+}
+.ozk-ai-t code {
+  color: #7dd3fc;
+}
+.ozk-ai-t .chk {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  white-space: nowrap;
+  color: #fca5a5;
+}
+.ozk-ai-t .chk input,
+.ozk-ai-t input[type='checkbox'] {
+  width: auto;
+}

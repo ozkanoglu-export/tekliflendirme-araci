@@ -1,46 +1,55 @@
-# PenCAD 6.1: 6.0 üzerine görsel katman
+# PenCAD 6.2: 6.0 üzerine katman
 
-Furkan'ın geliştirdiği **PenCAD 6.0** (`kaynak/ozkanoglu_pencad_60.html`) temel alındı. Bu dosya derlenmiş (sıkıştırılmış) halde geldi; kaynak kodu elimizde yok.
-6.1 bu dosyanın üzerine **sadece görsel katman** ekler. Hesap, fiyat, analiz ve kayıt koduna dokunulmaz.
+Furkan'ın geliştirdiği **PenCAD 6.0** (`kaynak/ozkanoglu_pencad_60.html`) temel alındı. Dosya derlenmiş halde geliyor; kaynak kodu elimizde yok.
+6.2 bu dosyanın üzerine bir katman ekler. Hesap, fiyat, analiz ve kayıt koduna dokunulmaz. Tek istisna montaj bedeli: yalnızca kutucuk işaretliyse toplama eklenir.
 
-- Çıktı: `release/Ozkanoglu-PenCAD-6.1.html` (çift tıkla aç)
-- Yeniden üretmek için:
+- Çıktı: `release/Ozkanoglu-PenCAD-6.2.html` (çift tıkla aç)
+- Antigravity yeni bir 6.0 verdiğinde: dosyayı `kaynak/` içine koyup aşağıdaki komutu çalıştır. Yamalar desenle eşleştiği için değişken adları değişse de tutar. Tutmazsa derleme hangi yamada durduğunu söyler.
 
 ```bash
-python3 v6/build_v61.py
+python3 v6/build.py
 ```
 
-## Neler eklendi
+## Neler var
 
-| Alan | Değişiklik |
+| Alan | Ne yapar |
 |---|---|
-| Cam görselleri | 82 cam tek tek sınıflandırıldı: düz, Sinerji (Low-E), Konfor (solar), üçlü, satina, buzlu (desenli), lamine, akustik lamine, reflekte, renkli, jaluzili. Her tür ayrı renk, yansıma ve doku ile çiziliyor. Isıcamda ara çıta (warm-edge) görünüyor; lamine camlarda kenar çizgisi var. |
-| Gerçekçi doğrama | Kasa, kanat ve ortakayıtta ışık-gölge (eğim), gönye çizgileri ve iç conta çizgisi var. |
-| REHAU kartela | 44 renk eklendi: MX, PX, PFX ve FX serileri. Her biri kartelanın **gerçek folyo dokusuyla** çiziliyor; damar dikey profilde dikey, yatay profilde yatay akıyor. Mevcut Altın Meşe, Winchester, İrlanda Meşe ve Koyu Meşe de aynı gerçek dokulara bağlandı. |
-| 3D | Profillerde gerçek folyo dokusu var, doğru yönde ve tekrar eden şekilde. Cam malzemesi cam türüne göre değişiyor. Ortam yansıması eklendi. Gündüz modunda sahne arka planı açık. |
-| Teklif dilleri | Cam adları teklif dilinde yazılıyor (EN, DE, NL, FR, IT, RU, AR). Türkçede Furkan'ın orijinal adları aynen kalıyor. |
-| Tema | Ekranın alt ortasında ☀ Gündüz / ☾ Gece / ◐ Oto (07–19 gündüz) düğmeleri ve ◉ Göz koruma (mavi ışık filtresi) var. Seçim `ozk.ui.*` anahtarlarında saklanıyor; Furkan'ın kayıtlarından ayrı. |
-| Baskı | Teklifin etrafındaki koyu kenar artık basılmıyor. |
+| Görsel katman | Gerçekçi cam türleri, 44 REHAU kartela rengi ve gerçek folyo dokuları (2D + 3D), gece / gündüz / oto, göz koruma, liquid glass arayüz |
+| Teklif | ABT yazısı kaldırıldı. Çizen kişi profilden gelir (👤 düğmesi: ad, telefon, e-posta). Yeni adres: Fatih Mah. … No: 8/A Merkez. Vinesso logosu "by ÖZKANOĞLU" ile, "ihracat markamız" yazısı kaldırıldı. |
+| Premium teklif | Antetli kâğıt her basılı sayfada (Müşteri Teklifi → Montaj kutusundaki "Antetli kâğıt" ile kapatılabilir). "Kullanılan Profil Sistemleri & Ürün Detayları" bölümünde kesit görselleri (ozkanoglu.com.tr / adopen.com.tr) ve teknik değerler var, kullanılan camların tablosu da yer alır. |
+| Montaj + dahil / hariç | Montaj bedeli girişi ve kutucuğu var (nakliye gibi). Şartların sonunda iki satır yazılır: "Fiyata dahildir: …" ve "Fiyata dahil değildir: …". İhracatta (KDV %0) alıcı ülke KDV'si her zaman "dahil değil" olarak yazılır. |
+| Verilen teklifler | Müşteri Teklifi → "✔ Teklif Verildi — Kayda Al" düğmesi var. Birim fiyatı olmayan poz varsa kayıt alınmaz. Projeler'de ayrı panelde arama, detay (birim fiyatlar) ve "Aç" yapılabilir, JSON olarak indirilebilir. Kayıtlar `ozk.issuedQuotes` anahtarında, Furkan'ın arşivinden ayrı tutulur. |
+| Favoriler | Renk, cam, profil serisi, donanım, panjur ve sineklik renk seçimlerinin yanında ★ var. Hızlı renk düğmelerinde minik ★ bulunur. Favoriler listenin en üstüne çıkar. 🎨 ile eklenen renkler "Çok Kullanılan"da görünür. |
+| 3D | Camlar katman katman: her cam levhası, aradaki boşluk, warm-edge ara çıta ve lamine PVB ayrı görünür. Kollar gerçekçi (rozet, boyun, kavrama). HOK'ta pasif kanatta levye var. Açılış sırası: aktif kanadın kolu döner, kanat açılır, levye kalkar, pasif kanat açılır. Çift açılımlı kanatlar için "Vasistas" kaydırma çubuğu eklendi. |
+| Müşteri 3D teklifi | Müşteri Teklifi → "📱 Müşteri 3D Teklifi İndir". Telefonda veya bilgisayarda açılan tek bir HTML dosyası üretir: 3D döndürme, kanat açma, çizim ve profil detayları. **Birim fiyat, maliyet ve katalog içermez.** İnternetsiz de açılır. |
+| AI ölçü okuma | ✨ düğmesi: PDF, çizim fotoğrafı veya e-posta metni yüklenir. Claude (claude-opus-5-5) pozları çıkarır ve iki bağımsız okuma karşılaştırılır. Uyuşmayan ya da emin olunmayan ölçü, "kontrol ettim" işaretlenmeden projeye girmez. Profil, renk, cam, panjur ve sineklik onay ekranında düzenlenir. Sonra "Yeni proje olarak aç" (eski proje arşive kaydedilir) ya da "Mevcut projeye ekle" seçilir. |
 
-## Güvenlik kuralları (build_v61.py)
+AI için Anthropic API anahtarı gerekir. Anahtar yalnızca o bilgisayarda (`ozk.ai.key`) saklanır. OIE ERP'ye taşınınca istekler sunucu üzerinden yapılmalı, anahtar tarayıcıda durmamalı.
+
+## Güvenlik kuralları (build.py)
 
 - Her yama orijinal metinde **tam beklenen sayıda** eşleşmek zorunda; eşleşmezse derleme durur.
-- Her yama `window.OZKV yoksa orijinal davranış` şeklinde yazıldı. Görsel katmandaki her fonksiyon hata yakalar; bir sorun olursa 6.0'ın çizimi aynen görünür.
-- REHAU renkleri varsayılan kataloğa **eklenir**. 6.0'ın kendi birleştirme mantığı sayesinde kayıtlı renkler ve fiyatlar korunur.
+- Her yama `window.OZKV yoksa orijinal davranış` şeklinde yazıldı. Katmandaki her fonksiyon hata yakalar.
+- REHAU renkleri varsayılan kataloğa **eklenir**; kayıtlı renkler ve fiyatlar korunur.
 
-## Doğrulama (6.0 ↔ 6.1, örnek proje)
+## Doğrulama (6.0 ↔ 6.2, örnek proje)
 
-- 7 sekmenin tüm metni (Çizim, Teklif, Maliyet, Optimizasyon, Şişecam, Katalog, Projeler) birebir aynı.
-- Türkçe teklif (Avrupa detaylı ve kompakt) birebir aynı. Diğer dillerde tek fark cam adlarının çevrilmesi.
-- localStorage: proje, ayarlar ve arşiv aynı (rastgele id'ler hariç). Katalogda sadece 44 REHAU rengi eklendi; mevcut 14 rengin hiçbiri değişmedi.
+- Maliyet, Optimizasyon, Şişecam ve Katalog sekmeleri birebir aynı. Çizim, Teklif ve Projeler'deki tüm fiyat ve sayı satırları aynı. Farklar yalnızca yeni düğmeler, ☆ işaretleri, yeni bölümler ve cam adlarının teklif diline çevrilmesi.
+- Kayıtlarda yalnızca iki beklenen fark var:
+  - adres güncellendi;
+  - boş ya da "ABT CAD" olan çizen alanı giriş yapan kişiye çevrildi.
+- Arşiv aynı. Katalogda yalnızca 44 renk eklendi.
 
 ## Dosyalar
 
 ```
 v6/kaynak/ozkanoglu_pencad_60.html   ← Furkan'ın 6.0'ı (el sürülmez)
-v6/gorsel/ozk-visual.js              ← görsel katman (cam, profil, doku, çeviri, tema, 3D)
-v6/gorsel/ozk-theme.css              ← gece/gündüz, göz koruma, cam renk değişkenleri
-v6/gorsel/rehau_kartela.json         ← 44 REHAU rengi (Renolit + REHAU kodu, TR/EN ad)
-v6/gorsel/dokular/pXX.jpg            ← kartela sayfalarından kırpılmış folyo dokuları
-v6/build_v61.py                      ← yamaları uygulayan derleyici
+v6/build.py                          ← yamaları uygulayan derleyici
+v6/gorsel/ozk-visual.js              ← katman (görsel, teklif, favori, 3D, müşteri 3D, AI)
+v6/gorsel/ozk-theme.css              ← tema, liquid glass, teklif ve AI stilleri
+v6/gorsel/rehau_kartela.json         ← 44 REHAU rengi
+v6/gorsel/dokular/pXX.jpg            ← folyo dokuları
+v6/gorsel/varliklar/                 ← antet, profil kesit görselleri
+v6/gorsel/vendor/ozk3.min.js         ← three.js r187 (müşteri 3D görüntüleyici, MIT)
+v6/gorsel/vendor/ozkai.min.js        ← @anthropic-ai/sdk 1.14.0 tarayıcı paketi (MIT)
 ```

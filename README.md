@@ -1,7 +1,14 @@
 # Özkanoğlu PenCAD Stüdyo
 
-> **Güncel sürüm: 6.1** → `release/Ozkanoglu-PenCAD-6.1.html`
-> Furkan'ın 6.0'ı üzerine görsel katman eklendi: gerçekçi cam türleri, REHAU kartelası, folyo dokuları, gece/gündüz modu, 3D. Ayrıntılar: [v6/README.md](v6/README.md)
+> **Güncel sürüm: 6.2** → `release/Ozkanoglu-PenCAD-6.2.html`
+> Furkan'ın 6.0'ı üzerine kurulu. Eklenenler:
+> - premium antetli teklif, montaj bedeli ve dahil/hariç notları;
+> - verilen teklifler kaydı ve favoriler;
+> - gerçekçi 3D (katmanlı cam, kollar, HOK levye, vasistas);
+> - fiyatsız müşteri 3D teklif dosyası;
+> - Claude ile AI ölçü okuma.
+>
+> Ayrıntılar: [v6/README.md](v6/README.md)
 > Aşağıdaki bölüm ilk React sürümünü (5.x, `app/`) anlatır.
 
 PVC pencere, kapı ve sürme sistemleri için **çizim → reçete → kesim → teklif** aracı.
