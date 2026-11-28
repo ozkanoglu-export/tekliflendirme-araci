@@ -1363,7 +1363,9 @@
     { id: 'furkan', name: 'Furkan', phone: '', email: '' },
     { id: 'volkan', name: 'Volkan', phone: '', email: '' },
   ]
+  var ERP_USER = null // OIE ERP içinde: giriş yapan kişi (ad, telefon, e-posta) — elle seçim yok
   function users() {
+    if (ERP_USER) return [ERP_USER]
     try {
       var u = JSON.parse(localStorage.getItem(UKEY) || 'null')
       return Array.isArray(u) && u.length ? u : DEFAULT_USERS.slice()
@@ -1375,6 +1377,7 @@
     setPref(UKEY, JSON.stringify(list))
   }
   function activeUser() {
+    if (ERP_USER) return ERP_USER
     var list = users()
     var id = getPref(AKEY, list[0].id)
     return list.filter(function (u) {
@@ -1597,6 +1600,7 @@
           }),
           ctx ? issueButton(n, Object.assign({ totals: e, fmt: g }, ctx)) : null,
           ctx ? customer3DButton(n, Object.assign({ totals: e }, ctx)) : null,
+          ctx ? soldButton(n) : null,
         ],
       })
     } catch (err) {
@@ -1859,6 +1863,9 @@
       project: JSON.parse(JSON.stringify(pr)),
     }
     list.unshift(rec)
+    try {
+      saveNow('quoted')
+    } catch (e) {}
     if (issuedSave(list)) {
       toast('#' + rec.quoteNo + (rev ? ' (Rev.' + rev + ')' : '') + ' verilen teklifler kaydına alındı · ' + rec.grandText)
       try {
@@ -2079,6 +2086,9 @@
   }
   function issuedPanel(n, R, props) {
     try {
+      if (ERP.on) {
+        return n.jsxs(n.Fragment, { children: [erpPanel(n, R), n.jsx(IssuedPanel, Object.assign({ n: n, R: R }, props))] })
+      }
       PJ.load = props.load
       PJ.save = props.save
       PJ.project = props.project
@@ -2963,7 +2973,9 @@
   }
   var APP = null
   function bindApp(a) {
+    var first = !APP
     APP = a
+    if (ERP.on) scheduleSave(first)
     if (!bindApp._raf)
       bindApp._raf = requestAnimationFrame(function () {
         bindApp._raf = 0
@@ -3358,6 +3370,363 @@
       m.querySelector('[data-variant]').onclick = function () {
         apply(true)
       }
+    })
+  }
+
+
+  /* ============================================= OIE ERP KÖPRÜSÜ (6.2) =============================================
+     PenCAD, OIE içinde (iframe) açıldığında:
+       · giriş yapan kişi = çizen (👤 seçimi gizlenir)
+       · proje her değişiklikte birkaç saniye sonra ERP'ye otomatik taslak olarak kaydedilir (pcd_projects)
+       · Projeler sekmesinde ERP projeleri (kim çizdi, son düzenleyen, durum) listelenir, açılır
+       · "Satış oldu" → malzeme ihtiyacı depoya bildirilir, stok kontrolü, eksikler için satın alma talebi
+     Tüm veritabanı işlemleri üst pencere (OIE) tarafından, kullanıcının kendi oturumu ve RLS ile yapılır. */
+  var ERP = { on: false, pending: {}, seq: 0, lastSig: '', saveT: 0, savedAt: 0, status: '' }
+  function inErp() {
+    try {
+      return window.parent && window.parent !== window
+    } catch (e) {
+      return false
+    }
+  }
+  function erpCall(type, payload) {
+    return new Promise(function (res, rej) {
+      if (!ERP.on) return rej(new Error('ERP bağlantısı yok'))
+      var id = ++ERP.seq
+      ERP.pending[id] = { res: res, rej: rej }
+      window.parent.postMessage(Object.assign({ type: type, reqId: id }, payload || {}), location.origin)
+      setTimeout(function () {
+        if (ERP.pending[id]) {
+          delete ERP.pending[id]
+          rej(new Error('ERP yanıt vermedi'))
+        }
+      }, 20000)
+    })
+  }
+  window.addEventListener('message', function (ev) {
+    if (ev.origin !== location.origin || ev.source !== window.parent) return
+    var d = ev.data || {}
+    if (d.type === 'oie:init') {
+      ERP.on = true
+      if (d.user && d.user.name) ERP_USER = { id: 'erp_' + (d.user.id || ''), name: d.user.name, phone: d.user.phone || '', email: d.user.email || '', erp: true }
+      document.documentElement.setAttribute('data-ozk-erp', '1')
+      var ub = document.querySelector('#ozk-theme-ui [data-user]')
+      if (ub) ub.style.display = 'none'
+      erpBadge()
+      scheduleSave(true)
+      return
+    }
+    if (d.reqId && ERP.pending[d.reqId]) {
+      var p = ERP.pending[d.reqId]
+      delete ERP.pending[d.reqId]
+      if (d.error) p.rej(new Error(d.error))
+      else p.res(d.result)
+    }
+  })
+  function projectSummary(pr) {
+    var c = pr.commercial || {}
+    var total = 0
+    try {
+      if (OZKV.calcTotals && APP) total = OZKV.calcTotals(pr.positions, APP.getCatalog(), c, APP.getSettings(), pr.priceOverrides || {}).grand
+    } catch (e) {}
+    return {
+      title: pr.projectName || '',
+      quote_no: pr.quoteNo || '',
+      customer: (pr.customer && (pr.customer.company || pr.customer.name)) || '',
+      country: (pr.customer && pr.customer.country) || '',
+      currency: c.currency || 'EUR',
+      total: Math.round(total * 100) / 100,
+      positions: (pr.positions || []).length,
+    }
+  }
+  // Otomatik taslak: değişiklikten 4 sn sonra, sayfa gizlenince / kapanırken hemen
+  function scheduleSave(now) {
+    if (!ERP.on || !APP) return
+    // kısma (throttle): uygulama sık yeniden çizse de kayıt en geç 4 sn içinde yapılır
+    if (ERP.saveT && !now) return
+    clearTimeout(ERP.saveT)
+    ERP.saveT = setTimeout(
+      function () {
+        ERP.saveT = 0
+        saveNow()
+      },
+      now ? 300 : 4000,
+    )
+  }
+  function saveNow(status) {
+    if (!ERP.on || !APP) return Promise.resolve()
+    var pr
+    try {
+      pr = APP.getProject()
+    } catch (e) {
+      return Promise.resolve()
+    }
+    if (!pr || !pr.id) return Promise.resolve()
+    var json = JSON.stringify(pr)
+    var sig = (status || '') + '|' + json // tam karşılaştırma: tek rakam değişse de kaydedilir
+    if (sig === ERP.lastSig) return Promise.resolve()
+    ERP.lastSig = sig
+    ERP.status = 'kaydediliyor'
+    erpBadge()
+    return erpCall('pcd:save', { localId: pr.id, project: JSON.parse(json), summary: projectSummary(pr), status: status || null })
+      .then(function () {
+        ERP.status = 'ok'
+        ERP.savedAt = Date.now()
+        erpBadge()
+      })
+      .catch(function (e) {
+        ERP.lastSig = ''
+        ERP.status = 'hata'
+        erpBadge(e.message)
+      })
+  }
+  // her 5 sn: değişiklik varsa kaydet (uygulama her değişiklikte bize haber vermediği için)
+  setInterval(function () {
+    if (ERP.on && APP && !document.hidden) saveNow()
+  }, 5000)
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) saveNow()
+  })
+  window.addEventListener('pagehide', function () {
+    saveNow()
+  })
+  function erpBadge(err) {
+    var b = document.getElementById('ozk-erp')
+    if (!ERP.on) return
+    if (!document.body) return document.addEventListener('DOMContentLoaded', function () { erpBadge(err) })
+    if (!b) {
+      b = document.createElement('div')
+      b.id = 'ozk-erp'
+      b.className = 'ozk-no-print'
+      document.body.appendChild(b)
+    }
+    var t =
+      ERP.status === 'kaydediliyor'
+        ? '☁ Kaydediliyor…'
+        : ERP.status === 'hata'
+          ? '⚠ ERP\'ye kaydedilemedi' + (err ? ': ' + err : '')
+          : ERP.savedAt
+            ? '☁ Taslak kaydedildi ' + new Date(ERP.savedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+            : '☁ ERP'
+    b.textContent = t
+    b.setAttribute('data-s', ERP.status || '')
+  }
+  // Malzeme ihtiyacı: kesim parçaları (profil + çelik) → stok kodu + renk bazında boy sayısı
+  function materialNeeds(pr) {
+    var cat = APP.getCatalog(),
+      st = APP.getSettings()
+    var t = OZKV.calcTotals(pr.positions, cat, pr.commercial || {}, st, pr.priceOverrides || {})
+    var g = {}
+    ;(t.lines || []).forEach(function (l) {
+      var q = Math.max(1, Math.round((l.pos && l.pos.qty) || 1))
+      ;(l.pieces || []).forEach(function (pc) {
+        if (!pc || !pc.code || !(pc.length > 0)) return
+        var k = pc.code + '|' + (pc.colorLabel || '')
+        var e = g[k] || (g[k] = { code: pc.code, name: pc.name || pc.code, color: pc.colorLabel || '', unit: 'boy', mm: 0, pieces: 0, kind: pc.category || '' })
+        e.mm += pc.length * (pc.qty || 1) * q
+        e.pieces += (pc.qty || 1) * q
+      })
+    })
+    return Object.keys(g).map(function (k) {
+      var e = g[k]
+      return { code: e.code, name: e.name, color: e.color, unit: 'boy', qty: Math.ceil((e.mm * 1.05) / 6000), total_mm: Math.round(e.mm), pieces: e.pieces, kind: e.kind }
+    })
+  }
+  function soldFlow() {
+    if (!ERP.on) return toast('Satış bildirimi yalnız OIE ERP içinde çalışır')
+    var pr = APP.getProject()
+    var needs
+    try {
+      needs = materialNeeds(pr)
+    } catch (e) {
+      return toast('Malzeme listesi çıkarılamadı: ' + e.message)
+    }
+    var m = aiModal('<div class="ozk-ai-h"><b>✔ Satış oldu — depo kontrolü</b><button data-x>✕</button></div><p class="ozk-ai-p">Kaydediliyor, depo stoğu kontrol ediliyor…</p>')
+    m.querySelector('[data-x]').onclick = aiClose
+    saveNow('quoted')
+      .then(function () {
+        return erpCall('pcd:sold', { localId: pr.id, needs: needs })
+      })
+      .then(function (rows) {
+        rows = rows || []
+        var short = rows.filter(function (r) {
+          return r.shortage > 0
+        })
+        var html =
+          '<div class="ozk-ai-h"><b>✔ Satış kaydedildi — depo durumu</b><button data-x>✕</button></div>' +
+          '<p class="ozk-ai-p">Satın Alma & Depo ekibine bildirim gitti. Boy sayısı: kesim uzunluğu + %5 fire, 6 m boy üzerinden tahminidir.</p>' +
+          '<div class="ozk-ai-tw"><table class="ozk-ai-t"><thead><tr><th>Stok kodu</th><th>Profil</th><th>Renk</th><th>Gereken</th><th>Depoda</th><th>Eksik</th></tr></thead><tbody>' +
+          rows
+            .map(function (r) {
+              return '<tr class="' + (r.shortage > 0 ? 'bad' : '') + '"><td><code>' + esc(r.code) + '</code></td><td>' + esc(r.product_name || r.name || '') + (r.product_id ? '' : ' <small>(depoda tanımlı değil)</small>') + '</td><td>' + esc(r.color || '') + '</td><td>' + esc(r.needed) + ' ' + esc(r.unit || '') + '</td><td>' + esc(r.available) + '</td><td><b>' + esc(r.shortage) + '</b></td></tr>'
+            })
+            .join('') +
+          '</tbody></table></div>' +
+          '<div class="ozk-ai-f"><span data-msg>' + (short.length ? short.length + ' kalem eksik' : 'Tüm malzeme depoda var') + '</span>' +
+          (short.length ? '<button class="ozk-ai-go" data-pr>Eksikler için Satın Alma talebi aç</button>' : '') +
+          '</div>'
+        var m2 = aiModal(html)
+        m2.querySelector('.ozk-ai-box').classList.add('wide')
+        m2.querySelector('[data-x]').onclick = aiClose
+        var b = m2.querySelector('[data-pr]')
+        if (b)
+          b.onclick = function () {
+            b.disabled = true
+            erpCall('pcd:purchase', { localId: pr.id })
+              .then(function (no) {
+                m2.querySelector('[data-msg]').textContent = 'Satın alma talebi açıldı' + (no ? ': ' + no : '')
+              })
+              .catch(function (e) {
+                b.disabled = false
+                m2.querySelector('[data-msg]').textContent = 'Hata: ' + e.message
+              })
+          }
+      })
+      .catch(function (e) {
+        m.querySelector('.ozk-ai-p').textContent = 'Hata: ' + e.message
+      })
+  }
+  // Projeler sekmesi: ERP projeleri (otomatik taslaklar dahil)
+  function ErpPanel(props) {
+    var n = props.n,
+      R = props.R
+    var st = R.useState(null),
+      rows = st[0],
+      setRows = st[1]
+    var qs = R.useState(''),
+      q = qs[0],
+      setQ = qs[1]
+    var er = R.useState(''),
+      err = er[0],
+      setErr = er[1]
+    function load() {
+      erpCall('pcd:list', {})
+        .then(function (r) {
+          setRows(r || [])
+          setErr('')
+        })
+        .catch(function (e) {
+          setErr(e.message)
+        })
+    }
+    R.useEffect(function () {
+      if (ERP.on) load()
+    }, [])
+    if (!ERP.on) return null
+    var SL = { draft: 'Taslak', quoted: 'Teklif verildi', sold: 'Satış', cancelled: 'İptal', archived: 'Arşiv' }
+    var ql = q.toLocaleLowerCase('tr')
+    var list = (rows || []).filter(function (x) {
+      return !ql || [x.title, x.quote_no, x.customer, x.owner_name, x.country].join(' ').toLocaleLowerCase('tr').indexOf(ql) >= 0
+    })
+    return n.jsxs('div', {
+      className: 'rounded-2xl border border-sky-500/30 bg-ink-900/60 p-4 space-y-3',
+      children: [
+        n.jsxs('div', {
+          className: 'flex flex-wrap items-center justify-between gap-2 border-b border-ink-800 pb-2',
+          children: [
+            n.jsx('span', { className: 'font-bold text-sky-300', children: '☁ ERP Projeleri — otomatik taslaklar dahil (' + (rows ? rows.length : '…') + ')' }),
+            n.jsxs('div', {
+              className: 'flex items-center gap-1.5',
+              children: [
+                n.jsx('input', {
+                  value: q,
+                  onChange: function (ev) {
+                    setQ(ev.target.value)
+                  },
+                  placeholder: 'Ara: müşteri, çizen, teklif no…',
+                  className: 'h-7 w-48 rounded border border-ink-700 bg-ink-950 px-2 text-[11px] text-white',
+                }),
+                n.jsx('button', { type: 'button', onClick: load, className: 'rounded-lg border border-ink-700 bg-ink-900 px-3 py-1 font-semibold text-ink-200 hover:bg-ink-800', children: '↻' }),
+              ],
+            }),
+          ],
+        }),
+        err ? n.jsx('div', { className: 'text-[11px] text-red-300', children: err }) : null,
+        n.jsx('div', {
+          className: 'space-y-2',
+          children: list.map(function (x) {
+            var d = new Date(x.updated_at)
+            return n.jsxs(
+              'div',
+              {
+                className: 'flex items-center justify-between gap-2 rounded-xl border border-ink-800 bg-ink-950 p-3',
+                children: [
+                  n.jsxs('div', {
+                    className: 'min-w-0',
+                    children: [
+                      n.jsx('div', { className: 'truncate font-bold text-white', children: (x.quote_no ? '#' + x.quote_no + ' — ' : '') + (x.title || 'Adsız proje') }),
+                      n.jsx('div', {
+                        className: 'truncate text-[10px] text-ink-400',
+                        children: [
+                          x.customer,
+                          x.country,
+                          'Çizen: ' + (x.owner_name || '?'),
+                          x.last_editor_name && x.last_editor_name !== x.owner_name ? 'Son: ' + x.last_editor_name : '',
+                          d.toLocaleDateString('tr-TR') + ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+                          (x.positions || 0) + ' poz',
+                        ]
+                          .filter(Boolean)
+                          .join(' · '),
+                      }),
+                    ],
+                  }),
+                  n.jsxs('div', {
+                    className: 'flex shrink-0 items-center gap-1.5',
+                    children: [
+                      n.jsx('span', { className: 'ozk-erp-st st-' + x.status, children: SL[x.status] || x.status }),
+                      x.total ? n.jsx('span', { className: 'font-mono text-[12px] font-bold text-gold-400', children: OZKV.fmt ? OZKV.fmt(x.total / ((APP.getCatalog().exchangeRates || {})[x.currency] || 1), x.currency, APP.getCatalog()) : x.total }) : null,
+                      n.jsx('button', {
+                        type: 'button',
+                        onClick: function () {
+                          erpCall('pcd:load', { id: x.id })
+                            .then(function (pj) {
+                              if (!pj) return toast('Proje bulunamadı')
+                              saveNow()
+                              ensurePJ().then(function () {
+                                PJ.load(pj)
+                                toast('#' + (x.quote_no || '') + ' açıldı — çizen: ' + (x.owner_name || '?'))
+                              })
+                            })
+                            .catch(function (e) {
+                              toast('Açılamadı: ' + e.message)
+                            })
+                        },
+                        className: 'rounded-lg bg-brand-600 px-2.5 py-1 font-semibold text-white hover:bg-brand-500',
+                        children: 'Aç',
+                      }),
+                    ],
+                  }),
+                ],
+              },
+              x.id,
+            )
+          }),
+        }),
+      ],
+    })
+  }
+  function erpState() {
+    var pr = null
+    try {
+      pr = APP && APP.getProject()
+    } catch (e) {}
+    return { on: ERP.on, app: !!APP, status: ERP.status, savedAt: ERP.savedAt, user: ERP_USER && ERP_USER.name, pid: pr && pr.id }
+  }
+  function erpPanel(n, R) {
+    if (!ERP.on) return null
+    try {
+      return n.jsx(ErpPanel, { n: n, R: R })
+    } catch (e) {
+      return null
+    }
+  }
+  function soldButton(n) {
+    if (!ERP.on) return null
+    return n.jsx('button', {
+      type: 'button',
+      onClick: soldFlow,
+      className: 'mt-1 w-full rounded-lg bg-violet-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-violet-500',
+      children: '🏭 Satış oldu — depoya bildir (stok kontrol)',
     })
   }
 
@@ -4079,6 +4448,10 @@
 
   applyTheme()
   applyAntet()
+  if (inErp())
+    try {
+      window.parent.postMessage({ type: 'pcd:ready' }, location.origin)
+    } catch (e) {}
   if (document.readyState === 'loading')
     document.addEventListener('DOMContentLoaded', function () {
       applyAntet()
@@ -4129,6 +4502,7 @@
     _reg: REG,
     exportCustomer3D: exportCustomer3D,
     bindApp: bindApp,
+    erpState: erpState,
     sashHw: sashHw,
     frameHw: frameHw,
     aiOpen: aiOpen,
