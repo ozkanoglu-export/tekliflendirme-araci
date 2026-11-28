@@ -862,3 +862,26 @@ button:hover > .ozk-star-mini {
 .ozk-ai-t input[type='checkbox'] {
   width: auto;
 }
+.ozk-ai-free {
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+.ozk-ai-free ol {
+  margin: 8px 0 10px;
+  padding-inline-start: 20px;
+  color: #cbd5e1;
+}
+.ozk-ai-free li {
+  margin-bottom: 6px;
+}
+.ozk-ai-free textarea {
+  min-height: 70px !important;
+}
+.ozk-ai-api summary {
+  cursor: pointer;
+  color: #94a3b8;
+  margin: 4px 0 8px;
+}

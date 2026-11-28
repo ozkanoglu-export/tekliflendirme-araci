@@ -2654,8 +2654,8 @@
     return A.map(function (p, i) {
       var q = B[i]
       var issues = []
-      if (!q) issues.push('İkinci okumada bu poz yok')
-      else {
+      if (b && !q) issues.push('İkinci okumada bu poz yok')
+      else if (q) {
         if (p.width_mm !== q.width_mm) issues.push('Genişlik iki okumada farklı: ' + p.width_mm + ' / ' + q.width_mm)
         if (p.height_mm !== q.height_mm) issues.push('Yükseklik iki okumada farklı: ' + p.height_mm + ' / ' + q.height_mm)
         if ((p.qty || 1) !== (q.qty || 1)) issues.push('Adet farklı: ' + p.qty + ' / ' + q.qty)
@@ -2689,6 +2689,91 @@
     var m = document.getElementById('ozk-ai')
     if (m) m.remove()
   }
+
+  // claude.ai'ye yapıştırılacak komut (ücretsiz yöntem)
+  function aiPromptText() {
+    return (
+      AI_SYSTEM +
+      '\n\nOutput format: reply with ONLY one JSON object — no explanation, no markdown code fences — that validates against this JSON Schema (every property is required; use null where the schema allows it and empty strings / empty arrays when nothing is stated):\n' +
+      JSON.stringify(AI_SCHEMA) +
+      '\n\nThe customer request is attached to this message (file and/or pasted text). List every position.'
+    )
+  }
+  function copyText(t) {
+    function legacy() {
+      var ta = document.createElement('textarea')
+      ta.value = t
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      var ok = false
+      try {
+        ok = document.execCommand('copy')
+      } catch (e) {}
+      ta.remove()
+      return ok
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText)
+        return navigator.clipboard.writeText(t).then(
+          function () {
+            return true
+          },
+          function () {
+            return legacy()
+          },
+        )
+    } catch (e) {}
+    return Promise.resolve(legacy())
+  }
+  // Yapıştırılan cevaptan JSON'u çıkar ve eksik alanları tamamla
+  function parseAIText(t) {
+    var s0 = String(t).replace(/```(?:json)?/gi, '')
+    var i = s0.indexOf('{'),
+      j = s0.lastIndexOf('}')
+    if (i < 0 || j <= i) throw new Error('JSON bulunamadı')
+    var d = JSON.parse(s0.slice(i, j + 1))
+    if (!d || !Array.isArray(d.positions)) throw new Error('positions listesi yok')
+    function num(v) {
+      var n = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : v
+      return typeof n === 'number' && isFinite(n) ? n : null
+    }
+    d.customer = Object.assign({ company: '', name: '', country: '' }, d.customer || {})
+    d.project = Object.assign({ name: '', profile_system: '', color_inside: '', color_outside: '', glass: '', shutter: '', flyscreen: '', notes: '' }, d.project || {})
+    d.warnings = Array.isArray(d.warnings) ? d.warnings.map(String) : []
+    d.positions = d.positions.map(function (p, k) {
+      p = p || {}
+      return {
+        ref: String(p.ref || 'Poz ' + (k + 1)),
+        title: String(p.title || ''),
+        qty: Math.max(1, parseInt(p.qty, 10) || 1),
+        width_mm: num(p.width_mm),
+        height_mm: num(p.height_mm),
+        original_text: String(p.original_text || ''),
+        unit: String(p.unit || 'unknown'),
+        confidence: ['high', 'medium', 'low'].indexOf(p.confidence) >= 0 ? p.confidence : 'low',
+        type: AI_TYPES.indexOf(p.type) >= 0 ? p.type : 'unknown',
+        sections: Array.isArray(p.sections)
+          ? p.sections
+              .filter(function (x) {
+                return x && SEC_TYPES.indexOf(x.type) >= 0
+              })
+              .map(function (x) {
+                return { type: x.type, width_mm: num(x.width_mm) }
+              })
+          : [],
+        top_light_height_mm: num(p.top_light_height_mm),
+        hinge: p.hinge === 'left' || p.hinge === 'right' ? p.hinge : 'unknown',
+        shutter: ['none', 'monoblock', 'external', 'hidden_lento'].indexOf(p.shutter) >= 0 ? p.shutter : 'none',
+        flyscreen: ['none', 'fixed', 'hinged', 'pleated'].indexOf(p.flyscreen) >= 0 ? p.flyscreen : 'none',
+        color_inside: String(p.color_inside || ''),
+        color_outside: String(p.color_outside || ''),
+        notes: String(p.notes || ''),
+      }
+    })
+    return d
+  }
   async function ensurePJ() {
     if (PJ.catalog && Date.now() - PJ.t < 5000) return
     clickNav(/^Projeler/)
@@ -2698,11 +2783,19 @@
     var key = getPref(AI.key, '')
     var m = aiModal(
       '<div class="ozk-ai-h"><b>✨ AI ile Ölçü Okuma</b><button data-x>✕</button></div>' +
+        '<div class="ozk-ai-free"><b>Ücretsiz yöntem: claude.ai aboneliğiyle</b>' +
+        '<ol><li><button class="ozk-ai-go" data-copy>📋 Komutu kopyala</button></li>' +
+        '<li>claude.ai\'de <b>yeni sohbet</b> aç, müşteri dosyasını (PDF / foto / e-posta) ekle, komutu yapıştır, gönder.</li>' +
+        '<li>Claude\'un cevabını aşağıya yapıştır. Ölçülerden emin olmak için aynısını <b>ikinci bir yeni sohbette</b> tekrar yapıp 2. kutuya yapıştır; iki okuma karşılaştırılır.</li></ol>' +
+        '<textarea data-j1 placeholder="1. cevabı buraya yapıştır"></textarea>' +
+        '<textarea data-j2 placeholder="2. cevap (önerilir: ölçüleri karşılaştırır)"></textarea>' +
+        '<div class="ozk-ai-f"><span data-msg2></span><button class="ozk-ai-go" data-paste>Onaya geç →</button></div></div>' +
+        '<details class="ozk-ai-api"><summary>Otomatik yöntem (Anthropic API anahtarı, ücretli)</summary>' +
         '<p class="ozk-ai-p">Müşteri talebini yükleyin (PDF, çizim / fotoğraf, e-posta metni). Claude pozları ve ölçüleri çıkarır; iki ayrı okuma karşılaştırılır. Projeye eklemeden önce her şeyi onaylarsınız.</p>' +
         '<label class="ozk-ai-drop" data-drop><input type="file" multiple accept=".pdf,image/*,.txt,.eml,.csv" hidden><span>📎 Dosya seç veya buraya sürükle</span><em data-files></em></label>' +
         '<textarea data-txt placeholder="veya e-posta / mesaj metnini buraya yapıştırın…"></textarea>' +
         '<div class="ozk-ai-key"><label>Anthropic API anahtarı <input type="password" data-key placeholder="sk-ant-…" value="' + esc(key) + '"></label><small>Yalnızca bu bilgisayarda saklanır. ERP\'ye taşınınca sunucudan yönetilecek.</small></div>' +
-        '<div class="ozk-ai-f"><span data-msg></span><button class="ozk-ai-go" data-go>Oku →</button></div>',
+        '<div class="ozk-ai-f"><span data-msg></span><button class="ozk-ai-go" data-go>Oku →</button></div></details>',
     )
     var files = []
     var inp = m.querySelector('input[type=file]'),
@@ -2732,6 +2825,30 @@
       showFiles()
     })
     m.querySelector('[data-x]').onclick = aiClose
+    m.querySelector('[data-copy]').onclick = function () {
+      var b = this
+      copyText(aiPromptText()).then(function (ok) {
+        b.textContent = ok ? '✔ Kopyalandı' : 'Kopyalanamadı'
+        setTimeout(function () {
+          b.textContent = '📋 Komutu kopyala'
+        }, 2000)
+      })
+    }
+    m.querySelector('[data-paste]').onclick = async function () {
+      var msg = m.querySelector('[data-msg2]')
+      var t1 = m.querySelector('[data-j1]').value.trim(),
+        t2 = m.querySelector('[data-j2]').value.trim()
+      if (!t1) return (msg.textContent = '1. cevabı yapıştırın')
+      try {
+        var a = parseAIText(t1),
+          b2 = t2 ? parseAIText(t2) : null
+        msg.textContent = 'Hazırlanıyor…'
+        await ensurePJ()
+        aiConfirm(a, compareRuns(a, b2))
+      } catch (e) {
+        msg.textContent = 'Cevap okunamadı: ' + (e && e.message ? e.message : e) + ' — Claude\'un cevabının tamamını kopyaladığınızdan emin olun.'
+      }
+    }
     m.querySelector('[data-go]').onclick = async function () {
       var msg = m.querySelector('[data-msg]')
       var k = m.querySelector('[data-key]').value.trim()

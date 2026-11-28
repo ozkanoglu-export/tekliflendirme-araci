@@ -24,7 +24,7 @@ python3 v6/build.py
 | Müşteri 3D teklifi | Müşteri Teklifi → "📱 Müşteri 3D Teklifi İndir". Telefonda veya bilgisayarda açılan tek bir HTML dosyası üretir: 3D döndürme, kanat açma, çizim ve profil detayları. **Birim fiyat, maliyet ve katalog içermez.** İnternetsiz de açılır. |
 | AI ölçü okuma | ✨ düğmesi: PDF, çizim fotoğrafı veya e-posta metni yüklenir. Claude (claude-opus-5-5) pozları çıkarır ve iki bağımsız okuma karşılaştırılır. Uyuşmayan ya da emin olunmayan ölçü, "kontrol ettim" işaretlenmeden projeye girmez. Profil, renk, cam, panjur ve sineklik onay ekranında düzenlenir. Sonra "Yeni proje olarak aç" (eski proje arşive kaydedilir) ya da "Mevcut projeye ekle" seçilir. |
 
-AI için Anthropic API anahtarı gerekir. Anahtar yalnızca o bilgisayarda (`ozk.ai.key`) saklanır. OIE ERP'ye taşınınca istekler sunucu üzerinden yapılmalı, anahtar tarayıcıda durmamalı.
+AI okuma iki yolla çalışır. **Ücretsiz yol:** ✨ → "Komutu kopyala". Komut, müşteri dosyasıyla birlikte claude.ai'de yeni bir sohbete yapıştırılır, gelen cevap programa geri yapıştırılır. İkinci bir sohbetteki cevap da yapıştırılırsa ölçüler karşılaştırılır. **Otomatik yol:** Anthropic API anahtarı gerekir (ücretli). Anahtar yalnızca o bilgisayarda (`ozk.ai.key`) saklanır. OIE ERP'ye taşınınca istekler sunucu üzerinden yapılmalı, anahtar tarayıcıda durmamalı.
 
 ## Güvenlik kuralları (build.py)
 
