@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Özkanoğlu PenCAD 6.1 — Görsel Katman (OZKV)
+   Vinesso CAD (eski adı PenCAD) — Görsel Katman (OZKV)
    --------------------------------------------------------------------------
    Bu dosya 6.0'ın hesap/fiyat/veri mantığına DOKUNMAZ. Sadece:
      • cam türlerine göre gerçekçi cam görselleri (SVG + 3D)
@@ -2417,7 +2417,7 @@
     var html = customerHTML(D)
     var a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }))
-    a.download = 'Teklif-' + (D.quoteNo || 'PenCAD') + '-3D.html'
+    a.download = 'Teklif-' + (D.quoteNo || 'VinessoCAD') + '-3D.html'
     document.body.appendChild(a)
     a.click()
     setTimeout(function () {

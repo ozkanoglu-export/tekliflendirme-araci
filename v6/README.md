@@ -1,9 +1,9 @@
-# PenCAD 6.2: 6.0 üzerine katman
+# Vinesso CAD 6.2 (eski adı Özkanoğlu PenCAD): 6.0 üzerine katman
 
 Furkan'ın geliştirdiği **PenCAD 6.0** (`kaynak/ozkanoglu_pencad_60.html`) temel alındı. Dosya derlenmiş halde geliyor; kaynak kodu elimizde yok.
-6.2 bu dosyanın üzerine bir katman ekler. Hesap, fiyat, analiz ve kayıt koduna dokunulmaz. Tek istisna montaj bedeli: yalnızca kutucuk işaretliyse toplama eklenir.
+6.2 bu dosyanın üzerine bir katman ekler. Hesap, fiyat, analiz ve kayıt koduna dokunulmaz. İstisnalar: montaj bedeli yalnızca kutucuk işaretliyse toplama eklenir; **iskonto yalnız ürün tutarına uygulanır** (ambalaj, palet, nakliye ve montaj iskontosuz; "hedef fiyat" da buna göre oran hesaplar). Yazdırmada ekrandaki kart düzeni sabitlenir (Chrome dar sayınca kartlar alt alta dizilip ilk sayfa boş kalıyordu).
 
-- Çıktı: `release/Ozkanoglu-PenCAD-6.2.html` (çift tıkla aç)
+- Çıktı: `release/Vinesso-CAD-6.2.html` (çift tıkla aç)
 - Antigravity yeni bir 6.0 verdiğinde: dosyayı `kaynak/` içine koyup aşağıdaki komutu çalıştır. Yamalar desenle eşleştiği için değişken adları değişse de tutar. Tutmazsa derleme hangi yamada durduğunu söyler.
 
 ```bash

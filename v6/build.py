@@ -3,7 +3,7 @@
 Özkanoğlu PenCAD — görsel/ek özellik katmanı derleyicisi
 --------------------------------------------------------
 Girdi : v6/kaynak/ozkanoglu_pencad_60.html  (Furkan / Antigravity derlemesi — el sürülmez)
-Çıktı : release/Ozkanoglu-PenCAD-6.2.html
+Çıktı : release/Vinesso-CAD-6.2.html
 
 • Yamalar sabit metin değil DESEN ile bulunur: Antigravity yeniden derleyip
   değişken adlarını değiştirse de doğru yer bulunur.
@@ -21,7 +21,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / 'v6' / 'kaynak' / 'ozkanoglu_pencad_60.html'
 GOR = ROOT / 'v6' / 'gorsel'
-OUT = ROOT / 'release' / 'Ozkanoglu-PenCAD-6.2.html'
+OUT = ROOT / 'release' / 'Vinesso-CAD-6.2.html'
 ID = r'[\w$]+'
 
 html = SRC.read_text(encoding='utf-8')
@@ -132,12 +132,23 @@ sub(E(mv.group(0)), f'children:{OZ}?[OZKV.vinessoLockup({mv.group(2)},{mv.group(
     'teklif: Vinesso imzası "by ÖZKANOĞLU" ("ihracat markamız" kaldırıldı)')
 
 
+# ------------------------------------------------------------ program adı: VİNESSO CAD (yalnız görünen yazılar; dosya biçimi/kimlikler aynı)
+sub(r'children:"ÖZKANOĞLU"\}\),(\w+)\.jsx\("span",\{className:"([^"]*)",children:"PenCAD 6\.0"\}\)',
+    r'children:"VİNESSO"}),\1.jsx("span",{className:"\2",children:"CAD 6.2"})', 'ad: üst başlık VİNESSO CAD 6.2')
+sub(r'"Klavye Kısayolları — PenCAD 6\.0"', '"Klavye Kısayolları — Vinesso CAD 6.2"', 'ad: kısayollar başlığı')
+sub(r'geçerli bir Özkanoğlu PenCAD \(', 'geçerli bir Vinesso CAD (', 'ad: proje dosyası uyarısı')
+sub(r'— PenCAD 6\.0 İhracat Projesi', '— Vinesso CAD İhracat Projesi', 'ad: örnek proje adı')
+
 # ------------------------------------------------------------ teklif: montaj, dahil/hariç, profil bölümü
 # Toplam fonksiyonu: montaj yalnızca tikliyse eklenir; tiksizken toplamlar 6.0 ile birebir aynı
 mt = find1(rf'const ({ID})=({ID})\(({ID})\+({ID})\+({ID})\+({ID})\),({ID})=\2\(\1\*Math\.min\(100,Math\.max\(0,({ID})\.discountPercent\)\)/100\)', 'toplam fonksiyonu')
 TV = mt.group(8)
 sub(E(mt.group(0)), (f'const __oI={OZ}&&{TV}.includeInstallation?Math.max(0,+{TV}.installationPrice||0):0,{mt.group(1)}={mt.group(2)}({mt.group(3)}+{mt.group(4)}+{mt.group(5)}+{mt.group(6)}+__oI),'
-                     f'{mt.group(7)}={mt.group(2)}({mt.group(1)}*Math.min(100,Math.max(0,{TV}.discountPercent))/100)').replace('\\', '\\\\'), 'toplam: montaj bedeli')
+                     f'{mt.group(7)}={mt.group(2)}(({OZ}?{mt.group(3)}:{mt.group(1)})*Math.min(100,Math.max(0,{TV}.discountPercent))/100)').replace('\\', '\\\\'),
+    'toplam: montaj bedeli + iskonto yalnız ürün tutarına (ambalaj/palet/nakliye/montaj iskontosuz)')
+# Hedef fiyattan iskonto oranı: oran artık ürün tutarı üzerinden hesaplanır
+sub(rf'(function {ID}\(({ID}),({ID}),({ID})\)\{{const ({ID})=\2/\(1\+Math\.max\(0,\4\.vatPercent\)/100\);if\(\3\.subtotal<=0\)return 0;const ({ID})=\(\3\.subtotal-\5\)/)\3\.subtotal\*100;',
+    rf'\1({OZ}?\3.products:\3.subtotal)*100;', 'hedef fiyat: iskonto oranı ürün tutarına göre')
 sub(rf'(packaging:{ID},pallet:{ID},freight:{ID},)(subtotal:)', r'\1installation:__oI,\2', 'toplam: montaj alanı')
 sub(rf'(grossProfit:{ID}-{ID}-{ID}-{ID}-{ID}-{ID})\}}', r'\1-__oI}', 'toplam: brüt kâr montaj düşümü')
 
@@ -304,6 +315,30 @@ rules.append("html[data-ozk-theme='day'] svg.ozk-canvas text[fill='#f8fafc']{fil
 rules.append("html[data-ozk-theme='day'] svg.ozk-canvas rect[fill='#0f172a']{fill:#ffffff}")
 theme_css = (GOR / 'ozk-theme.css').read_text(encoding='utf-8').replace('__OZK_CANVAS_DAY__', '\n'.join(rules))
 
+
+# Yazdırma: Chrome sayfa genişliğini (A4 ≈ 720 px) ekran kırılımlarının altında sayınca teklif kartları alt alta dizilip
+# uzuyor ve "bölünmesin" kuralıyla bir sonraki sayfaya atlıyordu (ilk sayfa boş kalıyordu). Ekrandaki md/lg düzeni
+# yazdırmada da aynen uygulanır (yalnız yerleşim; hiçbir yazı / sayı değişmez).
+def _media_block(src, bp):
+    m = re.search(r'@media\s*\(min-width:\s*' + bp + r'px\)\{', src)
+    if not m:
+        sys.exit(f'Kırılım bulunamadı: {bp}px')
+    i, depth = m.end(), 1
+    while depth:
+        c = src[i]
+        depth += c == '{'
+        depth -= c == '}'
+        i += 1
+    return src[m.end():i - 1]
+
+
+_pr = []
+for _bp in ('640', '768', '1024'):
+    for sel, body in re.findall(r'([^{}]+)\{([^{}]*)\}', _media_block(html, _bp)):
+        _pr.append(','.join('html body ' + x.strip() for x in sel.split(',')) + '{' + body + '}')
+theme_css += '\n@media print{' + ''.join(_pr) + '}\n'
+print(f'  ✓ yazdırma: ekran düzeni sabitlendi ({len(_pr)} kural)')
+
 # ------------------------------------------------------------ dokular + kartela
 rehau = json.loads((GOR / 'rehau_kartela.json').read_text(encoding='utf-8'))
 
@@ -326,7 +361,7 @@ ozkv = ozkv.replace('__OZK_TEX__', json.dumps(tex)).replace('__OZK_REHAU__', jso
 
 # ------------------------------------------------------------ birleştir
 out = html[:i0] + js + html[j0:]
-out = re.sub(r'<title>[^<]*</title>', '<title>Özkanoğlu PenCAD 6.2 Stüdyo</title>', out, count=1)
+out = re.sub(r'<title>[^<]*</title>', '<title>Vinesso CAD 6.2</title>', out, count=1)
 viewer_js = (GOR / 'vendor' / 'ozk3.min.js').read_text(encoding='utf-8')
 if '</script' in viewer_js.lower() or '<!--' in viewer_js:
     sys.exit('görüntüleyici paketinde </script var')

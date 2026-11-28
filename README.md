@@ -1,6 +1,6 @@
-# Özkanoğlu PenCAD Stüdyo
+# Vinesso CAD (eski adı Özkanoğlu PenCAD)
 
-> **Güncel sürüm: 6.2** → `release/Ozkanoglu-PenCAD-6.2.html`
+> **Güncel sürüm: Vinesso CAD 6.2** → `release/Vinesso-CAD-6.2.html`
 > Furkan'ın 6.0'ı üzerine kurulu. Eklenenler:
 > - premium antetli teklif, montaj bedeli ve dahil/hariç notları;
 > - verilen teklifler kaydı ve favoriler;
