@@ -559,3 +559,65 @@ html[data-ozk-antet='1'] .print-sheet img[alt^='Özkanoğlu —'] + div {
 .ozk-spec-glass tr:nth-child(even) td {
   background: #f8fafc;
 }
+
+/* =====================================================================
+   FAVORİLER (6.2)
+   ===================================================================== */
+.ozk-favwrap {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+.ozk-favwrap > select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ozk-star {
+  flex: none;
+  width: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.45);
+  color: #94a3b8;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, transform 0.15s;
+}
+.ozk-star:hover:not(:disabled) {
+  color: #f5c542;
+  transform: scale(1.06);
+}
+.ozk-star.on {
+  color: #f5c542;
+  border-color: rgba(245, 197, 66, 0.55);
+  background: rgba(245, 197, 66, 0.12);
+}
+.ozk-star:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+button:has(> .ozk-star-mini) {
+  position: relative;
+}
+.ozk-star-mini {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  font-size: 10px;
+  line-height: 1;
+  color: #64748b;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+button:hover > .ozk-star-mini {
+  opacity: 0.9;
+}
+.ozk-star-mini:hover,
+.ozk-star-mini.on {
+  color: #f5c542;
+  opacity: 1;
+}

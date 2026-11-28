@@ -1531,6 +1531,172 @@
     }
   }
 
+
+  /* ============================================= FAVORİLER (6.2) */
+  // ozk.fav.<tür> = [anahtar, ...]  — favoriler listelerin en üstüne çıkar
+  function favList(kind) {
+    try {
+      var a = JSON.parse(localStorage.getItem('ozk.fav.' + kind) || '[]')
+      return Array.isArray(a) ? a : []
+    } catch (e) {
+      return []
+    }
+  }
+  function isFav(kind, key) {
+    return favList(kind).indexOf(key) >= 0
+  }
+  function toggleFav(kind, key) {
+    if (!key) return
+    var a = favList(kind),
+      i = a.indexOf(key)
+    if (i >= 0) a.splice(i, 1)
+    else a.unshift(key)
+    setPref('ozk.fav.' + kind, JSON.stringify(a))
+    try {
+      window.dispatchEvent(new Event('ozk-fav'))
+    } catch (e) {}
+  }
+  function useFav(R) {
+    var st = R.useState(0)
+    R.useEffect(function () {
+      function f() {
+        st[1](function (x) {
+          return x + 1
+        })
+      }
+      window.addEventListener('ozk-fav', f)
+      return function () {
+        window.removeEventListener('ozk-fav', f)
+      }
+    }, [])
+    return st[0]
+  }
+  // Renk grupları: favoriler ve kendi eklediğimiz renkler "Çok Kullanılan" grubunun başına
+  function favColors(g) {
+    try {
+      var fav = favList('colors')
+      var all = g.popular.concat(g.standard, g.other)
+      var byKey = {}
+      all.forEach(function (c) {
+        byKey[c.key] = c
+      })
+      var top = fav
+        .map(function (k) {
+          return byKey[k]
+        })
+        .filter(Boolean)
+      all.forEach(function (c) {
+        if (c.custom && top.indexOf(c) < 0) top.push(c)
+      })
+      function rest(arr) {
+        return arr.filter(function (c) {
+          return top.indexOf(c) < 0
+        })
+      }
+      return { popular: top.concat(rest(g.popular)), standard: rest(g.standard), other: rest(g.other) }
+    } catch (e) {
+      return g
+    }
+  }
+  // Hızlı renk düğmelerindeki minik yıldız
+  function starMini(n, kind, key) {
+    var on = isFav(kind, key)
+    return n.jsx('span', {
+      role: 'button',
+      title: on ? 'Favorilerden çıkar' : 'Favorilere ekle (en üste taşır)',
+      className: 'ozk-star-mini' + (on ? ' on' : ''),
+      onClick: function (ev) {
+        ev.stopPropagation()
+        ev.preventDefault()
+        toggleFav(kind, key)
+      },
+      children: on ? '★' : '☆',
+    })
+  }
+  // Seçim kutusu + ★ düğmesi + en üstte "★ Favorilerim" grubu
+  function collectOpts(el, out, depth) {
+    if (!el || depth > 6) return
+    if (Array.isArray(el)) {
+      el.forEach(function (x) {
+        collectOpts(x, out, depth + 1)
+      })
+      return
+    }
+    if (typeof el !== 'object') return
+    if (el.type === 'option') {
+      if (el.props && el.props.value != null) out.push({ v: String(el.props.value), c: el.props.children })
+      return
+    }
+    if (typeof el.type === 'function') {
+      try {
+        collectOpts(el.type(el.props), out, depth + 1)
+      } catch (e) {}
+      return
+    }
+    if (el.props && el.props.children) collectOpts(el.props.children, out, depth + 1)
+  }
+  function FavSelect(p) {
+    var n = p.n
+    useFav(p.R)
+    var props = p.props,
+      kind = p.kind
+    var opts = []
+    collectOpts(props.children, opts, 0)
+    var fav = favList(kind)
+    var favOpts = fav
+      .map(function (k) {
+        for (var i = 0; i < opts.length; i++) if (opts[i].v === k) return opts[i]
+        return null
+      })
+      .filter(Boolean)
+    var ch = props.children
+    var children = favOpts.length
+      ? [
+          n.jsx(
+            'optgroup',
+            {
+              label: '★ Favorilerim',
+              children: favOpts.map(function (o) {
+                return n.jsx('option', { value: o.v, children: o.c }, 'fav-' + o.v)
+              }),
+            },
+            'ozk-fav',
+          ),
+        ].concat(Array.isArray(ch) ? ch : [ch])
+      : Array.isArray(ch)
+        ? ch
+        : [ch]
+    var sel = n.jsxs(p.type, Object.assign({}, props, { children: children }))
+    var cur = String(props.value == null ? '' : props.value)
+    var on = fav.indexOf(cur) >= 0
+    var canStar = opts.some(function (o) {
+      return o.v === cur
+    })
+    return n.jsxs('div', {
+      className: 'ozk-favwrap',
+      children: [
+        sel,
+        n.jsx('button', {
+          type: 'button',
+          disabled: !canStar,
+          title: on ? 'Seçili olanı favorilerden çıkar' : 'Seçili olanı favorilere ekle (listenin en üstüne çıkar)',
+          className: 'ozk-star' + (on ? ' on' : ''),
+          onClick: function () {
+            toggleFav(kind, cur)
+          },
+          children: on ? '★' : '☆',
+        }),
+      ],
+    })
+  }
+  function ws(R, n, kind, type, props, key) {
+    try {
+      return n.jsx(FavSelect, { R: R, n: n, kind: kind, type: type, props: props }, key)
+    } catch (e) {
+      return n.jsx(type, props, key)
+    }
+  }
+
   /* ------------------------------------------------ alt araç çubuğu (dock) */
   function esc(t) {
     return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
@@ -1751,6 +1917,11 @@
     specSection: specSection,
     applyAntet: applyAntet,
     issuedPanel: issuedPanel,
+    ws: ws,
+    useFav: useFav,
+    favColors: favColors,
+    starMini: starMini,
+    toggleFav: toggleFav,
     issuedList: issuedList,
   }
 })()

@@ -160,6 +160,25 @@ PJ_LOAD, PJ_NOTIFY, PJ_REACT = mp2.group(6), mp2.group(7), mp2.group(8)
 sub(rf'({ID})\.jsxs\("div",\{{className:"rounded-2xl border border-ink-800 bg-ink-900/60 p-4 space-y-3",children:\[\1\.jsxs\("div",\{{className:"flex items-center justify-between border-b border-ink-800 pb-2",children:\[\1\.jsxs\("span",\{{className:"flex items-center gap-2 font-bold text-brand-300",children:\[\1\.jsx\({ID},\{{size:15\}}\)," Tarayıcı Arşivi \("',
     lambda m: f'{OZ}?OZKV.issuedPanel({m.group(1)},{PJ_REACT},{{load:{PJ_LOAD},notify:{PJ_NOTIFY}}}):null,' + m.group(0), 'projeler: verilen teklifler paneli')
 
+
+# ------------------------------------------------------------ favoriler
+RX = PJ_REACT
+sub(rf'return\{{popular:({ID}),standard:({ID}),other:({ID})\}}\}}', rf'return {OZ}?OZKV.favColors({{popular:\1,standard:\2,other:\3}}):{{popular:\1,standard:\2,other:\3}}}}', 'renk grupları: favoriler en üstte')
+sub(rf'const\{{popular:({ID}),standard:({ID})\}}=({ID})\(({ID})\),', rf'const __ozf={OZ}?OZKV.useFav({RX}):0,{{popular:\1,standard:\2}}=\3(\4),', 'hızlı renkler: favori güncellemesi')
+sub(rf'(className:"truncate text-\[10px\] font-semibold leading-tight",children:({ID})\}}\))\]\}},({ID})\.key\)',
+    rf'\1,{OZ}?OZKV.starMini(n,"colors",\3.key):null]}},\3.key)', 'hızlı renkler: minik yıldız')
+FAV_TARGETS = [
+    (rf'({ID})\.(jsxs?)\("select",\{{value:({ID})\.colorOutside\|\|\3\.color,', 'colors', 'renk seçimi (dış)', 1),
+    (rf'({ID})\.(jsxs?)\("select",\{{value:({ID})\.(?:color|colorOutside),', 'colors', 'renk seçimleri', 3),
+    (rf'({ID})\.(jsxs?)\("select",\{{value:({ID})\.(?:shutter\.(?:slatColor|guideColor|boxColor)|flyscreen\.color),', 'colors', 'panjur / sineklik renkleri', 4),
+    (rf'({ID})\.(jsxs?)\("select",\{{value:({ID})\.glass,', 'glasses', 'cam seçimleri', 2),
+    (rf'({ID})\.(jsxs?)\("select",\{{value:({ID})\.series,', 'series', 'profil serisi seçimleri', 2),
+    (rf'({ID})\.(jsxs?)\("select",\{{value:({ID})\.hardware\|\|"",', 'hardware', 'donanım seçimi', 1),
+]
+for pat, kind, name, cnt in FAV_TARGETS:
+    sub(pat, lambda m, kind=kind: f'({OZ}?OZKV.ws:(R,j,k,t,p,y)=>j.{m.group(2)}(t,p,y))({RX},{m.group(1)},"{kind}","select",' + m.group(0).split('("select",', 1)[1],
+        f'favori: {name}', expected=cnt)
+
 # ------------------------------------------------------------ 3D
 mg = find1(rf'({ID})=({ID})\.colors\[({ID})\.color\]\?\?\2\.colors\.WHITE,({ID})=\2\.colors\[\3\.colorOutside\|\|\3\.color\]\?\?\1,({ID})=new ({ID})\((\{{color:8246268,transparent:!0,opacity:\.34,roughness:\.08,metalness:\.1,reflectivity:\.9,side:{ID}\}})\)', '3D cam malzemesi')
 cat3, pos3, glassObj = mg.group(2), mg.group(3), mg.group(7)
