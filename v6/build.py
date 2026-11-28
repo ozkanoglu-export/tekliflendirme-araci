@@ -179,6 +179,21 @@ for pat, kind, name, cnt in FAV_TARGETS:
     sub(pat, lambda m, kind=kind: f'({OZ}?OZKV.ws:(R,j,k,t,p,y)=>j.{m.group(2)}(t,p,y))({RX},{m.group(1)},"{kind}","select",' + m.group(0).split('("select",', 1)[1],
         f'favori: {name}', expected=cnt)
 
+
+# ------------------------------------------------------------ alüminyum eşik: pencerelere de (sürme hariç), açıkça seçilince
+# Eski projelerde pencerede kalmış "alu20" değerleri etkilenmesin diye ayrı işaret: ozkWinThr (yalnızca kullanıcı seçince yazılır)
+sub(rf'({ID})=({ID})\.kind==="casement"&&({ID})\.threshold==="alu20"&&({ID})\(\3\.root\)',
+    rf'\1=\2.kind==="casement"&&\3.threshold==="alu20"&&(\4(\3.root)||!!({OZ}&&\3.ozkWinThr))', 'eşik: pencerelerde de uygulanır (işaretliyse)')
+sub(r'threshold:([\w$]+)\.threshold==="alu20"\?"alu20":"pvc",',
+    rf'threshold:\1.threshold==="alu20"?"alu20":"pvc",...(\1.ozkWinThr?{{ozkWinThr:!0}}:{{}}),', 'eşik: pencere işareti kayıtta korunur')
+mpt = find1(rf'({ID})=({ID})&&({ID})\.threshold==="alu20"&&({ID})\(\3\.root\),({ID})=({ID})\.techSpecs,({ID})=({ID})=>\{{', 'eşik paneli değişkenleri')
+KE, VL, VT = mpt.group(3), mpt.group(4), mpt.group(7)
+sub(E(mpt.group(0)), (f'{mpt.group(1)}={mpt.group(2)}&&{KE}.threshold==="alu20"&&({VL}({KE}.root)||!!({OZ}&&{KE}.ozkWinThr)),{mpt.group(5)}={mpt.group(6)}.techSpecs,{VT}={mpt.group(8)}=>{{').replace('\\', '\\\\'), 'eşik: alt yükseltme seçeneği pencerelerde de')
+sub(rf'value:{E(KE)}\.threshold,onChange:({ID})=>\{{const ({ID})=\1\.target\.value;({ID})\(\{{threshold:\2\}}\)',
+    lambda m: (f'value:{OZ}&&{KE}.threshold==="alu20"&&!{VL}({KE}.root)&&!{KE}.ozkWinThr?"pvc":{KE}.threshold,onChange:{m.group(1)}=>{{const {m.group(2)}={m.group(1)}.target.value;'
+               f'{m.group(3)}({{threshold:{m.group(2)}}}),{OZ}&&!{VL}({KE}.root)&&{VT}({{ozkWinThr:{m.group(2)}==="alu20"}})'), 'eşik: seçim pencerelere de işler')
+sub(r'"Kapı Eşik Tipi "', '"Eşik Tipi (kapı + pencere) "', 'eşik: etiket')
+
 # ------------------------------------------------------------ 3D
 
 # ------------------------------------------------------------ 3D: gerçekçi kol, katmanlı cam, HOK levye, vasistas

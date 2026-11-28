@@ -576,6 +576,45 @@
           'gs',
         ),
       )
+      // Alüminyum düşük eşik: belirgin metal profil (gerçek ölçü 20 mm), çerçevenin üstünde
+      if (be) {
+        var ty = ke + z - 20,
+          gid = 'ozkthr-' + R
+        kids.push(
+          n.jsx(
+            'defs',
+            {
+              children: n.jsxs('linearGradient', {
+                id: gid,
+                x1: 0,
+                y1: 0,
+                x2: 0,
+                y2: 1,
+                children: [
+                  n.jsx('stop', { offset: '0', stopColor: '#f4f7fa' }, 'a'),
+                  n.jsx('stop', { offset: '0.35', stopColor: '#c9d1da' }, 'b'),
+                  n.jsx('stop', { offset: '0.6', stopColor: '#9aa6b3' }, 'c'),
+                  n.jsx('stop', { offset: '1', stopColor: '#5f6b78' }, 'd'),
+                ],
+              }),
+            },
+            'thd',
+          ),
+        )
+        kids.push(n.jsx('rect', { x: Ee, y: ty, width: $, height: 20, fill: 'url(#' + gid + ')', stroke: '#2a3542', strokeWidth: Math.max(1.2, O * 0.9) }, 'thr'))
+        ;[6.5, 13.5].forEach(function (dy, k) {
+          kids.push(n.jsx('line', { x1: Ee + 6, y1: ty + dy, x2: Ee + $ - 6, y2: ty + dy, stroke: '#4b5866', strokeOpacity: 0.7, strokeWidth: Math.max(0.6, O * 0.45) }, 'thg' + k))
+        })        // okunur etiket (çizimde ve teklifte)
+        var fs = Math.max(22, Math.min(40, $ / 14)),
+          lw = fs * 10,
+          lh = fs * 1.5
+        if ($ > lw + 40) {
+          var lx = Ee + $ / 2 - lw / 2,
+            ly = ty - lh - 6
+          kids.push(n.jsx('rect', { x: lx, y: ly, width: lw, height: lh, rx: lh / 2, fill: '#e8edf2', fillOpacity: 0.92, stroke: '#5f6b78', strokeWidth: Math.max(1, O * 0.6) }, 'thl'))
+          kids.push(n.jsx('text', { x: Ee + $ / 2, y: ly + lh / 2, textAnchor: 'middle', dominantBaseline: 'central', fontSize: fs, fontWeight: 700, fontFamily: 'ui-monospace, Menlo, monospace', fill: '#1f2933', children: 'ALU EŞİK 20 mm' }, 'tht'))
+        }
+      }
       return n.jsx('g', { children: kids })
     } catch (e2) {
       return base
@@ -2779,24 +2818,80 @@
     clickNav(/^Projeler/)
     for (var k = 0; k < 30 && !(PJ.catalog && Date.now() - PJ.t < 3000); k++) await sleep(100)
   }
+  // ---- Ücretsiz otomatik sağlayıcı: Google Gemini (AI Studio anahtarı, ücretsiz kota)
+  var GKEY = 'ozk.ai.gemini.key',
+    GMODEL = 'ozk.ai.gemini.model',
+    PROV = 'ozk.ai.provider'
+  async function geminiRead(key, model, blocks) {
+    var parts = blocks.map(function (b) {
+      if (b.type === 'text') return { text: b.text }
+      return { inlineData: { mimeType: b.source.media_type, data: b.source.data } }
+    })
+    parts.push({ text: aiPromptText() })
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key)
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: parts }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+      }),
+    })
+    var data = await res.json().catch(function () {
+      return {}
+    })
+    if (!res.ok) {
+      var m = (data.error && data.error.message) || 'HTTP ' + res.status
+      if (res.status === 404) m += ' — model adı geçersiz olabilir; model alanını güncelleyin'
+      if (res.status === 429) m += ' — ücretsiz kota doldu, biraz bekleyip tekrar deneyin'
+      throw new Error(m)
+    }
+    var c = data.candidates && data.candidates[0]
+    var txt =
+      ((c && c.content && c.content.parts) || [])
+        .map(function (p) {
+          return p.text || ''
+        })
+        .join('') || ''
+    if (!txt) throw new Error('Gemini boş yanıt verdi' + (c && c.finishReason ? ' (' + c.finishReason + ')' : ''))
+    return parseAIText(txt)
+  }
   function aiOpen() {
-    var key = getPref(AI.key, '')
+    var prov = getPref(PROV, 'gemini')
     var m = aiModal(
       '<div class="ozk-ai-h"><b>✨ AI ile Ölçü Okuma</b><button data-x>✕</button></div>' +
-        '<div class="ozk-ai-free"><b>Ücretsiz yöntem: claude.ai aboneliğiyle</b>' +
-        '<ol><li><button class="ozk-ai-go" data-copy>📋 Komutu kopyala</button></li>' +
-        '<li>claude.ai\'de <b>yeni sohbet</b> aç, müşteri dosyasını (PDF / foto / e-posta) ekle, komutu yapıştır, gönder.</li>' +
-        '<li>Claude\'un cevabını aşağıya yapıştır. Ölçülerden emin olmak için aynısını <b>ikinci bir yeni sohbette</b> tekrar yapıp 2. kutuya yapıştır; iki okuma karşılaştırılır.</li></ol>' +
-        '<textarea data-j1 placeholder="1. cevabı buraya yapıştır"></textarea>' +
-        '<textarea data-j2 placeholder="2. cevap (önerilir: ölçüleri karşılaştırır)"></textarea>' +
-        '<div class="ozk-ai-f"><span data-msg2></span><button class="ozk-ai-go" data-paste>Onaya geç →</button></div></div>' +
-        '<details class="ozk-ai-api"><summary>Otomatik yöntem (Anthropic API anahtarı, ücretli)</summary>' +
-        '<p class="ozk-ai-p">Müşteri talebini yükleyin (PDF, çizim / fotoğraf, e-posta metni). Claude pozları ve ölçüleri çıkarır; iki ayrı okuma karşılaştırılır. Projeye eklemeden önce her şeyi onaylarsınız.</p>' +
+        '<p class="ozk-ai-p">Müşteri talebini yükleyin (PDF, çizim / fotoğraf, e-posta metni). Yapay zekâ pozları ve ölçüleri çıkarır; iki bağımsız okuma karşılaştırılır. Projeye eklemeden önce her şeyi onaylarsınız.</p>' +
         '<label class="ozk-ai-drop" data-drop><input type="file" multiple accept=".pdf,image/*,.txt,.eml,.csv" hidden><span>📎 Dosya seç veya buraya sürükle</span><em data-files></em></label>' +
         '<textarea data-txt placeholder="veya e-posta / mesaj metnini buraya yapıştırın…"></textarea>' +
-        '<div class="ozk-ai-key"><label>Anthropic API anahtarı <input type="password" data-key placeholder="sk-ant-…" value="' + esc(key) + '"></label><small>Yalnızca bu bilgisayarda saklanır. ERP\'ye taşınınca sunucudan yönetilecek.</small></div>' +
-        '<div class="ozk-ai-f"><span data-msg></span><button class="ozk-ai-go" data-go>Oku →</button></div></details>',
+        '<div class="ozk-ai-prov">' +
+        '<label><input type="radio" name="ozkprov" value="gemini"' + (prov !== 'claude' ? ' checked' : '') + '> <b>Google Gemini</b> — ücretsiz</label>' +
+        '<label><input type="radio" name="ozkprov" value="claude"' + (prov === 'claude' ? ' checked' : '') + '> <b>Claude API</b> — ücretli, en hassas</label></div>' +
+        '<div class="ozk-ai-key" data-pk="gemini"><label>Gemini API anahtarı <input type="password" data-gkey placeholder="AIza…" value="' + esc(getPref(GKEY, '')) + '"></label>' +
+        '<label>Model <input data-gmodel value="' + esc(getPref(GMODEL, 'gemini-flash-latest')) + '"></label>' +
+        '<small>Anahtar: aistudio.google.com → “Get API key” (ücretsiz). Not: ücretsiz kullanımda Google gönderilen içeriği ürünlerini geliştirmek için kullanabilir. Anahtar yalnızca bu bilgisayarda saklanır.</small></div>' +
+        '<div class="ozk-ai-key" data-pk="claude"><label>Anthropic API anahtarı <input type="password" data-key placeholder="sk-ant-…" value="' + esc(getPref(AI.key, '')) + '"></label><small>console.anthropic.com · Yalnızca bu bilgisayarda saklanır.</small></div>' +
+        '<div class="ozk-ai-f"><span data-msg></span><button class="ozk-ai-go" data-go>Oku →</button></div>' +
+        '<details class="ozk-ai-api"><summary>Anahtarsız yöntem: claude.ai aboneliğiyle (kopyala-yapıştır)</summary>' +
+        '<div class="ozk-ai-free"><ol><li><button class="ozk-ai-go" data-copy>📋 Komutu kopyala</button></li>' +
+        '<li>claude.ai\'de <b>yeni sohbet</b> aç, müşteri dosyasını ekle, komutu yapıştır, gönder.</li>' +
+        '<li>Cevabı aşağıya yapıştır. Ölçüleri karşılaştırmak için aynısını <b>ikinci yeni sohbette</b> tekrar yapıp 2. kutuya yapıştır.</li></ol>' +
+        '<textarea data-j1 placeholder="1. cevabı buraya yapıştır"></textarea>' +
+        '<textarea data-j2 placeholder="2. cevap (önerilir)"></textarea>' +
+        '<div class="ozk-ai-f"><span data-msg2></span><button class="ozk-ai-go" data-paste>Onaya geç →</button></div></div></details>',
     )
+    function showProv() {
+      var v = (m.querySelector('input[name=ozkprov]:checked') || {}).value || 'gemini'
+      m.querySelectorAll('[data-pk]').forEach(function (d) {
+        d.style.display = d.getAttribute('data-pk') === v ? '' : 'none'
+      })
+      return v
+    }
+    m.querySelectorAll('input[name=ozkprov]').forEach(function (r) {
+      r.addEventListener('change', function () {
+        setPref(PROV, showProv())
+      })
+    })
+    showProv()
     var files = []
     var inp = m.querySelector('input[type=file]'),
       drop = m.querySelector('[data-drop]')
@@ -2826,11 +2921,11 @@
     })
     m.querySelector('[data-x]').onclick = aiClose
     m.querySelector('[data-copy]').onclick = function () {
-      var b = this
+      var bt = this
       copyText(aiPromptText()).then(function (ok) {
-        b.textContent = ok ? '✔ Kopyalandı' : 'Kopyalanamadı'
+        bt.textContent = ok ? '✔ Kopyalandı' : 'Kopyalanamadı'
         setTimeout(function () {
-          b.textContent = '📋 Komutu kopyala'
+          bt.textContent = '📋 Komutu kopyala'
         }, 2000)
       })
     }
@@ -2840,42 +2935,144 @@
         t2 = m.querySelector('[data-j2]').value.trim()
       if (!t1) return (msg.textContent = '1. cevabı yapıştırın')
       try {
-        var a = parseAIText(t1),
+        var a1 = parseAIText(t1),
           b2 = t2 ? parseAIText(t2) : null
         msg.textContent = 'Hazırlanıyor…'
         await ensurePJ()
-        aiConfirm(a, compareRuns(a, b2))
+        aiConfirm(a1, compareRuns(a1, b2))
       } catch (e) {
-        msg.textContent = 'Cevap okunamadı: ' + (e && e.message ? e.message : e) + ' — Claude\'un cevabının tamamını kopyaladığınızdan emin olun.'
+        msg.textContent = 'Cevap okunamadı: ' + (e && e.message ? e.message : e) + ' — cevabın tamamını kopyaladığınızdan emin olun.'
       }
     }
     m.querySelector('[data-go]').onclick = async function () {
       var msg = m.querySelector('[data-msg]')
-      var k = m.querySelector('[data-key]').value.trim()
-      if (k) setPref(AI.key, k)
+      var prov2 = showProv()
       var txt = m.querySelector('[data-txt]').value.trim()
       if (!files.length && !txt) return (msg.textContent = 'Dosya veya metin ekleyin')
-      if (!k) return (msg.textContent = 'API anahtarı gerekli')
-      this.disabled = true
+      var gk = m.querySelector('[data-gkey]').value.trim(),
+        gm = m.querySelector('[data-gmodel]').value.trim() || 'gemini-flash-latest',
+        ck = m.querySelector('[data-key]').value.trim()
+      if (gk) setPref(GKEY, gk)
+      setPref(GMODEL, gm)
+      if (ck) setPref(AI.key, ck)
+      if (prov2 === 'gemini' && !gk) return (msg.textContent = 'Gemini API anahtarı gerekli (aistudio.google.com, ücretsiz)')
+      if (prov2 === 'claude' && !ck) return (msg.textContent = 'Anthropic API anahtarı gerekli')
+      var btn = this
+      btn.disabled = true
       var t0 = Date.now()
       var tick = setInterval(function () {
-        msg.textContent = 'Claude okuyor… (2 bağımsız okuma) ' + Math.round((Date.now() - t0) / 1000) + ' sn'
+        msg.textContent = (prov2 === 'gemini' ? 'Gemini' : 'Claude') + ' okuyor… (2 bağımsız okuma) ' + Math.round((Date.now() - t0) / 1000) + ' sn'
       }, 500)
       try {
         var blocks = []
         for (var i = 0; i < files.length; i++) blocks.push(await fileToBlock(files[i]))
         if (txt) blocks.push({ type: 'text', text: 'Yapıştırılan metin:\n\n' + txt })
-        var client = aiClient()
-        var runs = await Promise.all([aiRead(client, blocks), aiRead(client, blocks)])
+        var runs
+        if (prov2 === 'gemini') runs = await Promise.all([geminiRead(gk, gm, blocks), geminiRead(gk, gm, blocks)])
+        else {
+          var client = aiClient()
+          runs = await Promise.all([aiRead(client, blocks), aiRead(client, blocks)])
+        }
         clearInterval(tick)
         await ensurePJ()
         aiConfirm(runs[0], compareRuns(runs[0], runs[1]))
       } catch (e) {
         clearInterval(tick)
         msg.textContent = 'Hata: ' + (e && e.message ? e.message : e)
-        this.disabled = false
+        btn.disabled = false
       }
     }
+  }
+
+  // ---- Tüm projedeki camları tek seferde değiştir
+  function glassBulkOpen() {
+    var m0 = aiModal('<div class="ozk-ai-h"><b>🪟 Tüm Camları Değiştir</b><button data-x>✕</button></div><p class="ozk-ai-p">Proje bilgileri yükleniyor…</p>')
+    m0.querySelector('[data-x]').onclick = aiClose
+    var back = currentTab()
+    ensurePJ().then(function () {
+      if (back) clickTab(back)
+      var cat = PJ.catalog || {},
+        pr = PJ.project
+      if (!pr || !cat.glasses) return (m0.querySelector('.ozk-ai-p').textContent = 'Proje okunamadı, tekrar deneyin.')
+      var G = cat.glasses
+      var count = {}
+      ;(pr.positions || []).forEach(function (p) {
+        count[p.glass] = (count[p.glass] || 0) + (Math.max(1, p.qty) || 1)
+      })
+      var used = Object.keys(count)
+        .map(function (k) {
+          return '<li>' + esc((G[k] && G[k].name) || k) + ' — <b>' + count[k] + ' adet</b></li>'
+        })
+        .join('')
+      var m = aiModal(
+        '<div class="ozk-ai-h"><b>🪟 Tüm Camları Değiştir</b><button data-x>✕</button></div>' +
+          '<p class="ozk-ai-p">Projede şu an kullanılan camlar:</p><ul class="ozk-ai-used">' + used + '</ul>' +
+          '<label class="ozk-ai-lbl">Yeni cam<select data-g>' + opts(G, null, function (g) { return !g.panel }) + '</select></label>' +
+          '<label class="ozk-ai-lbl">Hangi pozlar<select data-from><option value="">Tüm pozlar</option>' +
+          Object.keys(count)
+            .map(function (k) {
+              return '<option value="' + esc(k) + '">Yalnızca şu camı kullananlar: ' + esc((G[k] && G[k].name) || k) + '</option>'
+            })
+            .join('') +
+          '</select></label>' +
+          '<label class="ozk-ai-chk"><input type="checkbox" data-leaf checked> Bölmelere özel seçilmiş camları da değiştir</label>' +
+          '<label class="ozk-ai-chk"><input type="checkbox" data-units checked> Birleşik pozların diğer birimlerini de değiştir</label>' +
+          '<p class="ozk-ai-p">Panel / kapı dolguları değişmez. İşlem geri alınabilir (Ctrl+Z).</p>' +
+          '<div class="ozk-ai-f"><span data-msg></span><button class="ozk-ai-go" data-apply>Tüm projeye uygula</button></div>',
+      )
+      m.querySelector('[data-x]').onclick = aiClose
+      m.querySelector('[data-apply]').onclick = async function () {
+        var nk = m.querySelector('[data-g]').value,
+          from = m.querySelector('[data-from]').value,
+          leaf = m.querySelector('[data-leaf]').checked,
+          units = m.querySelector('[data-units]').checked
+        function ok(k) {
+          return k && (!G[k] || !G[k].panel) && (!from || k === from)
+        }
+        function walk(r) {
+          if (!r) return r
+          if (r.kind === 'leaf') return r.glass && ok(r.glass) && !r.panelModel ? Object.assign({}, r, { glass: nk }) : r
+          if (r.children)
+            return Object.assign({}, r, {
+              children: r.children.map(function (c) {
+                return Object.assign({}, c, { field: walk(c.field) })
+              }),
+            })
+          return r
+        }
+        var changed = 0
+        await ensurePJ()
+        var cur = PJ.project
+        var positions = (cur.positions || []).map(function (p) {
+          var q = Object.assign({}, p)
+          if (ok(p.glass)) {
+            if (p.glass !== nk) changed++
+            q.glass = nk
+          }
+          if (leaf) q.root = walk(p.root)
+          if (units && Array.isArray(p.coupledUnits))
+            q.coupledUnits = p.coupledUnits.map(function (u) {
+              var u2 = Object.assign({}, u)
+              if (u.glass && ok(u.glass)) u2.glass = nk
+              if (leaf) u2.root = walk(u.root)
+              return u2
+            })
+          return q
+        })
+        PJ.load(Object.assign({}, cur, { positions: positions }))
+        aiClose()
+        toast('Cam değiştirildi: ' + changed + ' poz → ' + ((G[nk] && G[nk].name) || nk))
+      }
+    })
+  }
+  function currentTab() {
+    var b = Array.prototype.slice.call(document.querySelectorAll('header button')).filter(function (x) {
+      return /bg-ink-800|bg-brand|text-white shadow|aria-current/.test(x.className) && /Çizim|Müşteri|Maliyet|Optimizasyon|Şişecam|Katalog|Projeler/.test(x.innerText || '')
+    })[0]
+    return b ? (b.innerText || '').trim().split('\n')[0] : null
+  }
+  function clickTab(label) {
+    clickNav(new RegExp('^' + label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }
   function opts(obj, sel, filter) {
     return Object.keys(obj || {})
@@ -3172,7 +3369,8 @@
       '<i></i><button data-eye title="Göz koruma — mavi ışığı azaltan sıcak filtre">◉<span>Göz koruma</span></button>' +
       '<i></i><button data-user title="Çizen / teklif veren kişi">👤<span class="ozk-keep">' + esc(userName()) + '</span></button>' +
       '<button data-color title="Kendi rengini ekle">🎨<span>Renk ekle</span></button>' +
-      '<button data-ai title="AI ölçü okuma — belge / fotoğraftan poz çıkar">✨<span class="ozk-keep">AI Ölçü</span></button>'
+      '<button data-ai title="AI ölçü okuma — belge / fotoğraftan poz çıkar">✨<span class="ozk-keep">AI Ölçü</span></button>' +
+      '<button data-glass title="Projedeki tüm camları tek seferde değiştir">🪟<span>Tüm camlar</span></button>'
     d.addEventListener('click', function (ev) {
       var b = ev.target.closest('button')
       if (!b) return
@@ -3180,6 +3378,7 @@
       else if (b.hasAttribute('data-user')) return userPop()
       else if (b.hasAttribute('data-color')) return colorPop()
       else if (b.hasAttribute('data-ai')) return window.OZKV && OZKV.aiOpen ? OZKV.aiOpen() : toast('AI ölçü okuma yükleniyor…')
+      else if (b.hasAttribute('data-glass')) return glassBulkOpen()
       else setPref(TKEY, b.getAttribute('data-v'))
       applyTheme()
     })

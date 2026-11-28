@@ -885,3 +885,38 @@ button:hover > .ozk-star-mini {
   color: #94a3b8;
   margin: 4px 0 8px;
 }
+.ozk-ai-prov {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 4px 0 8px;
+}
+.ozk-ai-prov label,
+.ozk-ai-chk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+#ozk-ai .ozk-ai-prov input,
+#ozk-ai .ozk-ai-chk input {
+  width: auto;
+}
+.ozk-ai-key label,
+.ozk-ai-lbl {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+.ozk-ai-used {
+  margin: 0 0 10px;
+  padding-inline-start: 18px;
+  color: #cbd5e1;
+}
+.ozk-ai-chk {
+  margin: 6px 0;
+  color: #cbd5e1;
+}
