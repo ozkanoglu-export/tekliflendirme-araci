@@ -21,7 +21,7 @@ python3 v6/build.py
 | Verilen teklifler | Müşteri Teklifi → "✔ Teklif Verildi — Kayda Al" düğmesi var. Birim fiyatı olmayan poz varsa kayıt alınmaz. Projeler'de ayrı panelde arama, detay (birim fiyatlar) ve "Aç" yapılabilir, JSON olarak indirilebilir. Kayıtlar `ozk.issuedQuotes` anahtarında, Furkan'ın arşivinden ayrı tutulur. |
 | Favoriler | Renk, cam, profil serisi, donanım, panjur ve sineklik renk seçimlerinin yanında ★ var. Hızlı renk düğmelerinde minik ★ bulunur. Favoriler listenin en üstüne çıkar. 🎨 ile eklenen renkler "Çok Kullanılan"da görünür. |
 | 3D | Camlar katman katman: her cam levhası, aradaki boşluk, warm-edge ara çıta ve lamine PVB ayrı görünür. Kollar gerçekçi (rozet, boyun, kavrama). HOK'ta pasif kanatta levye var. Açılış sırası: aktif kanadın kolu döner, kanat açılır, levye kalkar, pasif kanat açılır. Çift açılımlı kanatlar için "Vasistas" kaydırma çubuğu eklendi. |
-| Müşteri 3D teklifi | Müşteri Teklifi → "📱 Müşteri 3D Teklifi İndir". Telefonda veya bilgisayarda açılan tek bir HTML dosyası üretir: 3D döndürme, kanat açma, çizim ve profil detayları. **Birim fiyat, maliyet ve katalog içermez.** İnternetsiz de açılır. |
+| Müşteri 3D teklifi | Müşteri Teklifi → "📱 Müşteri 3D Teklifi İndir". Telefonda veya bilgisayarda açılan tek bir HTML dosyası üretir: 3D döndürme, kanat açma, vasistas, panjur indirme, sineklik açma, "Hepsini aç", çizim ve profil detayları. **Birim fiyat, maliyet ve katalog içermez.** İnternetsiz de açılır. |
 | AI ölçü okuma | ✨ düğmesi: PDF, çizim fotoğrafı veya e-posta metni yüklenir. Claude (claude-opus-5-5) pozları çıkarır ve iki bağımsız okuma karşılaştırılır. Uyuşmayan ya da emin olunmayan ölçü, "kontrol ettim" işaretlenmeden projeye girmez. Profil, renk, cam, panjur ve sineklik onay ekranında düzenlenir. Sonra "Yeni proje olarak aç" (eski proje arşive kaydedilir) ya da "Mevcut projeye ekle" seçilir. |
 
 | Alüminyum eşik | 20 mm alüminyum düşük eşik pencerelere de atılabilir (sürmeler hariç). Pencerelerde ancak kullanıcı seçince devreye girer; eski kayıtlar etkilenmez (`ozkWinThr`). Çizimde ve teklifte metal profil ve "ALU EŞİK 20 mm" etiketiyle görünür. |
@@ -33,6 +33,11 @@ python3 v6/build.py
 | Tüm camlar | ⚙ Araçlar → "Tüm camları değiştir" projedeki bütün camları tek seferde değiştirir. Yalnızca belirli bir camı kullanan pozlar da seçilebilir. Bölmeye özel camlar ve birleşik pozların birimleri de değişir; panel dolguları değişmez. |
 
 AI okuma üç yolla çalışır. **Google Gemini (ücretsiz, varsayılan):** aistudio.google.com'dan alınan ücretsiz anahtarla otomatik okur; varsayılan model `gemini-flash-latest`. Ücretsiz kullanımda Google, gönderilen içeriği ürünlerini geliştirmek için kullanabilir. **claude.ai ile:** ✨ → "Komutu kopyala". Komut, müşteri dosyasıyla birlikte claude.ai'de yeni bir sohbete yapıştırılır, gelen cevap programa geri yapıştırılır. İkinci bir sohbetteki cevap da yapıştırılırsa ölçüler karşılaştırılır. **Otomatik yol:** Anthropic API anahtarı gerekir (ücretli). Anahtar yalnızca o bilgisayarda (`ozk.ai.key`) saklanır. OIE ERP'ye taşınınca istekler sunucu üzerinden yapılmalı, anahtar tarayıcıda durmamalı.
+
+## PDF
+
+- Kaydederken dosya adı hazır gelir: `TEKLİF-MÜŞTERİ-ÜLKE-SERİ` (ör. `TEKLİF-AHMET-MAHMUT-ALMANYA-ADOPEN888`), Maliyet sekmesinden `BİRİM-FİYAT-…`. İlk kelime teklif diline göre: QUOTE, ANGEBOT, OFFERTE, DEVIS, OFFERTA, ПРЕДЛОЖЕНИЕ, عرض-سعر.
+- Tarayıcının tarih / sayfa başlığı / adres satırları basılmaz (Chrome 131+, sayfa kenar kutuları).
 
 ## Güvenlik kuralları (build.py)
 

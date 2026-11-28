@@ -1529,11 +1529,87 @@
       if (st) st.media = on && (forPrint ? quoteVisible() : true) ? 'print' : 'not all'
     } catch (e) {}
   }
+  /* PDF dosya adı: kaydederken Chrome sayfa başlığını dosya adı yapar.
+     Teklif → TEKLİF-MÜŞTERİ-ÜLKE-SERİ, Maliyet (birim fiyatlar) → BİRİM-FİYAT-…; ilk kelime teklif diline göre. */
+  var PDF_WORD = {
+    TR: ['TEKLİF', 'BİRİM-FİYAT'],
+    EN: ['QUOTE', 'UNIT-PRICES'],
+    DE: ['ANGEBOT', 'EINZELPREISE'],
+    NL: ['OFFERTE', 'EENHEIDSPRIJZEN'],
+    FR: ['DEVIS', 'PRIX-UNITAIRES'],
+    IT: ['OFFERTA', 'PREZZI-UNITARI'],
+    RU: ['ПРЕДЛОЖЕНИЕ', 'ЦЕНЫ-ЗА-ЕДИНИЦУ'],
+    AR: ['عرض-سعر', 'أسعار-الوحدة'],
+  }
+  // Seri kısa kodu: marka + seri numarası (ADOPEN Pasifik 888 → ADOPEN888); numara yoksa seri adı
+  function seriesCode(se, id) {
+    var t = String((se && (se.shortName || se.name)) || id || '').replace(/\(.*$/, '').trim()
+    var w = t.split(/\s+/)
+    var num = (t.match(/\d{3,4}/) || [])[0] || ''
+    var brand = (se && se.brand) || (num ? '' : '') || ''
+    var code = brand ? brand + (num || w[0] || '') : (w[0] || '') + num
+    return code.replace(/[^\wÇĞİÖŞÜçğıöşü+]/g, '').toLocaleUpperCase('tr')
+  }
+  function pdfName(kind) {
+    var pr = APP && APP.getProject ? APP.getProject() : PJ.project
+    var cat = APP && APP.getCatalog ? APP.getCatalog() : PJ.catalog
+    if (!pr) return ''
+    var lang = String((pr.commercial && pr.commercial.language) || 'TR').toUpperCase()
+    var word = (PDF_WORD[lang] || PDF_WORD.EN)[kind === 'unit' ? 1 : 0]
+    var cu = pr.customer || {}
+    var cnt = {}
+    ;(pr.positions || []).forEach(function (p) {
+      var se = cat && cat.series && cat.series[p.series]
+      var c = seriesCode(se, p.series)
+      if (c) cnt[c] = (cnt[c] || 0) + 1
+    })
+    var codes = Object.keys(cnt).sort(function (a, b) {
+      return cnt[b] - cnt[a]
+    })
+    // aynı marka tekrar yazılmaz: ADOPEN888+750
+    var ser = codes
+      .map(function (c, i) {
+        var m = c.match(/^(\D+)(\d.*)$/),
+          m0 = codes[0].match(/^(\D+)/)
+        return i && m && m0 && m[1] === m0[1] ? m[2] : c
+      })
+      .join('+')
+    // müşteri adı yabancı olabilir (ENERVIA, AHMET); ülke Türkçe yazılır (BELÇİKA, ALMANYA)
+    var who = String(cu.company || cu.name || '').toUpperCase()
+    var land = String(cu.country || '').toLocaleUpperCase('tr')
+    return [word, who, land, ser]
+      .filter(Boolean)
+      .join('-')
+      .replace(/[\\/:*?"<>|&.,;'’`()\[\]{}#%]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/-{2,}/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 150)
+  }
+  function unitPricesVisible() {
+    return Array.prototype.slice.call(document.querySelectorAll('h2,h3,div,span')).some(function (e) {
+      return e.childElementCount === 0 && /^Kalem Kalem Maliyet & Teklife Özel Birim Fiyatlar/.test(e.textContent || '') && e.offsetParent !== null
+    })
+  }
+  var titleBeforePrint = null
   window.addEventListener('beforeprint', function () {
     applyAntet(true)
+    try {
+      var kind = quoteVisible() ? 'quote' : unitPricesVisible() ? 'unit' : ''
+      var nm = kind ? pdfName(kind) : ''
+      if (nm) {
+        titleBeforePrint = document.title
+        document.title = nm
+      }
+    } catch (e) {}
   })
   window.addEventListener('afterprint', function () {
     applyAntet()
+    if (titleBeforePrint !== null) {
+      document.title = titleBeforePrint
+      titleBeforePrint = null
+    }
   })
   function setAntet(on) {
     setPref(AKEY_ANTET, on ? '1' : '0')
@@ -2297,6 +2373,20 @@
   function posLabel(p, i) {
     return p.pozCode || 'POZ ' + (i + 1)
   }
+  // Sineklik 3D nesnesine hareket bilgisi (müşteri 3D dosyası aynı hareketi oynatır)
+  function tagFs(o) {
+    try {
+      if (!o) return
+      if (o.hingePivot) o.hingePivot.userData.ozkFs = { t: 'h' }
+      else if (o.meshGroup && o.pullBar)
+        o.meshGroup.userData.ozkFs = { t: o.type === 'PILELI_DIKEY' ? 'v' : 'x', iw: o.innerW, ih: o.innerH, f: o.fsFace, bar: o.pullBar.uuid }
+    } catch (e) {}
+  }
+  function navBtn(re) {
+    return Array.prototype.slice.call(document.querySelectorAll('button')).filter(function (x) {
+      return re.test(x.innerText || '')
+    })[0]
+  }
   async function exportCustomer3D(ctx) {
     var pr = ctx.project,
       cat = ctx.catalog,
@@ -2328,11 +2418,15 @@
     var scenes = {}
     try {
       busy('Müşteri 3D teklifi hazırlanıyor… 3D sahneler toplanıyor')
+      OZKV.forceShutter = true // panjur perdesi tam inik kurulur; müşteri dosyasında kaydırıcıyla iner / kalkar
       clickNav(/^Çizim/)
       await sleep(700)
-      var b3 = Array.prototype.slice.call(document.querySelectorAll('button')).filter(function (x) {
-        return /3D 360/.test(x.innerText || '')
-      })[0]
+      var b2 = navBtn(/2D CAD/)
+      if (b2) {
+        b2.click()
+        await sleep(300)
+      }
+      var b3 = navBtn(/3D 360/)
       if (b3) b3.click()
       await sleep(1200)
       for (var i = 0; i < positions.length; i++) {
@@ -2357,6 +2451,7 @@
         }
       }
     } finally {
+      OZKV.forceShutter = false
       clickNav(/^Müşteri/)
       busy(null)
     }
@@ -2386,11 +2481,14 @@
       spec: specHTML,
       positions: positions.map(function (p, i) {
         var g = cat.glasses && cat.glasses[p.glass]
-        var hasTilt = false
+        var hasTilt = false,
+          has3Shut = false,
+          has3Fs = false
         try {
-          JSON.stringify(scenes[p.id] || {}).replace(/"opening":"tiltturn"/, function () {
-            hasTilt = true
-          })
+          var sj = JSON.stringify(scenes[p.id] || {})
+          hasTilt = /"opening":"tiltturn"/.test(sj)
+          has3Shut = /"ozkShut"/.test(sj)
+          has3Fs = /"ozkFs"/.test(sj)
         } catch (e) {}
         return {
           id: p.id,
@@ -2408,6 +2506,8 @@
           svg: svgs[i] || '',
           scene: scenes[p.id] || null,
           tilt: hasTilt,
+          shut3: has3Shut,
+          fs3: has3Fs,
         }
       }),
     }
@@ -2454,8 +2554,8 @@
     var data = JSON.stringify(D).replace(/<\//g, '<\\/').replace(new RegExp('<' + '!--', 'g'), '<\\u0021--')
     var TR = D.lang === 'TR'
     var L = TR
-      ? { title: 'Teklif', quote: 'Teklif No', date: 'Tarih', customer: 'Müşteri', open: 'Kanatları aç', tilt: 'Vasistas', inside: 'İçeriden', outside: 'Dışarıdan', spin: '360°', size: 'Ölçü', qty: 'Adet', series: 'Profil sistemi', glass: 'Cam', cin: 'İç renk', cout: 'Dış renk', shutter: 'Panjur', fly: 'Sineklik', yes: 'Var', contact: 'Teklifi hazırlayan', hint: 'Döndürmek için sürükleyin · Yakınlaştırmak için iki parmak / tekerlek', drawing: 'Teknik çizim (içeriden bakış)', noscene: '3D görünüm bu poz için hazır değil' }
-      : { title: 'Offer', quote: 'Offer No', date: 'Date', customer: 'Customer', open: 'Open sashes', tilt: 'Tilt', inside: 'Inside', outside: 'Outside', spin: '360°', size: 'Size', qty: 'Qty', series: 'Profile system', glass: 'Glazing', cin: 'Inside colour', cout: 'Outside colour', shutter: 'Roller shutter', fly: 'Insect screen', yes: 'Yes', contact: 'Prepared by', hint: 'Drag to rotate · Pinch / wheel to zoom', drawing: 'Technical drawing (inside view)', noscene: '3D view not available for this item' }
+      ? { title: 'Teklif', quote: 'Teklif No', date: 'Tarih', customer: 'Müşteri', open: 'Kanatları aç', tilt: 'Vasistas', inside: 'İçeriden', outside: 'Dışarıdan', spin: '360°', size: 'Ölçü', qty: 'Adet', series: 'Profil sistemi', glass: 'Cam', cin: 'İç renk', cout: 'Dış renk', shutter: 'Panjur', fly: 'Sineklik', yes: 'Var', contact: 'Teklifi hazırlayan', shutDrop: 'Panjur', flyOpen: 'Sineklik', all: 'Hepsini aç', allOff: 'Hepsini kapat', hint: 'Döndürmek için sürükleyin · Yakınlaştırmak için iki parmak / tekerlek', drawing: 'Teknik çizim (içeriden bakış)', noscene: '3D görünüm bu poz için hazır değil' }
+      : { title: 'Offer', quote: 'Offer No', date: 'Date', customer: 'Customer', open: 'Open sashes', tilt: 'Tilt', inside: 'Inside', outside: 'Outside', spin: '360°', size: 'Size', qty: 'Qty', series: 'Profile system', glass: 'Glazing', cin: 'Inside colour', cout: 'Outside colour', shutter: 'Roller shutter', fly: 'Insect screen', yes: 'Yes', contact: 'Prepared by', shutDrop: 'Roller shutter', flyOpen: 'Insect screen', all: 'Open all', allOff: 'Close all', hint: 'Drag to rotate · Pinch / wheel to zoom', drawing: 'Technical drawing (inside view)', noscene: '3D view not available for this item' }
     var css =
       ':root{--ink:#0f172a;--mut:#64748b;--line:#e2e8f0;--navy:#002b5c;--gold:#b08d3c;--bg:#f4f1ec;--card:#ffffff}' +
       '*{box-sizing:border-box}body{margin:0;background:radial-gradient(60vmax 40vmax at 0% 0%,#fbe9d2,transparent 70%),radial-gradient(50vmax 40vmax at 100% 100%,#dfe9f6,transparent 70%),var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}' +
@@ -2467,7 +2567,7 @@
       '.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;margin-top:8px}@media(max-width:860px){.grid{grid-template-columns:1fr}}' +
       '.card{background:var(--card);border-radius:18px;box-shadow:0 8px 30px rgba(15,23,42,.07);border:1px solid #edf0f4;overflow:hidden}' +
       '#view{position:relative;height:min(68vh,620px);min-height:340px;background:linear-gradient(180deg,#eef2f7,#f8f6f2)}#view canvas{display:block;width:100%!important;height:100%!important;touch-action:none}' +
-      '.ctrl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 14px;border-top:1px solid var(--line)}.ctrl label{display:flex;align-items:center;gap:8px;font-weight:600;font-size:12.5px;color:var(--mut)}.ctrl input[type=range]{width:150px;accent-color:var(--gold)}.btns{display:flex;gap:6px;margin-inline-start:auto}.btns button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:6px 10px;font-weight:700;font-size:12px;cursor:pointer}.btns button.on{background:var(--navy);color:#fff}' +
+      '.ctrl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 14px;border-top:1px solid var(--line)}.ctrl label{display:flex;align-items:center;gap:8px;font-weight:600;font-size:12.5px;color:var(--mut)}.ctrl input[type=range]{width:150px;accent-color:var(--gold)}.btns{display:flex;gap:6px;margin-inline-start:auto}.btns button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:6px 10px;font-weight:700;font-size:12px;cursor:pointer}.btns button.on{background:var(--navy);color:#fff}.allb{border:1px solid var(--gold);background:#fff8ea;color:#7a5a12;border-radius:10px;padding:6px 12px;font-weight:800;font-size:12px;cursor:pointer}' +
       '.hint{position:absolute;left:12px;bottom:10px;font-size:11px;color:var(--mut);background:rgba(255,255,255,.7);padding:4px 8px;border-radius:8px}.nos{position:absolute;inset:0;display:grid;place-items:center;color:var(--mut)}' +
       '.det{padding:16px}.det h2{margin:0 0 2px;font-size:17px;color:var(--navy)}.det .sub{color:var(--mut);font-size:12.5px;margin-bottom:10px}.row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dotted #dbe2ea}.row span{color:var(--mut)}.row b{text-align:end}' +
       '.drw{padding:12px 16px 16px}.drw h3{margin:6px 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--navy)}.drw svg{width:100%;height:auto;max-height:360px;background:#fff;border-radius:12px;border:1px solid var(--line)}' +
@@ -2489,7 +2589,11 @@
       'S.add(new T.HemisphereLight(0xffffff,0xb8b0a2,1.0));var dl=new T.DirectionalLight(0xffffff,1.6);dl.position.set(3,5,4);dl.castShadow=true;S.add(dl);var dl2=new T.DirectionalLight(0xdfe8ff,.7);dl2.position.set(-3,2,-4);S.add(dl2);var grid=new T.GridHelper(10,20,0xc9c2b6,0xe2ddd4);S.add(grid);' +
       'var C=new T.PerspectiveCamera(36,1,.02,60);var O=new T.OrbitControls(C,R.domElement);O.enableDamping=true;O.dampingFactor=.08;O.minDistance=.3;O.maxDistance=14;' +
       'var vm="in";function size(){var w=view.clientWidth,h=view.clientHeight;R.setSize(w,h,false);C.aspect=w/h;C.updateProjectionMatrix();if(cur&&vm!=="spin")view3(vm)}addEventListener("resize",size);size();' +
-      'var cur=null,piv=[],ctr=new T.Vector3(),rad=1,openV=0,openT=0,tiltV=0,tiltT=0;var loader=new T.ObjectLoader();' +
+      'var cur=null,piv=[],shs=[],fss=[],ctr=new T.Vector3(),rad=1,openV=0,openT=0,tiltV=0,tiltT=0,shV=0,shT=0,fsV=0,fsT=0;var loader=new T.ObjectLoader();' +
+      // panjur: lameller yukarıdan aşağı görünür olur, alt profil son lamelin altına iner
+      'function applyAcc(){shs.forEach(function(g){var u=g.userData.ozkShut,k=Math.round(u.n*shV);g.visible=k>0;g.children.forEach(function(c){if(c.uuid===u.bar){c.position.y=u.top-k*u.step}else{var i=Math.round((u.top-c.position.y)/u.step-.5);c.visible=i<k}})});' +
+      // sineklik: stüdyodaki hareketin aynısı (menteşeli döner, pileli toplanır)
+      'fss.forEach(function(g){var u=g.userData.ozkFs,O=fsV;if(u.t==="h"){g.rotation.y=O*Math.PI*.46;return}var I=Math.max(.07,1-.92*O),bar=cur.getObjectByProperty("uuid",u.bar);if(u.t==="v"){g.scale.set(1,I,1);if(bar)bar.position.y=u.f+u.ih*(1-I)}else{g.scale.set(I,1,1);if(bar)bar.position.x=u.f+u.iw*I}})}' +
       'function cl(v){return v<0?0:v>1?1:v}function ez(v){v=cl(v);return v*v*(3-2*v)}' +
       'function apply(){piv.forEach(function(p){var u=p.userData.ozk,o=p;var lev=u.lever?cur.getObjectByProperty("uuid",u.lever):null;var lv=u.levye?cur.getObjectByProperty("uuid",u.levye):null;var Ov=openV;' +
       'if(u.opening==="slide"||u.opening==="liftslide"){if(u.slideDir){o.position.x=u.baseX+u.slideDir*u.slideTravelM*(u.opening==="liftslide"?cl((Ov-.12)/.88):Ov)}if(lev&&u.opening==="liftslide")lev.rotation.z=cl(Ov/.15)*Math.PI;return}' +
@@ -2502,17 +2606,21 @@
       'function show(i){var P=D.positions[i];[].forEach.call(document.querySelectorAll(".chip"),function(c,k){c.classList.toggle("on",k===i)});' +
       '$("#det").innerHTML="<h2>"+esc(P.label)+" · "+esc(P.title)+"</h2><div class=sub>"+esc(P.w)+" × "+esc(P.h)+" mm · "+esc(L.qty)+": "+esc(P.qty)+"</div>"+[[L.series,P.series],[L.glass,P.glass],[L.cin,P.colorIn],[L.cout,P.colorOut],[L.shutter,P.shutter?L.yes:""],[L.fly,P.flyscreen?L.yes:""]].filter(function(r){return r[1]}).map(function(r){return"<div class=row><span>"+esc(r[0])+"</span><b>"+esc(r[1])+"</b></div>"}).join("");' +
       '$("#drw").innerHTML=P.svg?"<h3>"+esc(L.drawing)+"</h3>"+P.svg:"";' +
-      'if(cur){S.remove(cur);cur.traverse(function(o){o.geometry&&o.geometry.dispose()})}cur=null;piv=[];$("#nos").style.display=P.scene?"none":"grid";$("#tiltbox").style.display=P.tilt?"":"none";openV=openT=0;tiltV=tiltT=0;$("#open").value=0;$("#tilt").value=0;if(!P.scene)return;' +
-      'cur=loader.parse(P.scene);cur.traverse(function(o){if(o.userData&&o.userData.ozk)piv.push(o);if(o.isMesh){o.castShadow=true}});S.add(cur);apply();var b=new T.Box3().setFromObject(cur);b.getCenter(ctr);rad=b.getSize(new T.Vector3()).length()/2||1;grid.position.y=b.min.y;view3("in")}' +
+      'if(cur){S.remove(cur);cur.traverse(function(o){o.geometry&&o.geometry.dispose()})}cur=null;piv=[];shs=[];fss=[];$("#nos").style.display=P.scene?"none":"grid";$("#tiltbox").style.display=P.tilt?"":"none";$("#shutbox").style.display=P.shut3?"":"none";$("#fsbox").style.display=P.fs3?"":"none";$("#allbtn").style.display=P.shut3||P.fs3?"":"none";openV=openT=0;tiltV=tiltT=0;shV=shT=0;fsV=fsT=0;$("#open").value=0;$("#tilt").value=0;$("#shut").value=0;$("#fs").value=0;allTxt();if(!P.scene)return;' +
+      'cur=loader.parse(P.scene);cur.traverse(function(o){if(o.userData&&o.userData.ozk)piv.push(o);if(o.userData&&o.userData.ozkShut)shs.push(o);if(o.userData&&o.userData.ozkFs)fss.push(o);if(o.isMesh){o.castShadow=true}});S.add(cur);apply();applyAcc();var b=new T.Box3().setFromObject(cur);b.getCenter(ctr);rad=b.getSize(new T.Vector3()).length()/2||1;grid.position.y=b.min.y;view3("in")}' +
       'function view3(m){vm=m;[].forEach.call(document.querySelectorAll(".btns button"),function(b){b.classList.toggle("on",b.dataset.v===m)});O.autoRotate=m==="spin";O.autoRotateSpeed=2;if(m==="spin")return;var d=rad*2.5/Math.min(1,C.aspect*0.95),s=m==="out"?-1:1;C.position.set(ctr.x+d*.42,ctr.y+d*.16,ctr.z+s*d);O.target.copy(ctr);O.update()}' +
       'D.positions.forEach(function(P,i){var b=document.createElement("button");b.className="chip";b.innerHTML=esc(P.label)+"<span>"+esc(P.w)+"×"+esc(P.h)+"</span>";b.onclick=function(){show(i)};$("#chips").appendChild(b)});' +
-      '$("#open").oninput=function(){openT=this.value/100};$("#tilt").oninput=function(){tiltT=this.value/100};[].forEach.call(document.querySelectorAll(".btns button"),function(b){b.onclick=function(){view3(b.dataset.v)}});' +
-      '(function loop(){requestAnimationFrame(loop);var ch=false;if(Math.abs(openT-openV)>8e-4){openV+=(openT-openV)*.12;ch=true}if(Math.abs(tiltT-tiltV)>8e-4){tiltV+=(tiltT-tiltV)*.12;ch=true}if(ch&&cur)apply();O.update();R.render(S,C)})();show(0)})();'
+      'function anyOn(){return openT>0||shT>0||fsT>0}function allTxt(){$("#allbtn").textContent=anyOn()?L.allOff:L.all}' +
+      '$("#open").oninput=function(){openT=this.value/100;allTxt()};$("#tilt").oninput=function(){tiltT=this.value/100};$("#shut").oninput=function(){shT=this.value/100;allTxt()};$("#fs").oninput=function(){fsT=this.value/100;allTxt()};' +
+      // stüdyodaki "Hepsini aç": kanat açılır, panjur yarıya iner, sineklik açılır
+      '$("#allbtn").onclick=function(){var on=!anyOn();openT=on?1:0;shT=on?.55:0;fsT=on?1:0;$("#open").value=openT*100;$("#shut").value=shT*100;$("#fs").value=fsT*100;allTxt()};[].forEach.call(document.querySelectorAll(".btns button"),function(b){b.onclick=function(){view3(b.dataset.v)}});' +
+      '(function loop(){requestAnimationFrame(loop);var ch=false;if(Math.abs(openT-openV)>8e-4){openV+=(openT-openV)*.12;ch=true}if(Math.abs(tiltT-tiltV)>8e-4){tiltV+=(tiltT-tiltV)*.12;ch=true}if(ch&&cur)apply();var ca=false;if(Math.abs(shT-shV)>8e-4){shV+=(shT-shV)*.12;ca=true}if(Math.abs(fsT-fsV)>8e-4){fsV+=(fsT-fsV)*.12;ca=true}if(ca&&cur)applyAcc();O.update();R.render(S,C)})();show(0)})();'
     var body =
       '<div class="wrap"><header><div class="brand" id="brand"></div><div class="meta" id="meta"></div></header>' +
       '<div class="chips" id="chips"></div>' +
       '<div class="grid"><div class="card"><div id="view"><div class="nos" id="nos">' + L.noscene + '</div><div class="hint">' + L.hint + '</div></div>' +
       '<div class="ctrl"><label>' + L.open + ' <input id="open" type="range" min="0" max="100" value="0"></label><label id="tiltbox">' + L.tilt + ' <input id="tilt" type="range" min="0" max="100" value="0"></label>' +
+      '<label id="shutbox">' + L.shutDrop + ' <input id="shut" type="range" min="0" max="100" value="0"></label><label id="fsbox">' + L.flyOpen + ' <input id="fs" type="range" min="0" max="100" value="0"></label><button type="button" id="allbtn" class="allb">' + L.all + '</button>' +
       '<div class="btns"><button data-v="in" class="on">' + L.inside + '</button><button data-v="out">' + L.outside + '</button><button data-v="spin">' + L.spin + '</button></div></div></div>' +
       '<div class="card"><div class="det" id="det"></div><div class="drw" id="drw"></div></div></div>' +
       '<div class="card spec tbl-wrap" id="spec"></div><footer id="foot"></footer></div>'
@@ -4499,6 +4607,8 @@
     glassLayers: glassLayers,
     lever3D: lever3D,
     anim3D: anim3D,
+    tagFs: tagFs,
+    pdfName: pdfName,
     _reg: REG,
     exportCustomer3D: exportCustomer3D,
     bindApp: bindApp,

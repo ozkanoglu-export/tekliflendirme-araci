@@ -1192,3 +1192,16 @@ button:hover > .ozk-star-mini {
 html[data-ozk-erp] #ozk-theme-ui [data-user] {
   display: none !important;
 }
+
+/* Yazdırma: tarayıcının kendi üst/alt bilgisi (tarih, sayfa başlığı, adres, sayfa no) basılmasın.
+   Chrome 131+: sayfa kenar kutuları tanımlıysa tarayıcı üst/alt bilgisi gösterilmez. */
+@media print {
+  @page {
+    @top-left { content: ''; }
+    @top-center { content: ''; }
+    @top-right { content: ''; }
+    @bottom-left { content: ''; }
+    @bottom-center { content: ''; }
+    @bottom-right { content: ''; }
+  }
+}

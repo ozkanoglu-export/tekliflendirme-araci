@@ -291,6 +291,15 @@ sub(E(mpe.group(0)), (f'const {mpe.group(1)}=new {mpe.group(2)};{mpe.group(1)}.p
                       f'{mpe.group(1)}.userData.ozkF={{w:{mBD.group(4)},h:{mBD.group(1)},face:{mZf.group(1)},depth:{mNe.group(1)},thr:!!{mpe.group(7)}.threshold,hw:{mUt.group(5)},col:{mXo.group(1)}.fill,wood:!!{mXo.group(1)}.woodgrain,M:{C3}}};'
                       f'const {mpe.group(5)}={mpe.group(6)}({mpe.group(7)}.W,{mpe.group(7)}.H,{mpe.group(7)}.shape)').replace('\\', '\\\\'), '3D: birim bilgisi (tahliye kapakları için)')
 
+# ------------------------------------------------------------ müşteri 3D: panjur perdesi + sineklik hareketi işaretlenir
+# Panjur: dışa aktarırken perde tam inik kurulur (OZKV.forceShutter) ve lamellere işaret konur; müşteri dosyası lamelleri gösterip gizleyerek indirir.
+sub(rf'({ID})=Math\.min\(1,Math\.max\(0,({ID})/100\)\);({ID})\.units\.forEach',
+    rf'\1={OZ}&&OZKV.forceShutter?1:Math.min(1,Math.max(0,\2/100));\3.units.forEach', '3D: dışa aktarımda panjur perdesi tam inik')
+sub(rf'(const ({ID})=new {ID}\(new {ID}\(({ID}),\.036,\.016\),{ID}\);\2\.position\.set\({ID}/2,({ID})-({ID})\*({ID}),{ID}\),({ID})\.add\(\2\)),({ID})\.add\(\7\)',
+    rf'\1,{OZ}&&(\7.userData.ozkShut={{top:\4,step:\6,n:\5,bar:\2.uuid}}),\8.add(\7)', '3D: panjur perdesi işareti')
+sub(rf'(fsFace:{ID}\}};)({ID})\(({ID}),({ID})\.current\),({ID})\.current\.push\(\3\)',
+    rf'\1\2(\3,\4.current),\5.current.push(\3),{OZ}&&OZKV.tagFs&&OZKV.tagFs(\3)', '3D: sineklik işareti', 3)
+
 # ------------------------------------------------------------ varyant fiyatları: toplam hesap ve para biçimi katmana açılır
 mn1 = find1(rf'function ({ID})\(({ID}),({ID}),({ID}),({ID}),({ID})\)\{{const ({ID})=\2\.map\(\(?({ID})\)?=>({ID})\(\8,\3,\4,\5,\6\)\);', 'toplam hesap fonksiyonu')
 sub(E(mn1.group(0)), (f'window.OZKV&&(OZKV.calcTotals=function(a,b,c,d,f){{return {mn1.group(1)}(a,b,c,d,f)}});' + mn1.group(0)).replace('\\', '\\\\'), 'toplam hesap katmana açıldı')
