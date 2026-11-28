@@ -102,6 +102,10 @@ sub(rf'className:`select-none \$\{{({ID})\}}`,role:"img"',
     rf'className:`select-none ${{{P}?"ozk-paper":"ozk-canvas"}} ${{\1}}`,role:"img"',
     'çizim SVG sınıfı (gündüz modu için)')
 
+
+# ------------------------------------------------------------ sandviç paneller: PVC ve alüminyum, 24 / 42 mm
+sub(r'(PNL04101S:\{[^{}]*\})\}', rf'\1,...({OZ}?OZKV.extraGlasses():{{}})}}', 'sandviç paneller kataloğa eklenir (PVC / alüminyum, 24 / 42 mm)')
+
 # ------------------------------------------------------------ teklif: cam adları
 for pat, name in [
     (rf'children:\[({ID})\.name," \[Ug="', 'teklif: cam adı (detaylı kart)'),
@@ -263,7 +267,7 @@ if not hw_all:
 HW2D = hw_all[-1].group(1)
 sub(E(msf.group(0)), (msf.group(0) + f',{OZ}?OZKV.sashHw({JSX},{msf.group(6)},{HW2D},{OUTV},{O},{P}):null').replace('\\', '\\\\'), '2D: menteşe kapakları (aksesuar rengi)')
 sub(rf':({ID})\(0,0,({ID})\.W,\2\.H,({ID}),({ID})\.fill,\4\.stroke,\2\.threshold\)',
-    lambda m: f':({OZ}?OZKV.frameHw({JSX},{m.group(1)}(0,0,{m.group(2)}.W,{m.group(2)}.H,{m.group(3)},{m.group(4)}.fill,{m.group(4)}.stroke,{m.group(2)}.threshold),{m.group(2)},{HW2D},{OUTV},{O},{P},{m.group(3)}):{m.group(1)}(0,0,{m.group(2)}.W,{m.group(2)}.H,{m.group(3)},{m.group(4)}.fill,{m.group(4)}.stroke,{m.group(2)}.threshold))',
+    lambda m: f':({OZ}?OZKV.frameHw({JSX},{m.group(1)}(0,0,{m.group(2)}.W,{m.group(2)}.H,{m.group(3)},{m.group(4)}.fill,{m.group(4)}.stroke,{m.group(2)}.threshold),{m.group(2)},{HW2D},{OUTV},{O},{P},{m.group(3)},{m.group(4)}.fill):{m.group(1)}(0,0,{m.group(2)}.W,{m.group(2)}.H,{m.group(3)},{m.group(4)}.fill,{m.group(4)}.stroke,{m.group(2)}.threshold))',
     '2D: tahliye delik kapakları (aksesuar rengi)')
 mpe = find1(rf'const ({ID})=new ({ID});\1\.position\.set\(({ID}),({ID}),0\);const ({ID})=({ID})\(({ID})\.W,\7\.H,\7\.shape\)', '3D birim grubu')
 pre = js[:mpe.start()]
@@ -271,8 +275,9 @@ mBD = [m for m in re.finditer(rf'({ID})=({ID})\.H\*({ID}),({ID})=\2\.W\*\3', pre
 mZf = [m for m in re.finditer(rf'({ID})=\(({ID})\.faces\.frame\|\|58\)\*({ID})', pre)][-1]
 mNe = [m for m in re.finditer(rf'({ID})=\(({ID})\.thickness\|\|70\)\*({ID})', pre)][-1]
 mUt = [m for m in re.finditer(rf'({ID})=({ID})\(({ID})\(({ID})\.techSpecs,\4\.color\)\),({ID})=new ({ID})\(\{{color:\1', pre)][-1]
+mXo = [m for m in re.finditer(rf'({ID})=({ID})\.colors\[({ID})\.colorOutside\|\|\3\.color\]\?\?({ID}),', pre)][-1]
 sub(E(mpe.group(0)), (f'const {mpe.group(1)}=new {mpe.group(2)};{mpe.group(1)}.position.set({mpe.group(3)},{mpe.group(4)},0);'
-                      f'{mpe.group(1)}.userData.ozkF={{w:{mBD.group(4)},h:{mBD.group(1)},face:{mZf.group(1)},depth:{mNe.group(1)},thr:!!{mpe.group(7)}.threshold,hw:{mUt.group(5)},M:{C3}}};'
+                      f'{mpe.group(1)}.userData.ozkF={{w:{mBD.group(4)},h:{mBD.group(1)},face:{mZf.group(1)},depth:{mNe.group(1)},thr:!!{mpe.group(7)}.threshold,hw:{mUt.group(5)},col:{mXo.group(1)}.fill,wood:!!{mXo.group(1)}.woodgrain,M:{C3}}};'
                       f'const {mpe.group(5)}={mpe.group(6)}({mpe.group(7)}.W,{mpe.group(7)}.H,{mpe.group(7)}.shape)').replace('\\', '\\\\'), '3D: birim bilgisi (tahliye kapakları için)')
 
 # ------------------------------------------------------------ varyant fiyatları: toplam hesap ve para biçimi katmana açılır

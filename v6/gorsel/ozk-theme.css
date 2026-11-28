@@ -1132,3 +1132,24 @@ button:hover > .ozk-star-mini {
   padding-top: 0;
   margin-bottom: 14px;
 }
+
+/* Sağ panel: seçim kutuları panelden taşmasın (dar ekranlarda) */
+#root aside select,
+#root aside input {
+  min-width: 0;
+  max-width: 100%;
+}
+#root aside .flex > select {
+  flex: 1 1 0;
+}
+/* Alt çubuk: durum çubuğundaki yazıların üstüne binmesin — çizim alanının sağ altına */
+#ozk-theme-ui {
+  left: auto !important;
+  right: 384px;
+  bottom: 50px !important;
+}
+@media (max-width: 1280px) {
+  #ozk-theme-ui {
+    right: 12px;
+  }
+}

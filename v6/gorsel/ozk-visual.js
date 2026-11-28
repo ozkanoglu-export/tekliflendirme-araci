@@ -67,6 +67,20 @@
       return {}
     }
   }
+
+  /* ---------- Sandviç paneller (Furkan: PVC ve alüminyum, 24 ve 42 mm) ----------
+     Fiyatlar başlangıç olarak mevcut "24 mm Düz Sandviç Panel" ile aynı (150 €/m²);
+     Katalog & Fiyat'tan güncellenir — kayıtlı fiyat her zaman bunun önüne geçer. */
+  function extraGlasses() {
+    function pnl(key, name, t, ug, kg, rw) {
+      return { key: key, name: name, ug: ug, price: 150, category: 'Panel / Dolgu', thicknessMm: t, weightKgPerM2: kg, panel: true, rwDb: rw }
+    }
+    return {
+      PNL42PVC: pnl('PNL42PVC', '42 mm PVC Sandviç Panel', 42, 0.9, 9, 30),
+      PNL24ALU: pnl('PNL24ALU', '24 mm Alüminyum Sandviç Panel', 24, 1.1, 9, 29),
+      PNL42ALU: pnl('PNL42ALU', '42 mm Alüminyum Sandviç Panel', 42, 0.8, 11, 31),
+    }
+  }
   function extraColors() {
     var o = {}
     for (var k in rehauColors) o[k] = rehauColors[k]
@@ -1161,7 +1175,7 @@
         className: 'pointer-events-none',
         children: [
           // renk style ile: gündüz modunun çizim renk eşlemesi aksesuar rengini değiştirmesin
-          n.jsx('rect', { x: x, y: y, width: w, height: h, rx: Math.min(w, h) * 0.35, style: { fill: hw.body, stroke: hw.stroke, strokeWidth: Math.max(0.8, O * 0.55) } }),
+          n.jsx('rect', { x: x, y: y, width: w, height: h, rx: Math.min(w, h) * 0.35, style: { fill: hw.body, stroke: hw.stroke, strokeWidth: Math.max(1.2, O * 0.9) } }),
           n.jsx('rect', { x: x + w * 0.18, y: y + h * 0.14, width: w * 0.64, height: Math.max(1, h * 0.12), rx: 1, style: { fill: hw.lever, fillOpacity: 0.55 } }),
         ],
       },
@@ -1176,8 +1190,8 @@
       var inward = s.openDirection !== 'outward'
       if (inward === !!outside) return null
       var r = s.rect,
-        w = Math.max(14, Math.min(22, (s.face || 60) * 0.32)),
-        h = s.door ? 110 : 72
+        w = Math.max(18, Math.min(26, (s.face || 60) * 0.4)),
+        h = s.door ? 120 : 90
       var x = (s.hinge === 'right' ? r.x + r.w : r.x) - w / 2
       var ys = s.door ? [r.y + 180, r.y + r.h / 2 - h / 2, r.y + r.h - 180 - h] : [r.y + 40, r.y + r.h - 40 - h]
       return n.jsx(
@@ -1193,13 +1207,38 @@
       return null
     }
   }
-  // 2D kasa: dış görünümde alt kasada tahliye delik kapakları
-  function frameHw(n, frame, W, hw, outside, O, P, D) {
+  // Tahliye kapağı rengi: doğrama (dış) rengine göre 4 seçenekten biri — beyaz / antrasit / koyu kahve / siyah
+  var DRAIN = {
+    white: { body: '#f4f4f1', lever: '#ffffff', stroke: '#8b939c', hex: 0xf4f4f1 },
+    anthracite: { body: '#3a4046', lever: '#58606a', stroke: '#1d2125', hex: 0x3a4046 },
+    brown: { body: '#4a2e20', lever: '#6b4532', stroke: '#24150d', hex: 0x4a2e20 },
+    black: { body: '#1c1c1e', lever: '#38383c', stroke: '#000000', hex: 0x1c1c1e },
+  }
+  function drainColor(fill, wood) {
     try {
-      if (!outside || !hw || !W || W.threshold || !(W.W > 300)) return frame
+      var hx = String(fill || '').replace('#', '')
+      if (hx.length === 3) hx = hx.replace(/(.)/g, '$1$1')
+      var r = parseInt(hx.slice(0, 2), 16),
+        g = parseInt(hx.slice(2, 4), 16),
+        b = parseInt(hx.slice(4, 6), 16)
+      if (!(r >= 0)) return DRAIN.white
+      var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+      if (wood || (r - b > 28 && lum < 0.75)) return DRAIN.brown
+      if (lum > 0.62) return DRAIN.white
+      if (lum < 0.13) return DRAIN.black
+      return DRAIN.anthracite
+    } catch (e) {
+      return DRAIN.white
+    }
+  }
+  // 2D kasa: dış görünümde alt kasada tahliye delik kapakları (doğrama renginde)
+  function frameHw(n, frame, W, hw, outside, O, P, D, frameFill) {
+    try {
+      if (!outside || !W || W.threshold || !(W.W > 300)) return frame
+      hw = drainColor(frameFill)
       var cnt = Math.max(2, Math.round(W.W / 650)),
-        cw = 40,
-        ch = Math.max(7, Math.min(10, (D || 60) * 0.16)),
+        cw = 50,
+        ch = Math.max(10, Math.min(14, (D || 60) * 0.2)),
         y = W.H - (D || 60) / 2 - ch / 2
       var caps = []
       for (var i = 0; i < cnt; i++) {
@@ -1238,7 +1277,9 @@
       o.userData.ozkDrain = true
       var C = f.M,
         mat = f.hw && f.hw.clone ? f.hw.clone() : f.hw
-      if (mat && mat.metalness != null) mat.metalness = 0.25
+      if (mat && mat.color && mat.color.setHex) mat.color.setHex(drainColor(f.col, f.wood).hex)
+      if (mat && mat.metalness != null) mat.metalness = 0.05
+      if (mat && mat.roughness != null) mat.roughness = 0.6
       var cnt = Math.max(2, Math.round(f.w / 0.65))
       for (var i = 0; i < cnt; i++) {
         var m = new C.M(new C.B(0.04, 0.009, 0.006), mat)
@@ -4051,6 +4092,7 @@
     version: '6.2',
     rehauColors: rehauColors,
     extraColors: extraColors,
+    extraGlasses: extraGlasses,
     users: users,
     saveUsers: saveUsers,
     activeUser: activeUser,
