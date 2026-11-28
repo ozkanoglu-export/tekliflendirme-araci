@@ -146,12 +146,19 @@ QG = find1(rf'children:({ID})\({E(QE)}\.freight\)\}}\)\]\}}\),{E(QCOM)}\.include
 print(f'  teklif: project={QP} totals={QE} catalog={QC} comm={QCOM} dict={QH} jsx={QJ} upd={QB} fmt={QG}')
 
 sub(r'children:"Nakliye, Palet & Ambalaj Seçenekleri"\}\)',
-    f'children:"Nakliye, Palet, Ambalaj & Montaj"}}),{OZ}?OZKV.montajUI({QJ},{QCOM},{QB},{QG},{QE}):null', 'panel: montaj + antet')
+    f'children:"Nakliye, Palet, Ambalaj & Montaj"}}),{OZ}?OZKV.montajUI({QJ},{QCOM},{QB},{QG},{QE},{{project:{QP},catalog:{QC},settings:{mq.group(4)}}}):null', 'panel: montaj + antet')
 sub(rf'(\{{children:\[{E(QH)}\.freight,":"\]\}}\),{E(QJ)}\.jsx\("strong",\{{children:{E(QG)}\({E(QE)}\.freight\)\}}\)\]\}}\))',
     rf'\1,{OZ}?OZKV.montajLine({QJ},{QCOM},{QE},{QG},{QCOM}.language):null', 'özet: montaj satırı')
 sub(rf'{E(QH)}\.termsList\.map\(', f'({OZ}?OZKV.terms({QH}.termsList,{QCOM},{QH}):{QH}.termsList).map(', 'şartlar: dahil / dahil değil')
 sub(rf'({E(QJ)}\.jsxs\("div",\{{className:"print-avoid-break grid grid-cols-1 gap-5 border-t-2 border-\[#002b5c\] pt-4 md:grid-cols-\[1fr_260px\]")',
     rf'{OZ}?OZKV.specSection({QJ},{QP},{QC},{QCOM},{QE}):null,\1', 'profil sistemleri & cam özeti')
+
+
+# ------------------------------------------------------------ projeler: verilen teklifler
+mp2 = find1(rf'\(\{{project:({ID}),savedProjects:({ID}),catalog:({ID}),settings:({ID}),grandTotal:({ID}),onLoadProject:({ID}),onImportBundle:{ID},onSaveProject:{ID},onDeleteSaved:{ID},onStartNewProject:{ID},onEditProjectSetup:{ID},notify:({ID})\}}\)=>\{{const\[{ID},{ID}\]=({ID})\.useState\(""\)', 'projeler bileşeni')
+PJ_LOAD, PJ_NOTIFY, PJ_REACT = mp2.group(6), mp2.group(7), mp2.group(8)
+sub(rf'({ID})\.jsxs\("div",\{{className:"rounded-2xl border border-ink-800 bg-ink-900/60 p-4 space-y-3",children:\[\1\.jsxs\("div",\{{className:"flex items-center justify-between border-b border-ink-800 pb-2",children:\[\1\.jsxs\("span",\{{className:"flex items-center gap-2 font-bold text-brand-300",children:\[\1\.jsx\({ID},\{{size:15\}}\)," Tarayıcı Arşivi \("',
+    lambda m: f'{OZ}?OZKV.issuedPanel({m.group(1)},{PJ_REACT},{{load:{PJ_LOAD},notify:{PJ_NOTIFY}}}):null,' + m.group(0), 'projeler: verilen teklifler paneli')
 
 # ------------------------------------------------------------ 3D
 mg = find1(rf'({ID})=({ID})\.colors\[({ID})\.color\]\?\?\2\.colors\.WHITE,({ID})=\2\.colors\[\3\.colorOutside\|\|\3\.color\]\?\?\1,({ID})=new ({ID})\((\{{color:8246268,transparent:!0,opacity:\.34,roughness:\.08,metalness:\.1,reflectivity:\.9,side:{ID}\}})\)', '3D cam malzemesi')

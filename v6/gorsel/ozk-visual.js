@@ -986,7 +986,7 @@
   }
 
   // Ticari şartlar paneli: Montaj + Antet (Nakliye/Palet kutularıyla aynı görünüm)
-  function montajUI(n, c, b, g, e) {
+  function montajUI(n, c, b, g, e, ctx) {
     try {
       var on = !!c.includeInstallation
       return n.jsxs('div', {
@@ -1043,6 +1043,7 @@
               n.jsx('span', { children: '📄 Antetli kâğıt (PDF / baskı arka planı)' }),
             ],
           }),
+          ctx ? issueButton(n, Object.assign({ totals: e, fmt: g }, ctx)) : null,
         ],
       })
     } catch (err) {
@@ -1195,6 +1196,337 @@
         ],
       })
     } catch (err) {
+      return null
+    }
+  }
+
+
+  /* ============================================= VERİLEN TEKLİFLER KAYDI (6.2) */
+  // Furkan'ın arşivinden ayrı: teklif verildiği andaki birim fiyatlar + toplamlar + proje kopyası
+  var IKEY = 'ozk.issuedQuotes'
+  function issuedList() {
+    try {
+      var a = JSON.parse(localStorage.getItem(IKEY) || '[]')
+      return Array.isArray(a) ? a : []
+    } catch (e) {
+      return []
+    }
+  }
+  function issuedSave(a) {
+    try {
+      localStorage.setItem(IKEY, JSON.stringify(a))
+      return true
+    } catch (e) {
+      toast('Kayıt alanı doldu: eski teklifleri JSON olarak indirip silin')
+      return false
+    }
+  }
+  function nm(o) {
+    return (o && (o.name || o.shortName)) || ''
+  }
+  function issueQuote(ctx) {
+    var pr = ctx.project,
+      cat = ctx.catalog,
+      tot = ctx.totals,
+      c = pr.commercial || {}
+    var lines = (tot && tot.lines) || []
+    if (!lines.length) return toast('Teklifte poz yok')
+    var noPrice = lines.filter(function (l) {
+      return !(l.priceUnit > 0)
+    })
+    if (noPrice.length) {
+      return toast(
+        'Birim fiyatı olmayan poz var: ' +
+          noPrice
+            .map(function (l) {
+              return (l.pos && (l.pozCode || l.pos.pozCode || l.pos.title)) || '?'
+            })
+            .join(', ') +
+          ' — teklif kayda alınmadı',
+      )
+    }
+    var list = issuedList()
+    var rev = list.filter(function (q) {
+      return q.quoteNo === pr.quoteNo
+    }).length
+    var rate = (cat.exchangeRates && cat.exchangeRates[c.currency]) || 1
+    var rec = {
+      id: 'iq_' + Date.now().toString(36),
+      issuedAt: new Date().toISOString(),
+      quoteNo: pr.quoteNo || '',
+      rev: rev,
+      projectName: pr.projectName || '',
+      customer: JSON.parse(JSON.stringify(pr.customer || {})),
+      drawnBy: fixDrawn(pr.drawnBy),
+      issuedBy: userName(),
+      currency: c.currency || 'EUR',
+      rate: rate,
+      language: c.language || 'TR',
+      incoterm: [c.incoterm, c.incotermPlace].filter(Boolean).join(' — '),
+      includes: {
+        packaging: !!c.includePackaging,
+        pallet: !!c.includePallet,
+        freight: !!c.includeFreight,
+        installation: !!c.includeInstallation,
+      },
+      totals: {
+        products: tot.products,
+        packaging: tot.packaging,
+        pallet: tot.pallet,
+        freight: tot.freight,
+        installation: tot.installation || 0,
+        subtotal: tot.subtotal,
+        discount: tot.discount,
+        net: tot.net,
+        vat: tot.vat,
+        grand: tot.grand,
+        totalArea: tot.totalArea,
+        totalUnits: tot.totalUnits,
+        totalWeightKg: tot.totalWeightKg,
+      },
+      grandText: ctx.fmt ? ctx.fmt(tot.grand) : '',
+      lines: lines.map(function (l, i) {
+        var p = l.pos || {}
+        return {
+          poz: p.pozCode || 'POZ ' + (i + 1),
+          title: p.title || '',
+          qty: Math.max(1, Math.round(p.qty) || 1),
+          w: p.totalW || (l.geo && l.geo.W_total) || '',
+          h: p.totalH || (l.geo && l.geo.H_total) || '',
+          series: nm(cat.series && cat.series[p.series]),
+          glass: nm(cat.glasses && cat.glasses[p.glass]),
+          color: nm(cat.colors && cat.colors[p.color]),
+          unit: l.priceUnit,
+          unitText: ctx.fmt ? ctx.fmt(l.priceUnit) : '',
+          line: l.priceLine,
+          lineText: ctx.fmt ? ctx.fmt(l.priceLine) : '',
+        }
+      }),
+      project: JSON.parse(JSON.stringify(pr)),
+    }
+    list.unshift(rec)
+    if (issuedSave(list)) {
+      toast('#' + rec.quoteNo + (rev ? ' (Rev.' + rev + ')' : '') + ' verilen teklifler kaydına alındı · ' + rec.grandText)
+      try {
+        window.dispatchEvent(new Event('ozk-issued'))
+      } catch (e) {}
+    }
+  }
+  function downloadJSON(name, data) {
+    var a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+    a.download = name
+    document.body.appendChild(a)
+    a.click()
+    setTimeout(function () {
+      URL.revokeObjectURL(a.href)
+      a.remove()
+    }, 500)
+  }
+  function issueButton(n, ctx) {
+    return n.jsx('button', {
+      type: 'button',
+      onClick: function () {
+        issueQuote(ctx)
+      },
+      className: 'mt-1 w-full rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-500',
+      children: '✔ Teklif Verildi — Kayda Al (birim fiyatlarla)',
+    })
+  }
+  // Projeler sekmesi: Verilen Teklifler paneli (React bileşeni; React örneği props.R ile gelir)
+  function IssuedPanel(props) {
+    var n = props.n,
+      R = props.R
+    var st = R.useState(0),
+      bump = st[1]
+    var op = R.useState(null),
+      open = op[0],
+      setOpen = op[1]
+    var qs = R.useState(''),
+      q = qs[0],
+      setQ = qs[1]
+    R.useEffect(function () {
+      function f() {
+        bump(function (x) {
+          return x + 1
+        })
+      }
+      window.addEventListener('ozk-issued', f)
+      return function () {
+        window.removeEventListener('ozk-issued', f)
+      }
+    }, [])
+    var all = issuedList()
+    var ql = q.toLocaleLowerCase('tr')
+    var list = all.filter(function (x) {
+      if (!ql) return true
+      return [x.quoteNo, x.projectName, x.customer && x.customer.company, x.customer && x.customer.name, x.customer && x.customer.country, x.issuedBy]
+        .join(' ')
+        .toLocaleLowerCase('tr')
+        .indexOf(ql) >= 0
+    })
+    function del(id) {
+      if (!confirm('Bu verilen teklif kaydı silinsin mi?')) return
+      issuedSave(
+        issuedList().filter(function (x) {
+          return x.id !== id
+        }),
+      )
+      bump(function (x) {
+        return x + 1
+      })
+    }
+    var rows = list.map(function (x) {
+      var d = new Date(x.issuedAt)
+      var isOpen = open === x.id
+      return n.jsxs(
+        'div',
+        {
+          className: 'rounded-xl border border-ink-800 bg-ink-950 p-3',
+          children: [
+            n.jsxs('div', {
+              className: 'flex items-center justify-between gap-2',
+              children: [
+                n.jsxs('div', {
+                  className: 'min-w-0',
+                  children: [
+                    n.jsx('div', {
+                      className: 'truncate font-bold text-white',
+                      children: '#' + x.quoteNo + (x.rev ? ' · Rev.' + x.rev : '') + ' — ' + (x.projectName || ''),
+                    }),
+                    n.jsx('div', {
+                      className: 'truncate text-[10px] text-ink-400',
+                      children: [
+                        (x.customer && (x.customer.company || x.customer.name)) || '',
+                        x.customer && x.customer.country,
+                        d.toLocaleDateString('tr-TR') + ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+                        'Veren: ' + (x.issuedBy || x.drawnBy || ''),
+                        x.lines.length + ' poz',
+                        x.incoterm,
+                      ]
+                        .filter(Boolean)
+                        .join(' · '),
+                    }),
+                  ],
+                }),
+                n.jsxs('div', {
+                  className: 'flex shrink-0 items-center gap-1.5',
+                  children: [
+                    n.jsx('span', { className: 'font-mono text-[12px] font-bold text-gold-400', children: x.grandText }),
+                    n.jsx('button', {
+                      type: 'button',
+                      onClick: function () {
+                        setOpen(isOpen ? null : x.id)
+                      },
+                      className: 'rounded-lg bg-ink-800 px-2.5 py-1 font-semibold text-ink-200 hover:bg-ink-700',
+                      children: isOpen ? 'Kapat' : 'Detay',
+                    }),
+                    n.jsx('button', {
+                      type: 'button',
+                      onClick: function () {
+                        if (!confirm('#' + x.quoteNo + ' teklifindeki proje açılsın mı? (Açık çalışma dosyası bununla değişir)')) return
+                        props.load(JSON.parse(JSON.stringify(x.project)))
+                        props.notify && props.notify('#' + x.quoteNo + ' verilen tekliften açıldı', 'ok')
+                      },
+                      className: 'rounded-lg bg-brand-600 px-2.5 py-1 font-semibold text-white hover:bg-brand-500',
+                      children: 'Aç',
+                    }),
+                    n.jsx('button', {
+                      type: 'button',
+                      onClick: function () {
+                        del(x.id)
+                      },
+                      className: 'rounded-lg bg-ink-800 px-2 py-1 text-red-300 hover:bg-red-900/40',
+                      children: '✕',
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            isOpen &&
+              n.jsxs('table', {
+                className: 'mt-2 w-full text-[10.5px]',
+                children: [
+                  n.jsx('thead', {
+                    children: n.jsx('tr', {
+                      className: 'text-left text-ink-400',
+                      children: ['Poz', 'Açıklama', 'Ölçü', 'Adet', 'Seri / Cam / Renk', 'Birim Fiyat', 'Tutar'].map(function (h) {
+                        return n.jsx('th', { className: 'py-1 pe-2 font-semibold', children: h }, h)
+                      }),
+                    }),
+                  }),
+                  n.jsx('tbody', {
+                    children: x.lines.map(function (l, i) {
+                      return n.jsx(
+                        'tr',
+                        {
+                          className: 'border-t border-ink-800 text-ink-200',
+                          children: [
+                            l.poz,
+                            l.title,
+                            l.w + ' × ' + l.h,
+                            l.qty,
+                            [l.series, l.glass, l.color].filter(Boolean).join(' · '),
+                            l.unitText,
+                            l.lineText,
+                          ].map(function (v, j) {
+                            return n.jsx('td', { className: 'py-1 pe-2' + (j >= 5 ? ' whitespace-nowrap font-mono text-gold-400' : j === 2 || j === 0 ? ' whitespace-nowrap' : ''), children: v }, j)
+                          }),
+                        },
+                        i,
+                      )
+                    }),
+                  }),
+                ],
+              }),
+          ],
+        },
+        x.id,
+      )
+    })
+    return n.jsxs('div', {
+      className: 'rounded-2xl border border-emerald-500/30 bg-ink-900/60 p-4 space-y-3',
+      children: [
+        n.jsxs('div', {
+          className: 'flex flex-wrap items-center justify-between gap-2 border-b border-ink-800 pb-2',
+          children: [
+            n.jsx('span', { className: 'font-bold text-emerald-300', children: '✔ Verilen Teklifler (' + all.length + ')' }),
+            n.jsxs('div', {
+              className: 'flex items-center gap-1.5',
+              children: [
+                n.jsx('input', {
+                  value: q,
+                  onChange: function (ev) {
+                    setQ(ev.target.value)
+                  },
+                  placeholder: 'Ara: müşteri, ülke, teklif no…',
+                  className: 'h-7 w-48 rounded border border-ink-700 bg-ink-950 px-2 text-[11px] text-white',
+                }),
+                n.jsx('button', {
+                  type: 'button',
+                  onClick: function () {
+                    downloadJSON('verilen-teklifler-' + new Date().toISOString().slice(0, 10) + '.json', issuedList())
+                  },
+                  className: 'rounded-lg border border-ink-700 bg-ink-900 px-3 py-1 font-semibold text-ink-200 hover:bg-ink-800',
+                  children: '⬇ JSON',
+                }),
+              ],
+            }),
+          ],
+        }),
+        rows.length
+          ? n.jsx('div', { className: 'space-y-2', children: rows })
+          : n.jsx('div', {
+              className: 'py-3 text-center italic text-ink-500',
+              children: 'Henüz kayıt yok. Müşteri Teklifi sekmesinde “✔ Teklif Verildi — Kayda Al” düğmesiyle eklenir; teklif anındaki birim fiyatlar ve toplamlar saklanır.',
+            }),
+      ],
+    })
+  }
+  function issuedPanel(n, R, props) {
+    try {
+      return n.jsx(IssuedPanel, Object.assign({ n: n, R: R }, props))
+    } catch (e) {
       return null
     }
   }
@@ -1418,5 +1750,7 @@
     terms: terms,
     specSection: specSection,
     applyAntet: applyAntet,
+    issuedPanel: issuedPanel,
+    issuedList: issuedList,
   }
 })()
